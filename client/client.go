@@ -13,8 +13,6 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
-	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"google.golang.org/grpc"
 )
 
@@ -88,18 +86,6 @@ func grpcConn(addr string) *grpc.ClientConn {
 		panic(err)
 	}
 	return conn
-}
-
-func NewRpcClient(addr string) *rpchttp.HTTP {
-	httpClient, err := libclient.DefaultHTTPClient(addr)
-	if err != nil {
-		panic(err)
-	}
-	rpcClient, err := rpchttp.NewWithClient(addr, "/websocket", httpClient)
-	if err != nil {
-		panic(err)
-	}
-	return rpcClient
 }
 
 func NewGreenlandClient(grpcAddr string) (GreenlandClient, error) {
