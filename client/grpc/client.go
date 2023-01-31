@@ -2,7 +2,10 @@ package client
 
 import (
 	_ "encoding/json"
-	bfstypes "github.com/bnb-chain/bfs/x/bfs/types"
+	"github.com/bnb-chain/gnfd-go-sdk/keys"
+	"github.com/bnb-chain/gnfd-go-sdk/types"
+	gnfdtypes "github.com/bnb-chain/greenfield/x/greenfield/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -17,7 +20,7 @@ import (
 )
 
 //
-//type GreenlandClient struct {
+//type GreenfieldClient struct {
 //	upgradetypes.QueryClient
 //	distrtypes.MsgClient
 //	slashingtypes.QueryClient
@@ -34,8 +37,8 @@ import (
 //	feegranttypes.QueryClient
 //	feegranttypes.MsgClient
 //	paramstypes.QueryClient
-//	bfstypes.QueryClient
-//	bfstypes.MsgClient
+//	gnfdtypes.QueryClient
+//	gnfdtypes.MsgClient
 //}
 
 type UpgradeQueryClient = upgradetypes.QueryClient
@@ -55,10 +58,12 @@ type AuthzMsgClient = authztypes.MsgClient
 type FeegrantQueryClient = feegranttypes.QueryClient
 type FeegrantMsgClient = feegranttypes.MsgClient
 type ParamsQueryClient = paramstypes.QueryClient
-type BfsQueryClient = bfstypes.QueryClient
-type BfsMsgClient = bfstypes.MsgClient
+type BfsQueryClient = gnfdtypes.QueryClient
+type BfsMsgClient = gnfdtypes.MsgClient
+type TxClient = tx.ServiceClient
 
-type GreenlandClient struct {
+type GreenfieldClient struct {
+	TxClient
 	UpgradeQueryClient
 	DistrQueryClient
 	DistrMsgClient
@@ -78,6 +83,7 @@ type GreenlandClient struct {
 	ParamsQueryClient
 	BfsQueryClient
 	BfsMsgClient
+	keyManager keys.KeyManager
 }
 
 func grpcConn(addr string) *grpc.ClientConn {
@@ -88,10 +94,12 @@ func grpcConn(addr string) *grpc.ClientConn {
 	return conn
 }
 
-func NewGreenlandClient(grpcAddr string) (GreenlandClient, error) {
+func NewGreenlandClient(grpcAddr, chainId string) GreenfieldClient {
+	types.SetChainId(chainId)
 	conn := grpcConn(grpcAddr)
 
-	return GreenlandClient{
+	return GreenfieldClient{
+		tx.NewServiceClient(conn),
 		upgradetypes.NewQueryClient(conn),
 		distrtypes.NewQueryClient(conn),
 		distrtypes.NewMsgClient(conn),
@@ -109,38 +117,14 @@ func NewGreenlandClient(grpcAddr string) (GreenlandClient, error) {
 		feegranttypes.NewQueryClient(conn),
 		feegranttypes.NewMsgClient(conn),
 		paramstypes.NewQueryClient(conn),
-		bfstypes.NewQueryClient(conn),
-		bfstypes.NewMsgClient(conn),
-	}, nil
+		gnfdtypes.NewQueryClient(conn),
+		gnfdtypes.NewMsgClient(conn),
+		nil,
+	}
 }
 
-// TODO: Check whether singular init is required
-func NewGreenlandClients(rpcAddrs []string, grpcAddrs []string) ([]*GreenlandClient, error) {
-	greenlandClients := make([]*GreenlandClient, 0)
-
-	for i := 0; i < len(rpcAddrs); i++ {
-		conn := grpcConn(grpcAddrs[i])
-		greenlandClients = append(greenlandClients, &GreenlandClient{
-			upgradetypes.NewQueryClient(conn),
-			distrtypes.NewQueryClient(conn),
-			distrtypes.NewMsgClient(conn),
-			slashingtypes.NewQueryClient(conn),
-			slashingtypes.NewMsgClient(conn),
-			stakingtypes.NewQueryClient(conn),
-			stakingtypes.NewMsgClient(conn),
-			authtypes.NewQueryClient(conn),
-			banktypes.NewQueryClient(conn),
-			banktypes.NewMsgClient(conn),
-			v1beta1.NewQueryClient(conn),
-			v1beta1.NewMsgClient(conn),
-			authztypes.NewQueryClient(conn),
-			authztypes.NewMsgClient(conn),
-			feegranttypes.NewQueryClient(conn),
-			feegranttypes.NewMsgClient(conn),
-			paramstypes.NewQueryClient(conn),
-			bfstypes.NewQueryClient(conn),
-			bfstypes.NewMsgClient(conn),
-		})
-	}
-	return greenlandClients, nil
+func NewGreenlandClientWithKeyManager(grpcAddr, chainId string, keyManager keys.KeyManager) GreenfieldClient {
+	gnfdClient := NewGreenlandClient(grpcAddr, chainId)
+	gnfdClient.keyManager = keyManager
+	return gnfdClient
 }

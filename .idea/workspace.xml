@@ -5,42 +5,171 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3dcc5755-9cda-4783-ab16-bbda56974f97" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/client/grpc/account.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/grpc/tx.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/grpc/tx_test.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/rpc/rpc_client.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/keys/key_manager_test.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/keys/test_keystore.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/types/address.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/types/codec.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/types/type.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/client.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/grpc/client.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/keys/ethsecp256k1/ethsecp256k1.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/keys/key_manager.go" beforeDir="false" afterPath="$PROJECT_DIR$/keys/key_manager.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/keys/keystore.go" beforeDir="false" afterPath="$PROJECT_DIR$/keys/keystore.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
+  </component>
   <component name="GOROOT" url="file:///usr/local/go" />
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
   <component name="ProjectId" id="2KJCPSKtPiEDw4Zyqnx9gix7rI5" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.format.on.save.advertiser.fired&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.watchers.conflict.with.on.save.actions.check.performed&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/angrandy&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultGoTemplateProperty": "Go File",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.go.format.on.save.advertiser.fired": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
+    "RunOnceActivity.go.watchers.conflict.with.on.save.actions.check.performed": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "go.import.settings.migrated": "true",
+    "last_opened_file_path": "/Users/alex-nodereal/GolandProjects/gnfd-go-sdk/keys"
   }
-}</component>
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/keys" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/types" />
+      <recent name="$PROJECT_DIR$/client/grpc" />
+      <recent name="$PROJECT_DIR$/client" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Go Test.TestBroadcastTx in github.com/bnb-chain/gnfd-go-sdk/client/grpc">
+    <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
+      <module name="gnfd-go-sdk" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/randyahx/inscription-go-sdk" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestBroadcastTx in github.com/bnb-chain/gnfd-go-sdk/client/grpc" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="gnfd-go-sdk" />
+      <working_directory value="$PROJECT_DIR$/client/grpc" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/bnb-chain/gnfd-go-sdk/client/grpc" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestBroadcastTx\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestCreateKeyManagerFromKeyStore in github.com/bnb-chain/gnfd-go-sdk/keys" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="gnfd-go-sdk" />
+      <working_directory value="$PROJECT_DIR$/keys" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/bnb-chain/gnfd-go-sdk/keys" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestCreateKeyManagerFromKeyStore\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestCreateKeyManagerFromMnemonic in github.com/bnb-chain/gnfd-go-sdk/keys" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="gnfd-go-sdk" />
+      <working_directory value="$PROJECT_DIR$/keys" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/bnb-chain/gnfd-go-sdk/keys" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestCreateKeyManagerFromMnemonic\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestCreateKeyManagerFromPrivateKeyHex in github.com/bnb-chain/gnfd-go-sdk/keys" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="gnfd-go-sdk" />
+      <working_directory value="$PROJECT_DIR$/keys" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/bnb-chain/gnfd-go-sdk/keys" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestCreateKeyManagerFromPrivateKeyHex\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestRecoveryFromKeyBaseNoError in github.com/bnb-chain/gnfd-go-sdk/keys" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="gnfd-go-sdk" />
+      <working_directory value="$PROJECT_DIR$/keys" />
+      <root_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/bnb-chain/gnfd-go-sdk/keys" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <pattern value="^\QTestRecoveryFromKeyBaseNoError\E$" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
+      <module name="gnfd-go-sdk" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="DIRECTORY" />
+      <package value="github.com/randyahx/inscription-go-sdk" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Go Test.TestBroadcastTx in github.com/bnb-chain/gnfd-go-sdk/client/grpc" />
+        <item itemvalue="Go Test.TestCreateKeyManagerFromMnemonic in github.com/bnb-chain/gnfd-go-sdk/keys" />
+        <item itemvalue="Go Test.TestCreateKeyManagerFromPrivateKeyHex in github.com/bnb-chain/gnfd-go-sdk/keys" />
+        <item itemvalue="Go Test.TestCreateKeyManagerFromKeyStore in github.com/bnb-chain/gnfd-go-sdk/keys" />
+        <item itemvalue="Go Test.TestRecoveryFromKeyBaseNoError in github.com/bnb-chain/gnfd-go-sdk/keys" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
@@ -58,5 +187,16 @@
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/keys/keystore.go</url>
+          <line>45</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

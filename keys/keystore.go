@@ -1,123 +1,127 @@
 package keys
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/crypto"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/crypto/types"
+	"golang.org/x/crypto/pbkdf2"
+	"golang.org/x/crypto/sha3"
 )
 
-type keystore struct {
-	db      keyring.Keyring
-	cdc     codec.Codec
-	backend string
-	options keyring.Options
+var (
+	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+)
+
+type PlainKeyJSON struct {
+	Address    string `json:"address"`
+	PrivateKey string `json:"privatekey"`
+	Id         string `json:"id"`
+	Version    int    `json:"version"`
 }
 
-func newKeystore(kr keyring.Keyring, cdc codec.Codec, backend string, opts ...keyring.Option) keystore {
-	// Default options for keybase, these can be overwritten using the
-	// Option function
-	options := keyring.Options{
-		SupportedAlgos:       keyring.SigningAlgoList{hd.Secp256k1},
-		SupportedAlgosLedger: keyring.SigningAlgoList{hd.Secp256k1},
-	}
-
-	for _, optionFn := range opts {
-		optionFn(&options)
-	}
-
-	return keystore{
-		db:      kr,
-		cdc:     cdc,
-		backend: backend,
-		options: options,
-	}
+type EncryptedKeyJSON struct {
+	Address string     `json:"address"`
+	Crypto  CryptoJSON `json:"crypto"`
+	Id      string     `json:"id"`
+	Version int        `json:"version"`
+}
+type CryptoJSON struct {
+	Cipher       string                 `json:"cipher"`
+	CipherText   string                 `json:"ciphertext"`
+	CipherParams cipherparamsJSON       `json:"cipherparams"`
+	KDF          string                 `json:"kdf"`
+	KDFParams    map[string]interface{} `json:"kdfparams"`
+	MAC          string                 `json:"mac"`
 }
 
-func (ks keystore) ImportPrivKey(uid, armor, passphrase string) error {
-	if k, err := ks.Key(uid); err == nil {
-		if uid == k.Name {
-			return fmt.Errorf("cannot overwrite key: %s", uid)
+type cipherparamsJSON struct {
+	IV string `json:"iv"`
+}
+
+func decryptKey(keyProtected *EncryptedKeyJSON, auth string) ([]byte, error) {
+	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
+	if err != nil {
+		return nil, err
+	}
+
+	iv, err := hex.DecodeString(keyProtected.Crypto.CipherParams.IV)
+	if err != nil {
+		return nil, err
+	}
+
+	cipherText, err := hex.DecodeString(keyProtected.Crypto.CipherText)
+	if err != nil {
+		return nil, err
+	}
+	derivedKey, err := getKDFKey(keyProtected.Crypto, auth)
+	if err != nil {
+		return nil, err
+	}
+
+	bufferValue := make([]byte, len(cipherText)+16)
+	copy(bufferValue[0:16], derivedKey[16:32])
+	copy(bufferValue[16:], cipherText[:])
+	hasher := sha3.NewLegacyKeccak512()
+	_, err = hasher.Write(bufferValue)
+	if err != nil {
+		return nil, err
+	}
+	calculatedMAC := hasher.Sum(nil)
+	if !bytes.Equal(calculatedMAC[:], mac) {
+		// to compatible previous sha256 algorithm
+		calculatedMAC256 := sha256.Sum256([]byte((bufferValue)))
+		if !bytes.Equal(calculatedMAC256[:], mac) {
+			return nil, ErrDecrypt
 		}
+		calculatedMAC = calculatedMAC256[:]
 	}
-
-	privKey, _, err := crypto.UnarmorDecryptPrivKey(armor, passphrase)
+	plainText, err := aesCTRXOR(derivedKey[:32], cipherText, iv)
 	if err != nil {
-		return errors.Wrap(err, "failed to decrypt private key")
+		return nil, err
 	}
-
-	_, err = ks.writeLocalKey(uid, privKey)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return plainText, err
 }
 
-func (ks keystore) ImportPubKey(uid string, armor string) error {
-	if _, err := ks.Key(uid); err == nil {
-		return fmt.Errorf("cannot overwrite key: %s", uid)
-	}
-
-	pubBytes, _, err := crypto.UnarmorPubKeyBytes(armor)
+func getKDFKey(cryptoJSON CryptoJSON, auth string) ([]byte, error) {
+	authArray := []byte(auth)
+	salt, err := hex.DecodeString(cryptoJSON.KDFParams["salt"].(string))
 	if err != nil {
-		return err
+		return nil, err
 	}
+	dkLen := ensureInt(cryptoJSON.KDFParams["dklen"])
 
-	var pubKey types.PubKey
-	if err := ks.cdc.UnmarshalInterface(pubBytes, &pubKey); err != nil {
-		return err
+	if cryptoJSON.KDF == "pbkdf2" {
+		c := ensureInt(cryptoJSON.KDFParams["c"])
+		prf := cryptoJSON.KDFParams["prf"].(string)
+		if prf != "hmac-sha256" {
+			return nil, fmt.Errorf("Unsupported PBKDF2 PRF: %s", prf)
+		}
+		key := pbkdf2.Key(authArray, salt, c, dkLen, sha256.New)
+		return key, nil
 	}
-
-	_, err = ks.writeOfflineKey(uid, pubKey)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return nil, fmt.Errorf("Unsupported KDF: %s", cryptoJSON.KDF)
 }
 
-func (ks keystore) Sign(uid string, msg []byte) ([]byte, types.PubKey, error) {
-	k, err := ks.Key(uid)
-	if err != nil {
-		return nil, nil, err
+func ensureInt(x interface{}) int {
+	res, ok := x.(int)
+	if !ok {
+		res = int(x.(float64))
 	}
-
-	switch {
-	case k.GetLocal() != nil:
-		priv, err := extractPrivKeyFromLocal(k.GetLocal())
-		if err != nil {
-			return nil, nil, err
-		}
-
-		sig, err := priv.Sign(msg)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return sig, priv.PubKey(), nil
-
-	case k.GetLedger() != nil:
-		return SignWithLedger(k, msg)
-
-		// multi or offline record
-	default:
-		pub, err := k.GetPubKey()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return nil, pub, errors.New("cannot sign with offline keys")
-	}
+	return res
 }
 
-func (ks keystore) SignByAddress(address sdk.Address, msg []byte) ([]byte, types.PubKey, error) {
-	k, err := ks.KeyByAddress(address)
+func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
+	// AES-128 is selected due to size of encryptKey.
+	aesBlock, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	return ks.Sign(k.Name, msg)
+	stream := cipher.NewCTR(aesBlock, iv)
+	outText := make([]byte, len(inText))
+	stream.XORKeyStream(outText, inText)
+	return outText, err
 }
