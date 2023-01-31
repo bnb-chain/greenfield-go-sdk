@@ -1,4 +1,4 @@
-module github.com/randyahx/inscription-go-sdk
+module github.com/bnb-chain/gnfd-go-sdk
 
 go 1.17
 
