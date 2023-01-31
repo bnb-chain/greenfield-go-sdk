@@ -4,24 +4,18 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3dcc5755-9cda-4783-ab16-bbda56974f97" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/client/grpc/account.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/grpc/tx.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/grpc/tx_test.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/rpc/rpc_client.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/keys/key_manager_test.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/keys/test_keystore.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/types/address.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/types/codec.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/types/type.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+    <list default="true" id="3dcc5755-9cda-4783-ab16-bbda56974f97" name="Changes" comment="develop keyManager and broadcast tx">
+      <change afterPath="$PROJECT_DIR$/client/grpc/bank.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client/grpc/bank_test.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/common/coins.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/types/errors.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/util/validator.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/client.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/grpc/client.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/keys/ethsecp256k1/ethsecp256k1.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/keys/key_manager.go" beforeDir="false" afterPath="$PROJECT_DIR$/keys/key_manager.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/keys/keystore.go" beforeDir="false" afterPath="$PROJECT_DIR$/keys/keystore.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/grpc/account.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/grpc/account.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/grpc/tx.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/grpc/tx.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/grpc/tx_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/client/grpc/tx_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/types/codec.go" beforeDir="false" afterPath="$PROJECT_DIR$/types/codec.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/types/type.go" beforeDir="false" afterPath="$PROJECT_DIR$/types/type.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,20 +61,22 @@
     "RunOnceActivity.go.watchers.conflict.with.on.save.actions.check.performed": "true",
     "WebServerToolWindowFactoryState": "false",
     "go.import.settings.migrated": "true",
-    "last_opened_file_path": "/Users/alex-nodereal/GolandProjects/gnfd-go-sdk/keys"
+    "last_opened_file_path": "/Users/alex-nodereal/GolandProjects/gnfd-go-sdk/client/grpc"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/client/grpc" />
       <recent name="$PROJECT_DIR$/keys" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/types" />
       <recent name="$PROJECT_DIR$/client/grpc" />
+      <recent name="$PROJECT_DIR$/client/grpc/tx" />
+      <recent name="$PROJECT_DIR$/types" />
       <recent name="$PROJECT_DIR$/client" />
     </key>
   </component>
-  <component name="RunManager" selected="Go Test.TestBroadcastTx in github.com/bnb-chain/gnfd-go-sdk/client/grpc">
+  <component name="RunManager" selected="Go Test.TestSendToken in github.com/bnb-chain/gnfd-go-sdk/client/grpc">
     <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <module name="gnfd-go-sdk" />
       <working_directory value="$PROJECT_DIR$" />
@@ -138,16 +134,16 @@
       <pattern value="^\QTestCreateKeyManagerFromPrivateKeyHex\E$" />
       <method v="2" />
     </configuration>
-    <configuration name="TestRecoveryFromKeyBaseNoError in github.com/bnb-chain/gnfd-go-sdk/keys" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+    <configuration name="TestSendToken in github.com/bnb-chain/gnfd-go-sdk/client/grpc" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
       <module name="gnfd-go-sdk" />
-      <working_directory value="$PROJECT_DIR$/keys" />
+      <working_directory value="$PROJECT_DIR$/client/grpc" />
       <root_directory value="$PROJECT_DIR$" />
       <kind value="PACKAGE" />
-      <package value="github.com/bnb-chain/gnfd-go-sdk/keys" />
+      <package value="github.com/bnb-chain/gnfd-go-sdk/client/grpc" />
       <directory value="$PROJECT_DIR$" />
       <filePath value="$PROJECT_DIR$" />
       <framework value="gotest" />
-      <pattern value="^\QTestRecoveryFromKeyBaseNoError\E$" />
+      <pattern value="^\QTestSendToken\E$" />
       <method v="2" />
     </configuration>
     <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
@@ -162,11 +158,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Go Test.TestSendToken in github.com/bnb-chain/gnfd-go-sdk/client/grpc" />
         <item itemvalue="Go Test.TestBroadcastTx in github.com/bnb-chain/gnfd-go-sdk/client/grpc" />
         <item itemvalue="Go Test.TestCreateKeyManagerFromMnemonic in github.com/bnb-chain/gnfd-go-sdk/keys" />
         <item itemvalue="Go Test.TestCreateKeyManagerFromPrivateKeyHex in github.com/bnb-chain/gnfd-go-sdk/keys" />
         <item itemvalue="Go Test.TestCreateKeyManagerFromKeyStore in github.com/bnb-chain/gnfd-go-sdk/keys" />
-        <item itemvalue="Go Test.TestRecoveryFromKeyBaseNoError in github.com/bnb-chain/gnfd-go-sdk/keys" />
       </list>
     </recent_temporary>
   </component>
@@ -184,6 +180,10 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="develop keyManager and broadcast tx" />
+    <option name="LAST_COMMIT_MESSAGE" value="develop keyManager and broadcast tx" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>

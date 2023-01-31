@@ -2,7 +2,6 @@ package client
 
 import (
 	"github.com/bnb-chain/gnfd-go-sdk/keys"
-	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"testing"
@@ -19,13 +18,13 @@ func TestBroadcastTx(t *testing.T) {
 		return
 	}
 
-	msg1 := banktypes.NewMsgSend(km.GetAddr(), to, types.NewCoins(types.NewInt64Coin("bnb", 12)))
+	msg1 := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("bnb", 12)))
 
 	msgs := []sdk.Msg{msg1}
 
-	tx, err := gnfdCli.BroadcastTx(msgs)
+	tx, err := gnfdCli.BroadcastTx(true, msgs...)
 	if err != nil {
 		println(err.Error())
 	}
-	println(tx)
+	println(tx.TxHash)
 }
