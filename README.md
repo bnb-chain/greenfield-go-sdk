@@ -1,11 +1,11 @@
 # Greenfield Go SDK 
 
-The Greenfield GO SDK provides a thin wrapper for interacting with `greenfield` in 2 way:
+The `Greenfield-GO-SDK` provides a thin wrapper for interacting with `greenfield` in two ways:
 
-1. Interact using `tendermint` RPC client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
-2. interact using `gnfd-cosmos-sdk` GRPC clients, this includes querying accounts, chain info and transaction sending. 
+1. Interact using `gnfd-tendermint` RPC client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
+2. Interact using `gnfd-cosmos-sdk` GRPC clients, this includes querying accounts, chain info and broadcasting transaction. 
 
-## Usageddd
+## Usage
 
 ### Importing
 
@@ -18,19 +18,19 @@ import (
 ### Key Manager
 
 Key Manager is needed to sign the transaction msg or verify signature. Key Manager is an Identity Manager to define who 
-you are in the greenfield. It provide following interface:
-s
+you are in the greenfield. It provides following interface:
+
 ```go
 type KeyManager interface {
 
-    Sign(b []byte) ([]byte, error)
+    Sign(signByte []byte) ([]byte, error)
     GetPrivKey() ctypes.PrivKey
     GetAddr() types.AccAddress
 
 }
 ```
 
-We provide four construct functions to generate Key Manager:
+We provide three construct functions to generate the Key Manager:
 ```go
 NewPrivateKeyManager(priKey string) (KeyManager, error)
 
@@ -46,8 +46,8 @@ Examples:
 
 From private key hex string:
 ```GO
-priv := "9579fff0cab07a4379e845a890105004ba4c8276f8ad9d22082b2acbf02d884b"
-keyManager, err := NewPrivateKeyManager(priv)
+privateKey := "9579fff0cab07a4379e845a890105004ba4c8276f8ad9d22082b2acbf02d884b"
+keyManager, err := NewPrivateKeyManager(privateKey)
 ```
 
 From mnemonic:
@@ -66,27 +66,35 @@ keyManager, err := NewKeyStoreKeyManager(file, "your password")
 #### Init client without key manager, you should use it only for query purpose.
 
 ```go
-	client := NewGreenlandClient("localhost:9090", "greenfield_9000-121")
+client := NewGreenlandClient("localhost:9090", "greenfield_9000-121")
 ```
 
-#### Init client with key manager, you should use it only for query purpose.
+#### Init client with key manager, for signing and sending tx
 
 ```go
-    keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
-	
-    client := NewGreenlandClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
+keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
+
+client := NewGreenlandClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
 ```
 
-#### Send txs
+####  Token transfer
 
 
 ```go
-    keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
+keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
 
-    client := NewGreenlandClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
-    
-    sendTokenReq := types.SendTokenRequest{"bnb", 10, "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9"}
-	
-    txResponse , err = gnfdCli.SendToken(sendTokenReq, true)
+client := NewGreenlandClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
+
+sendTokenReq := types.SendTokenRequest{"bnb", 10, "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9"}
+
+txResponse, err := client.SendToken(sendTokenReq, true)
 	
 ```
+
+#### Broadcast TX
+
+A generic method `BroadcastTx` is provided to give you the flexibility to broadcast different types of transaction. 
+```go
+BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
+```
+before using it, you need to construct the appropriate type of `Msg`, refer to `gnfd-cosmos-sdk` for msg types supported

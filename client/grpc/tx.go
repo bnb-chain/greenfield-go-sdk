@@ -13,8 +13,8 @@ import (
 )
 
 type TransactionClient interface {
-	BroadcastTx(sync bool, msgs ...sdk.Msg) (*types.TxBroadcastResponse, error)
-	SendToken(req types.SendTokenRequest, sync bool) (*types.TxBroadcastResponse, error)
+	BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
+	SendToken(req types.SendTokenRequest, sync bool, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
 }
 
 func (c *GreenfieldClient) BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error) {
