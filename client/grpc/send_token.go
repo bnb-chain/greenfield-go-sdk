@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (c *GreenfieldClient) SendToken(req types.SendTokenRequest, sync bool, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error) {
+func (c *GreenfieldClient) SendToken(req types.SendTokenRequest, txOpt *types.TxOption, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error) {
 	if err := util.ValidateToken(req.Token); err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func (c *GreenfieldClient) SendToken(req types.SendTokenRequest, sync bool, opts
 		return nil, err
 	}
 	transferMsg := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin(req.Token, req.Amount)))
-	res, err := c.BroadcastTx(sync, []sdk.Msg{transferMsg}, opts...)
+	res, err := c.BroadcastTx([]sdk.Msg{transferMsg}, txOpt, opts...)
 	if err != nil {
 		return nil, err
 	}

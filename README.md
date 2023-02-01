@@ -95,6 +95,21 @@ txResponse, err := client.SendToken(sendTokenReq, true)
 
 A generic method `BroadcastTx` is provided to give you the flexibility to broadcast different types of transaction. 
 ```go
-BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
+BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
 ```
+
+`txOpt` is optional, which is provided to customize your transaction. When it is not provided, default `GasLimit` would 
+be used and broadcasting tx in `sync` mode
+
+```go
+type TxOption struct {
+Async     bool // default sync mode if not provided
+GasLimit  uint64
+Memo      string
+FeeAmount sdk.Coins
+FeePayer  sdk.AccAddress
+}
+```
+
+
 before using it, you need to construct the appropriate type of `Msg`, refer to `gnfd-cosmos-sdk` for msg types supported

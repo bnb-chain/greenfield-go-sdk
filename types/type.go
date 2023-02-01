@@ -1,5 +1,13 @@
 package types
 
+import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+)
+
+const (
+	DefaultGasLimit = uint64(210000)
+)
+
 type SendTokenRequest struct {
 	Token     string
 	Amount    int64
@@ -13,4 +21,12 @@ type TxBroadcastResponse struct {
 	TxHash string `json:"txHash"`
 	Code   uint32 `json:"code"`
 	Data   string `json:"data"`
+}
+
+type TxOption struct {
+	Async     bool // default sync mode if not provided
+	GasLimit  uint64
+	Memo      string
+	FeeAmount sdk.Coins
+	FeePayer  sdk.AccAddress
 }

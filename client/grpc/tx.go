@@ -13,11 +13,11 @@ import (
 )
 
 type TransactionClient interface {
-	BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
-	SendToken(req types.SendTokenRequest, sync bool, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
+	BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
+	SendToken(req types.SendTokenRequest, txOpt *types.TxOption, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
 }
 
-func (c *GreenfieldClient) BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error) {
+func (c *GreenfieldClient) BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error) {
 
 	txConfig := authtx.NewTxConfig(types.Cdc(), authtx.DefaultSignModes)
 	txBuilder := txConfig.NewTxBuilder()
@@ -27,8 +27,26 @@ func (c *GreenfieldClient) BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.C
 		return nil, err
 	}
 
-	// TODO passed from user?
-	txBuilder.SetGasLimit(210000)
+	txBuilder.SetGasLimit(types.DefaultGasLimit)
+	mode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+
+	if txOpt != nil {
+		if txOpt.Async {
+			mode = tx.BroadcastMode_BROADCAST_MODE_ASYNC
+		}
+		if txOpt.GasLimit != 0 {
+			txBuilder.SetGasLimit(txOpt.GasLimit)
+		}
+		if txOpt.Memo != "" {
+			txBuilder.SetMemo(txOpt.Memo)
+		}
+		if !txOpt.FeeAmount.IsZero() {
+			txBuilder.SetFeeAmount(txOpt.FeeAmount)
+		}
+		if !txOpt.FeePayer.Empty() {
+			txBuilder.SetFeePayer(txOpt.FeePayer)
+		}
+	}
 
 	km, err := c.GetKeyManager()
 	if err != nil {
@@ -85,11 +103,7 @@ func (c *GreenfieldClient) BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.C
 	if err != nil {
 		return nil, err
 	}
-	// Broadcast transaction
-	mode := tx.BroadcastMode_BROADCAST_MODE_ASYNC
-	if sync {
-		mode = tx.BroadcastMode_BROADCAST_MODE_SYNC
-	}
+
 	txRes, err := c.TxClient.BroadcastTx(
 		context.Background(),
 		&tx.BroadcastTxRequest{
