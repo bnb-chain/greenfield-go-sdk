@@ -26,6 +26,7 @@ func (c *GreenfieldClient) BroadcastTx(sync bool, msgs ...sdk.Msg) (*types.TxBro
 		return nil, err
 	}
 
+	//TODO passed from user?
 	txBuilder.SetGasLimit(210000)
 
 	address := c.keyManager.GetAddr().String()
