@@ -17,6 +17,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 //
@@ -87,7 +88,10 @@ type GreenfieldClient struct {
 }
 
 func grpcConn(addr string) *grpc.ClientConn {
-	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -127,4 +131,11 @@ func NewGreenlandClientWithKeyManager(grpcAddr, chainId string, keyManager keys.
 	gnfdClient := NewGreenlandClient(grpcAddr, chainId)
 	gnfdClient.keyManager = keyManager
 	return gnfdClient
+}
+
+func (c *GreenfieldClient) GetKeyManager() (keys.KeyManager, error) {
+	if c.keyManager == nil {
+		return nil, types.KeyManagerNotInitError
+	}
+	return c.keyManager, nil
 }

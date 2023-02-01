@@ -1,18 +1,12 @@
 package types
 
-type TxResult struct {
-	Hash string `json:"hash"`
-	Log  string `json:"log"`
-	Data string `json:"data"`
-	Code int32  `json:"code"`
-}
-
 type SendTokenRequest struct {
 	Token     string
 	Amount    int64
 	ToAddress string
 }
 
+// TxBroadcastResponse Generic tx response
 type TxBroadcastResponse struct {
 	Ok     bool   `json:"ok"`
 	Log    string `json:"log"`

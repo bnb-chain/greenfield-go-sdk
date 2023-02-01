@@ -2,14 +2,12 @@ package keys
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	ctypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 	ethHd "github.com/evmos/ethermint/crypto/hd"
 
-	"io/ioutil"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/types"
@@ -22,7 +20,7 @@ const (
 )
 
 type KeyManager interface {
-	Sign(b []byte) ([]byte, error)
+	Sign(signBytes []byte) ([]byte, error)
 	GetPrivKey() ctypes.PrivKey
 	GetAddr() types.AccAddress
 }
@@ -45,11 +43,7 @@ func NewMnemonicKeyManager(mnemonic string) (KeyManager, error) {
 	return &k, err
 }
 
-func NewKeyStoreKeyManager(file string, auth string) (KeyManager, error) {
-	k := keyManager{}
-	err := k.recoveryFromKeyStore(file, auth)
-	return &k, err
-}
+// NewKeyStoreKeyManager TODO to be implemented
 
 func (m *keyManager) recoveryFromPrivateKey(privateKey string) error {
 	priBytes, err := hex.DecodeString(privateKey)
@@ -86,41 +80,9 @@ func (m *keyManager) recoveryFromMnemonic(mnemonic, keyPath string) error {
 	}
 	priKey := ethHd.EthSecp256k1.Generate()(derivedPriv[:]).(*ethsecp256k1.PrivKey)
 	addr := types.AccAddress(priKey.PubKey().Address())
-	if err != nil {
-		return err
-	}
 	m.addr = addr
 	m.privKey = priKey
 	m.mnemonic = mnemonic
-	return nil
-}
-
-func (m *keyManager) recoveryFromKeyStore(keystoreFile string, auth string) error {
-	if auth == "" {
-		return fmt.Errorf("Password is missing ")
-	}
-	keyJson, err := ioutil.ReadFile(keystoreFile)
-	if err != nil {
-		return err
-	}
-	var encryptedKey EncryptedKeyJSON
-	err = json.Unmarshal(keyJson, &encryptedKey)
-	if err != nil {
-		return err
-	}
-	keyBytes, err := decryptKey(&encryptedKey, auth)
-	if err != nil {
-		return err
-	}
-	if len(keyBytes) != 32 {
-		return fmt.Errorf("Len of Keybytes is not equal to 32 ")
-	}
-	var keyBytesArray [32]byte
-	copy(keyBytesArray[:], keyBytes[:32])
-	priKey := ethHd.EthSecp256k1.Generate()(keyBytesArray[:]).(*ethsecp256k1.PrivKey)
-	addr := types.AccAddress(priKey.PubKey().Address())
-	m.addr = addr
-	m.privKey = priKey
 	return nil
 }
 

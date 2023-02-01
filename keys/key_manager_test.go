@@ -27,14 +27,3 @@ func TestCreateKeyManagerFromMnemonic(t *testing.T) {
 	assert.Equal(t, "ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf", hex.EncodeToString(key.Bytes()))
 
 }
-
-func TestCreateKeyManagerFromKeyStore(t *testing.T) {
-	file := "test_keystore.json"
-	planText := []byte("Test")
-	keyManager, err := NewKeyStoreKeyManager(file, "password")
-	assert.NoError(t, err)
-	sigs, err := keyManager.GetPrivKey().Sign(planText)
-	assert.NoError(t, err)
-	valid := keyManager.GetPrivKey().PubKey().VerifySignature(planText, sigs)
-	assert.True(t, valid)
-}

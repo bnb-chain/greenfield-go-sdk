@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"github.com/bnb-chain/gnfd-go-sdk/types"
 	clitx "github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,13 +9,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	xauthsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"google.golang.org/grpc"
 )
 
-// TODO enable passing calloption when BroadcastTx
-func (c *GreenfieldClient) BroadcastTx(sync bool, msgs ...sdk.Msg) (*types.TxBroadcastResponse, error) {
-	if c.keyManager == nil {
-		return nil, errors.New("please use the client with key manager to support sending transaction")
-	}
+type TransactionClient interface {
+	BroadcastTx(sync bool, msgs ...sdk.Msg) (*types.TxBroadcastResponse, error)
+	SendToken(req types.SendTokenRequest, sync bool) (*types.TxBroadcastResponse, error)
+}
+
+func (c *GreenfieldClient) BroadcastTx(sync bool, msgs []sdk.Msg, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error) {
 
 	txConfig := authtx.NewTxConfig(types.Cdc(), authtx.DefaultSignModes)
 	txBuilder := txConfig.NewTxBuilder()
@@ -26,10 +27,15 @@ func (c *GreenfieldClient) BroadcastTx(sync bool, msgs ...sdk.Msg) (*types.TxBro
 		return nil, err
 	}
 
-	//TODO passed from user?
+	// TODO passed from user?
 	txBuilder.SetGasLimit(210000)
 
-	address := c.keyManager.GetAddr().String()
+	km, err := c.GetKeyManager()
+	if err != nil {
+		return nil, err
+	}
+
+	address := km.GetAddr().String()
 	account, err := c.Account(address)
 	if err != nil {
 		return nil, err
@@ -38,7 +44,7 @@ func (c *GreenfieldClient) BroadcastTx(sync bool, msgs ...sdk.Msg) (*types.TxBro
 	accountSeq := account.GetSequence()
 
 	sig := signing.SignatureV2{
-		PubKey: c.keyManager.GetPrivKey().PubKey(),
+		PubKey: km.GetPrivKey().PubKey(),
 		Data: &signing.SingleSignatureData{
 			SignMode:  signing.SignMode_SIGN_MODE_EIP_712,
 			Signature: nil,
@@ -62,7 +68,7 @@ func (c *GreenfieldClient) BroadcastTx(sync bool, msgs ...sdk.Msg) (*types.TxBro
 	sig, err = clitx.SignWithPrivKey(signing.SignMode_SIGN_MODE_EIP_712,
 		signerData,
 		txBuilder,
-		c.keyManager.GetPrivKey(),
+		km.GetPrivKey(),
 		txConfig,
 		accountSeq,
 	)
@@ -89,7 +95,9 @@ func (c *GreenfieldClient) BroadcastTx(sync bool, msgs ...sdk.Msg) (*types.TxBro
 		&tx.BroadcastTxRequest{
 			Mode:    mode,
 			TxBytes: txBytes,
-		})
+		},
+		opts...)
+
 	if err != nil {
 		return nil, err
 	}
