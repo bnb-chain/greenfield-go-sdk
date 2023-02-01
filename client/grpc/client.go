@@ -20,28 +20,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-//
-//type GreenfieldClient struct {
-//	upgradetypes.QueryClient
-//	distrtypes.MsgClient
-//	slashingtypes.QueryClient
-//	slashingtypes.MsgClient
-//	stakingtypes.QueryClient
-//	stakingtypes.MsgClient
-//	authtypes.QueryClient
-//	banktypes.QueryClient
-//	banktypes.MsgClient
-//	v1beta1.QueryClient
-//	v1beta1.MsgClient
-//	authztypes.QueryClient
-//	authztypes.MsgClient
-//	feegranttypes.QueryClient
-//	feegranttypes.MsgClient
-//	paramstypes.QueryClient
-//	gnfdtypes.QueryClient
-//	gnfdtypes.MsgClient
-//}
-
 type UpgradeQueryClient = upgradetypes.QueryClient
 type DistrQueryClient = distrtypes.QueryClient
 type DistrMsgClient = distrtypes.MsgClient
