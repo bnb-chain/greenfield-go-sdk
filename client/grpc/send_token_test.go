@@ -15,7 +15,7 @@ var (
 func TestSendTokenSucceed(t *testing.T) {
 	km, err := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
 	assert.NoError(t, err)
-	gnfdCli := NewGreenlandClientWithKeyManager(GrpcConn, ChainId, km)
+	gnfdCli := NewGreenfieldClientWithKeyManager(GrpcConn, ChainId, km)
 
 	sendTokenReq := types.SendTokenRequest{
 		Token:     "bnb",
@@ -31,7 +31,7 @@ func TestSendTokenSucceed(t *testing.T) {
 func TestSendTokenWithTxOptionSucceed(t *testing.T) {
 	km, err := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
 	assert.NoError(t, err)
-	gnfdCli := NewGreenlandClientWithKeyManager(GrpcConn, ChainId, km)
+	gnfdCli := NewGreenfieldClientWithKeyManager(GrpcConn, ChainId, km)
 
 	sendTokenReq := types.SendTokenRequest{
 		Token:     "bnb",
@@ -50,7 +50,7 @@ func TestSendTokenWithTxOptionSucceed(t *testing.T) {
 }
 
 func TestSendTokenFailedWithoutInitKeyManager(t *testing.T) {
-	gnfdCli := NewGreenlandClient(GrpcConn, ChainId)
+	gnfdCli := NewGreenfieldClient(GrpcConn, ChainId)
 	sendTokenReq := types.SendTokenRequest{
 		Token:     "bnb",
 		Amount:    10,

@@ -66,7 +66,7 @@ keyManager, err := NewKeyStoreKeyManager(file, "your password")
 #### Init client without key manager, you should use it only for query purpose.
 
 ```go
-client := NewGreenlandClient("localhost:9090", "greenfield_9000-121")
+client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
 ```
 
 #### Init client with key manager, for signing and sending tx
@@ -74,7 +74,7 @@ client := NewGreenlandClient("localhost:9090", "greenfield_9000-121")
 ```go
 keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
 
-client := NewGreenlandClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
+client := NewGreenfieldClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
 ```
 
 ####  Token transfer
@@ -83,7 +83,7 @@ client := NewGreenlandClientWithKeyManager("localhost:9090", "greenfield_9000-12
 ```go
 keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
 
-client := NewGreenlandClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
+client := NewGreenfieldClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
 
 sendTokenReq := types.SendTokenRequest{"bnb", 10, "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9"}
 

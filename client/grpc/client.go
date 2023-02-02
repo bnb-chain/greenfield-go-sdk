@@ -76,7 +76,7 @@ func grpcConn(addr string) *grpc.ClientConn {
 	return conn
 }
 
-func NewGreenlandClient(grpcAddr, chainId string) GreenfieldClient {
+func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 	types.SetChainId(chainId)
 	conn := grpcConn(grpcAddr)
 
@@ -105,8 +105,8 @@ func NewGreenlandClient(grpcAddr, chainId string) GreenfieldClient {
 	}
 }
 
-func NewGreenlandClientWithKeyManager(grpcAddr, chainId string, keyManager keys.KeyManager) GreenfieldClient {
-	gnfdClient := NewGreenlandClient(grpcAddr, chainId)
+func NewGreenfieldClientWithKeyManager(grpcAddr, chainId string, keyManager keys.KeyManager) GreenfieldClient {
+	gnfdClient := NewGreenfieldClient(grpcAddr, chainId)
 	gnfdClient.keyManager = keyManager
 	return gnfdClient
 }
