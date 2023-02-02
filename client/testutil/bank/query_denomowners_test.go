@@ -20,7 +20,5 @@ func TestBankDenomOwners(t *testing.T) {
 	res, err := client.BankQueryClient.DenomOwners(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.DenomOwners)
-	println(res.GetDenomOwners())
 	println(res.String())
 }

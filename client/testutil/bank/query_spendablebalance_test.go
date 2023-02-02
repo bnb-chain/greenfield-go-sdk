@@ -20,5 +20,5 @@ func TestBankSpendableBalance(t *testing.T) {
 	res, err := client.BankQueryClient.SpendableBalances(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.Balances.String())
+	println(res.GetBalances().String())
 }

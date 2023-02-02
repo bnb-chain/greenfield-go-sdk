@@ -18,7 +18,5 @@ func TestBankParams(t *testing.T) {
 	res, err := client.BankQueryClient.Params(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.Params)
-	println(res.GetParams())
 	println(res.String())
 }

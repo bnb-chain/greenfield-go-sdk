@@ -18,7 +18,5 @@ func TestBankDenomsMetadata(t *testing.T) {
 	res, err := client.BankQueryClient.DenomsMetadata(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.Metadatas)
-	println(res.GetMetadatas())
 	println(res.String())
 }

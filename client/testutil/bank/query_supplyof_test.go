@@ -20,7 +20,5 @@ func TestBankSupplyOf(t *testing.T) {
 	res, err := client.BankQueryClient.SupplyOf(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.Amount.String())
-	println(res.GetAmount().String())
 	println(res.String())
 }
