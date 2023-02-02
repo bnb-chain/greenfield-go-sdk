@@ -63,6 +63,7 @@ type GreenfieldClient struct {
 	BfsQueryClient
 	BfsMsgClient
 	keyManager keys.KeyManager
+	chainId    string
 }
 
 func grpcConn(addr string) *grpc.ClientConn {
@@ -77,7 +78,6 @@ func grpcConn(addr string) *grpc.ClientConn {
 }
 
 func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
-	types.SetChainId(chainId)
 	conn := grpcConn(grpcAddr)
 
 	return GreenfieldClient{
@@ -102,6 +102,7 @@ func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 		gnfdtypes.NewQueryClient(conn),
 		gnfdtypes.NewMsgClient(conn),
 		nil,
+		chainId,
 	}
 }
 
@@ -116,4 +117,15 @@ func (c *GreenfieldClient) GetKeyManager() (keys.KeyManager, error) {
 		return nil, types.KeyManagerNotInitError
 	}
 	return c.keyManager, nil
+}
+
+func (c *GreenfieldClient) SetChainId(id string) {
+	c.chainId = id
+}
+
+func (c *GreenfieldClient) GetChainId() (string, error) {
+	if c.chainId == "" {
+		return "", types.ChainIdNotSetError
+	}
+	return c.chainId, nil
 }

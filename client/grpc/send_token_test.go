@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/bnb-chain/gnfd-go-sdk/client/testutil"
 	"github.com/bnb-chain/gnfd-go-sdk/keys"
 	"github.com/bnb-chain/gnfd-go-sdk/types"
 	"github.com/stretchr/testify/assert"
@@ -8,19 +9,20 @@ import (
 )
 
 var (
-	GrpcConn = "localhost:9090"
-	ChainId  = "greenfield_9000-121"
+	GrpcConn = testutil.TEST_GRPC_ADDR
+	ChainId  = testutil.TEST_CHAIN_ID
+	PrivKey  = testutil.TEST_PRIVATE_KEY
 )
 
 func TestSendTokenSucceed(t *testing.T) {
-	km, err := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
+	km, err := keys.NewPrivateKeyManager(PrivKey)
 	assert.NoError(t, err)
 	gnfdCli := NewGreenfieldClientWithKeyManager(GrpcConn, ChainId, km)
 
 	sendTokenReq := types.SendTokenRequest{
 		Token:     "bnb",
 		Amount:    10,
-		ToAddress: "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9",
+		ToAddress: testutil.TEST_ADDR,
 	}
 	response, err := gnfdCli.SendToken(sendTokenReq, nil)
 	assert.NoError(t, err)
@@ -29,14 +31,14 @@ func TestSendTokenSucceed(t *testing.T) {
 }
 
 func TestSendTokenWithTxOptionSucceed(t *testing.T) {
-	km, err := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
+	km, err := keys.NewPrivateKeyManager(PrivKey)
 	assert.NoError(t, err)
 	gnfdCli := NewGreenfieldClientWithKeyManager(GrpcConn, ChainId, km)
 
 	sendTokenReq := types.SendTokenRequest{
 		Token:     "bnb",
 		Amount:    10,
-		ToAddress: "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9",
+		ToAddress: testutil.TEST_ADDR,
 	}
 
 	txOpt := &types.TxOption{
@@ -54,7 +56,7 @@ func TestSendTokenFailedWithoutInitKeyManager(t *testing.T) {
 	sendTokenReq := types.SendTokenRequest{
 		Token:     "bnb",
 		Amount:    10,
-		ToAddress: "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9",
+		ToAddress: testutil.TEST_ADDR,
 	}
 	_, err := gnfdCli.SendToken(sendTokenReq, nil)
 	assert.Error(t, err)
