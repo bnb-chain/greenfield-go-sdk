@@ -85,10 +85,6 @@ func (m *keyManager) recoveryFromMnemonic(mnemonic, keyPath string) error {
 	return nil
 }
 
-func (m *keyManager) Sign(signBytes []byte) ([]byte, error) {
-	return m.privKey.Sign(signBytes)
-}
-
 func (m *keyManager) GetPrivKey() ctypes.PrivKey {
 	return m.privKey
 }
