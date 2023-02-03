@@ -2,7 +2,7 @@ package staking
 
 import (
 	"context"
-	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/grpc"
+	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/rpc"
 	"github.com/bnb-chain/gnfd-go-sdk/client/testutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -154,4 +154,3 @@ func TestStakingHistoricalInfo(t *testing.T) {
 
 	t.Log(res.String())
 }
-

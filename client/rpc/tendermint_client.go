@@ -6,8 +6,8 @@ import (
 	libclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 )
 
-type RPCClient struct {
-	RpcClient client.Client
+type TendermintClient struct {
+	TmClient client.Client
 }
 
 func httpClient(addr string) *chttp.HTTP {
@@ -22,8 +22,8 @@ func httpClient(addr string) *chttp.HTTP {
 	return cli
 }
 
-func NewRPCClient(addr string) RPCClient {
-	return RPCClient{
-		RpcClient: httpClient(addr),
+func NewRPCClient(addr string) TendermintClient {
+	return TendermintClient{
+		TmClient: httpClient(addr),
 	}
 }

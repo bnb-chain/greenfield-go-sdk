@@ -123,40 +123,5 @@ SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.
 SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
 ```
 
-#### Support msg type
-
-Currently below `sdk.Msg` type are supported.
-```go
-    MsgGrant  = authztypes.MsgGrant
-    MsgRevoke = authztypes.MsgRevoke
-    
-    MsgSend = banktypes.MsgSend
-    
-    MsgCreateValidator           = stakingtypes.MsgCreateValidator
-    MsgEditValidator             = stakingtypes.MsgEditValidator
-    MsgDelegate                  = stakingtypes.MsgDelegate
-    MsgBeginRedelegate           = stakingtypes.MsgBeginRedelegate
-    MsgUndelegate                = stakingtypes.MsgUndelegate
-    MsgCancelUnbondingDelegation = stakingtypes.MsgCancelUnbondingDelegation
-    
-    MsgSetWithdrawAddress          = distrtypes.MsgSetWithdrawAddress
-    MsgWithdrawDelegatorReward     = distrtypes.MsgWithdrawDelegatorReward
-    MsgWithdrawValidatorCommission = distrtypes.MsgWithdrawValidatorCommission
-    MsgFundCommunityPool           = distrtypes.MsgFundCommunityPool
-    
-    MsgSubmitProposal    = govv1.MsgSubmitProposal
-    MsgExecLegacyContent = govv1.MsgExecLegacyContent
-    MsgVote              = govv1.MsgVote
-    MsgDeposit           = govv1.MsgDeposit
-    MsgVoteWeighted      = govv1.MsgVoteWeighted
-    
-    MsgUnjail  = slashingtypes.MsgUnjail
-    MsgImpeach = slashingtypes.MsgImpeach
-    
-    MsgGrantAllowance  = feegranttypes.MsgGrantAllowance
-    MsgRevokeAllowance = feegranttypes.MsgRevokeAllowance
-    
-    MsgClaim = oracletypes.MsgClaim
-    
-    MsgTransferOut = bridgetypes.MsgTransferOut
-```
+#### Support transaction type
+Please refer to [msgTypes.go](./types/msgTypes.go) to see all types of `sdk.Msg` supported 

@@ -9,12 +9,12 @@ import (
 
 func TestGetABCIInfo(t *testing.T) {
 	client := NewRPCClient(testutil.TEST_RPC_ADDR)
-	_, err := client.RpcClient.ABCIInfo(context.Background())
+	_, err := client.TmClient.ABCIInfo(context.Background())
 	assert.NoError(t, err)
 }
 
 func TestGetStatus(t *testing.T) {
 	client := NewRPCClient(testutil.TEST_RPC_ADDR)
-	_, err := client.RpcClient.Status(context.Background())
+	_, err := client.TmClient.Status(context.Background())
 	assert.NoError(t, err)
 }
