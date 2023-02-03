@@ -72,9 +72,6 @@ func (s *IntegrationTestSuite) TestBalance() {
 		*bankRes.GetBalance(),
 	)
 
-	println(sdk.NewCoin(denom, s.network.Config.AccountTokens).String())
-	println(bankRes.GetBalance().String())
-	
 	blockHeight := header.Get(grpctypes.GRPCBlockHeightHeader)
 	s.Require().NotEmpty(blockHeight[0]) // Should contain the block height
 }

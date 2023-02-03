@@ -19,7 +19,7 @@ func TestStakingValidator(t *testing.T) {
 	res, err := client.StakingQueryClient.Validator(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingValidators(t *testing.T) {
@@ -31,7 +31,7 @@ func TestStakingValidators(t *testing.T) {
 	res, err := client.StakingQueryClient.Validators(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingDelagatorValidator(t *testing.T) {
@@ -44,7 +44,7 @@ func TestStakingDelagatorValidator(t *testing.T) {
 	res, err := client.StakingQueryClient.DelegatorValidator(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingDelagatorValidators(t *testing.T) {
@@ -56,7 +56,7 @@ func TestStakingDelagatorValidators(t *testing.T) {
 	res, err := client.StakingQueryClient.DelegatorValidators(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingUnbondingDelagation(t *testing.T) {
@@ -69,7 +69,7 @@ func TestStakingUnbondingDelagation(t *testing.T) {
 	res, err := client.StakingQueryClient.UnbondingDelegation(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingDelagatorDelegations(t *testing.T) {
@@ -81,7 +81,7 @@ func TestStakingDelagatorDelegations(t *testing.T) {
 	res, err := client.StakingQueryClient.DelegatorDelegations(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingValidatorDelegations(t *testing.T) {
@@ -93,7 +93,7 @@ func TestStakingValidatorDelegations(t *testing.T) {
 	res, err := client.StakingQueryClient.ValidatorDelegations(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingDelegatorUnbondingDelagation(t *testing.T) {
@@ -105,7 +105,7 @@ func TestStakingDelegatorUnbondingDelagation(t *testing.T) {
 	res, err := client.StakingQueryClient.DelegatorUnbondingDelegations(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 // TODO: Change delegator addr
@@ -120,7 +120,7 @@ func TestStaking(t *testing.T) {
 	res, err := client.StakingQueryClient.Redelegations(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingParams(t *testing.T) {
@@ -130,7 +130,7 @@ func TestStakingParams(t *testing.T) {
 	res, err := client.StakingQueryClient.Params(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingPool(t *testing.T) {
@@ -140,7 +140,7 @@ func TestStakingPool(t *testing.T) {
 	res, err := client.StakingQueryClient.Pool(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestStakingHistoricalInfo(t *testing.T) {
@@ -152,6 +152,6 @@ func TestStakingHistoricalInfo(t *testing.T) {
 	res, err := client.StakingQueryClient.HistoricalInfo(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 

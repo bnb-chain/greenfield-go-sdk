@@ -18,8 +18,8 @@ func TestBankBalance(t *testing.T) {
 	}
 	res, err := client.BankQueryClient.Balance(context.Background(), &query)
 	assert.NoError(t, err)
-
-	println(res.Balance.String())
+	
+	t.Log(res.Balance.String())
 }
 
 func TestBankAllBalances(t *testing.T) {
@@ -31,7 +31,7 @@ func TestBankAllBalances(t *testing.T) {
 	res, err := client.BankQueryClient.AllBalances(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.Balances.String())
+	t.Log(res.Balances.String())
 }
 
 func TestBankDenomMetadata(t *testing.T) {
@@ -43,7 +43,7 @@ func TestBankDenomMetadata(t *testing.T) {
 	res, err := client.BankQueryClient.DenomMetadata(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestBankDenomOwners(t *testing.T) {
@@ -55,7 +55,7 @@ func TestBankDenomOwners(t *testing.T) {
 	res, err := client.BankQueryClient.DenomOwners(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestBankDenomsMetadata(t *testing.T) {
@@ -65,7 +65,7 @@ func TestBankDenomsMetadata(t *testing.T) {
 	res, err := client.BankQueryClient.DenomsMetadata(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestBankParams(t *testing.T) {
@@ -75,7 +75,7 @@ func TestBankParams(t *testing.T) {
 	res, err := client.BankQueryClient.Params(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestBankSpendableBalance(t *testing.T) {
@@ -87,7 +87,7 @@ func TestBankSpendableBalance(t *testing.T) {
 	res, err := client.BankQueryClient.SpendableBalances(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.GetBalances().String())
+	t.Log(res.GetBalances().String())
 }
 
 func TestBankSupplyOf(t *testing.T) {
@@ -99,7 +99,7 @@ func TestBankSupplyOf(t *testing.T) {
 	res, err := client.BankQueryClient.SupplyOf(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.String())
+	t.Log(res.String())
 }
 
 func TestBankTotalSupply(t *testing.T) {
@@ -109,5 +109,5 @@ func TestBankTotalSupply(t *testing.T) {
 	res, err := client.BankQueryClient.TotalSupply(context.Background(), &query)
 	assert.NoError(t, err)
 
-	println(res.Supply.String())
+	t.Log(res.Supply.String())
 }
