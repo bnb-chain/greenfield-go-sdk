@@ -20,7 +20,6 @@ const (
 )
 
 type KeyManager interface {
-	Sign(signBytes []byte) ([]byte, error)
 	GetPrivKey() ctypes.PrivKey
 	GetAddr() types.AccAddress
 }

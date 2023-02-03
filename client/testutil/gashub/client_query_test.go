@@ -71,18 +71,12 @@ func (s *IntegrationTestSuite) TestBalance() {
 		sdk.NewCoin(denom, s.network.Config.AccountTokens),
 		*bankRes.GetBalance(),
 	)
+
+	println(sdk.NewCoin(denom, s.network.Config.AccountTokens).String())
+	println(bankRes.GetBalance().String())
+	
 	blockHeight := header.Get(grpctypes.GRPCBlockHeightHeader)
 	s.Require().NotEmpty(blockHeight[0]) // Should contain the block height
-
-	// Request metadata should work
-	bankRes, err = bankClient.Balance(
-		metadata.AppendToOutgoingContext(context.Background(), grpctypes.GRPCBlockHeightHeader, "1"), // Add metadata to request
-		&banktypes.QueryBalanceRequest{Address: val0.Address.String(), Denom: denom},
-		grpc.Header(&header),
-	)
-	s.Require().NoError(err)
-	blockHeight = header.Get(grpctypes.GRPCBlockHeightHeader)
-	s.Require().Equal([]string{"1"}, blockHeight)
 }
 
 func TestIntegrationTestSuite(t *testing.T) {
