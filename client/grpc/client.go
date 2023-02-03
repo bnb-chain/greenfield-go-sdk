@@ -37,8 +37,8 @@ type AuthzMsgClient = authztypes.MsgClient
 type FeegrantQueryClient = feegranttypes.QueryClient
 type FeegrantMsgClient = feegranttypes.MsgClient
 type ParamsQueryClient = paramstypes.QueryClient
-type BfsQueryClient = gnfdtypes.QueryClient
-type BfsMsgClient = gnfdtypes.MsgClient
+type GnfdQueryClient = gnfdtypes.QueryClient
+type GnfdMsgClient = gnfdtypes.MsgClient
 type TxClient = tx.ServiceClient
 
 type GreenfieldClient struct {
@@ -60,8 +60,8 @@ type GreenfieldClient struct {
 	FeegrantQueryClient
 	FeegrantMsgClient
 	ParamsQueryClient
-	BfsQueryClient
-	BfsMsgClient
+	GnfdQueryClient
+	GnfdMsgClient
 	keyManager keys.KeyManager
 	chainId    string
 }
