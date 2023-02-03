@@ -64,6 +64,12 @@ keyManager, _ := keys.NewMnemonicKeyManager(mnemonic)
 
 ```go
 client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
+
+query := banktypes.QueryBalanceRequest{
+		Address: testutil.TEST_ADDR,
+		Denom:   "bnb",
+}
+res, err := client.BankQueryClient.Balance(context.Background(), &query)  
 ```
 
 #### Init client with key manager, for signing and sending tx
