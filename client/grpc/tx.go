@@ -14,10 +14,12 @@ import (
 	"google.golang.org/grpc"
 )
 
+const GasMultiplier = float64(1.2)
+
 type TransactionClient interface {
 	BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
-	SimulateTx(msgs []sdk.Msg) ([]byte, error)
-	SignTx(msgs []sdk.Msg) ([]byte, error)
+	SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
+	SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
 }
 
 // BroadcastTx will sign and broadcast a tx with simulated gas(if not provided in txOpt)
@@ -26,12 +28,12 @@ func (c *GreenfieldClient) BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, op
 	txConfig := authtx.NewTxConfig(types.Cdc(), []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
 	txBuilder := txConfig.NewTxBuilder()
 
-	// Build tx and inject it into txBuilder
-	if err := c.buildTxWithGasLimit(msgs, txOpt, txConfig, txBuilder); err != nil {
+	// txBuilder holds tx info
+	if err := c.constructTxWithGasLimit(msgs, txOpt, txConfig, txBuilder); err != nil {
 		return nil, err
 	}
 
-	// do the actual signing of tx
+	// sign a tx
 	txSignedBytes, err := c.signTx(txConfig, txBuilder)
 	if err != nil {
 		return nil, err
@@ -47,8 +49,8 @@ func (c *GreenfieldClient) BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, op
 			Mode:    mode,
 			TxBytes: txSignedBytes,
 		},
-		opts...)
-	println(txRes.TxResponse.RawLog)
+		opts...,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +61,7 @@ func (c *GreenfieldClient) BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, op
 func (c *GreenfieldClient) SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
 	txConfig := authtx.NewTxConfig(types.Cdc(), []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
 	txBuilder := txConfig.NewTxBuilder()
-	err := c.buildTx(msgs, txOpt, txBuilder)
+	err := c.constructTx(msgs, txOpt, txBuilder)
 	if err != nil {
 		return nil, err
 	}
@@ -88,10 +90,10 @@ func (c *GreenfieldClient) simulateTx(txBytes []byte, opts ...grpc.CallOption) (
 	return simulateResponse, nil
 }
 
-func (c *GreenfieldClient) SignTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) ([]byte, error) {
+func (c *GreenfieldClient) SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error) {
 	txConfig := authtx.NewTxConfig(types.Cdc(), []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
 	txBuilder := txConfig.NewTxBuilder()
-	if err := c.buildTxWithGasLimit(msgs, txOpt, txConfig, txBuilder); err != nil {
+	if err := c.constructTxWithGasLimit(msgs, txOpt, txConfig, txBuilder); err != nil {
 		return nil, err
 	}
 	// sign the tx with signer info
@@ -109,7 +111,7 @@ func (c *GreenfieldClient) signTx(txConfig client.TxConfig, txBuilder client.TxB
 	}
 	sig := signing.SignatureV2{}
 	signerData := xauthsigning.SignerData{
-		ChainID:       types.ChainId,
+		ChainID:       c.chainId,
 		AccountNumber: account.GetAccountNumber(),
 		Sequence:      account.GetSequence(),
 	}
@@ -157,7 +159,7 @@ func (c *GreenfieldClient) setSingerInfo(txBuilder client.TxBuilder) error {
 	return nil
 }
 
-func (c *GreenfieldClient) buildTx(msgs []sdk.Msg, txOpt *types.TxOption, txBuilder client.TxBuilder) error {
+func (c *GreenfieldClient) constructTx(msgs []sdk.Msg, txOpt *types.TxOption, txBuilder client.TxBuilder) error {
 	for _, m := range msgs {
 		if err := m.ValidateBasic(); err != nil {
 			return err
@@ -181,33 +183,35 @@ func (c *GreenfieldClient) buildTx(msgs []sdk.Msg, txOpt *types.TxOption, txBuil
 	return c.setSingerInfo(txBuilder)
 }
 
-func (c *GreenfieldClient) buildTxWithGasLimit(msgs []sdk.Msg, txOpt *types.TxOption, txConfig client.TxConfig, txBuilder client.TxBuilder) error {
-	err := c.buildTx(msgs, txOpt, txBuilder)
+func (c *GreenfieldClient) constructTxWithGasLimit(msgs []sdk.Msg, txOpt *types.TxOption, txConfig client.TxConfig, txBuilder client.TxBuilder) error {
+	// construct a tx with txOpt excluding GasLimit
+	err := c.constructTx(msgs, txOpt, txBuilder)
 	if err != nil {
 		return err
 	}
 	if txOpt != nil && txOpt.GasLimit != 0 {
 		txBuilder.SetGasLimit(txOpt.GasLimit)
-	} else {
-		txBytes, err := txConfig.TxEncoder()(txBuilder.GetTx())
-		if err != nil {
-			return err
-		}
-		simulateRes, err := c.simulateTx(txBytes)
-		if err != nil {
-			return err
-		}
-		txBuilder.SetGasLimit(simulateRes.GasInfo.GetGasUsed())
+		return nil
 	}
+
+	txBytes, err := txConfig.TxEncoder()(txBuilder.GetTx())
+	if err != nil {
+		return err
+	}
+	simulateRes, err := c.simulateTx(txBytes)
+	if err != nil {
+		return err
+	}
+	txBuilder.SetGasLimit(uint64(GasMultiplier * float64(simulateRes.GasInfo.GetGasUsed())))
 	return nil
 }
+
 func (c *GreenfieldClient) getAccount() (authtypes.AccountI, error) {
 	km, err := c.GetKeyManager()
 	if err != nil {
 		return nil, err
 	}
-	address := km.GetAddr().String()
-	acct, err := c.AuthQueryClient.Account(context.Background(), &authtypes.QueryAccountRequest{Address: address})
+	acct, err := c.AuthQueryClient.Account(context.Background(), &authtypes.QueryAccountRequest{Address: km.GetAddr().String()})
 	if err != nil {
 		return nil, err
 	}

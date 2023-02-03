@@ -1,9 +1,13 @@
-# Greenfield Go SDK 
+# Greenfield Go SDK
 
 The `Greenfield-GO-SDK` provides a thin wrapper for interacting with `greenfield` in two ways:
 
 1. Interact using `gnfd-tendermint` RPC client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
-2. Interact using `gnfd-cosmos-sdk` GRPC clients, this includes querying accounts, chain info and broadcasting transaction. 
+2. Interact using `gnfd-cosmos-sdk` GRPC clients, this includes querying accounts, chain info and broadcasting transaction.
+
+### Requirement
+
+Go version above 1.19
 
 ## Usage
 
@@ -17,7 +21,7 @@ import (
 
 ### Key Manager
 
-Key Manager is needed to sign the transaction msg or verify signature. Key Manager is an Identity Manager to define who 
+Key Manager is needed to sign the transaction msg or verify signature. Key Manager is an Identity Manager to define who
 you are in the greenfield. It provides following interface:
 
 ```go
@@ -35,12 +39,10 @@ We provide three construct functions to generate the Key Manager:
 NewPrivateKeyManager(priKey string) (KeyManager, error)
 
 NewMnemonicKeyManager(mnemonic string) (KeyManager, error)
-
-NewKeyStoreKeyManager(file string, auth string) (KeyManager, error)
 ```
+
 - NewPrivateKeyManager. You should provide a Hex encoded string of your private key.
 - NewMnemonicKeyManager. You should provide your mnemonic, usually is a string of 24 words.
-- NewKeyStoreKeyManager. You should provide a keybase json file and you password, you can download the key base json file when your create a wallet account.
 
 Examples:
 
@@ -56,14 +58,9 @@ mnemonic := "dragon shy author wave swamp avoid lens hen please series heavy squ
 keyManager, _ := keys.NewMnemonicKeyManager(mnemonic)
 ```
 
-From keystore :
-```GO
-file := "test_keystore.json"
-keyManager, err := NewKeyStoreKeyManager(file, "your password")
-```
 ### Use GRPC Client
 
-#### Init client without key manager, you should use it only for query purpose.
+#### Init client without key manager, you should use it for only querying purpose.
 
 ```go
 client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
@@ -73,49 +70,37 @@ client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
 
 ```go
 keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
-
 client := NewGreenfieldClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
-```
-
-####  Token transfer
-
-
-```go
-keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
-
-client := NewGreenfieldClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
-
-sendTokenReq := types.SendTokenRequest{"bnb", 10, "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9"}
-
-txResponse, err := client.SendToken(sendTokenReq, true)
-	
 ```
 
 #### Broadcast TX
 
-A generic method `BroadcastTx` is provided to give you the flexibility to broadcast different types of transaction. 
+A generic method `BroadcastTx` is provided to give you the flexibility to broadcast different types of transaction.
 ```go
-BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*types.TxBroadcastResponse, error)
+BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
 ```
 
-`txOpt` is optional, which is provided to customize your transaction. When it is not provided, simulated `GasLimit` would 
-be used and broadcasting tx in `sync` mode
-
+`txOpt` is provided to customize your transaction. It is optional, and all fields are optional.
 ```go
 type TxOption struct {
-    Async     bool // default sync mode if not provided
-    GasLimit  uint64
+    Async     bool   // default to `sync` mode
+    GasLimit  uint64 // default to use simulated gas 
     Memo      string
     FeeAmount sdk.Coins
     FeePayer  sdk.AccAddress
 }
 ```
-example
+Example:
 
 ```go
-	txOpt := &types.TxOption{
-        Async: true,
-		GasLimit: 210000,
-	}
+payerAddr, _ := sdk.AccAddressFromHexUnsafe("0x76d244CE05c3De4BbC6fDd7F56379B145709ade9")
+txOpt := &types.TxOption{
+    Async:     true,
+    GasLimit:  1000000,
+    Memo:      "test",
+    FeeAmount: sdk.Coins{{"bnb", sdk.NewInt(1)}},
+    FeePayer:  payerAddr,
+}
+response, _ := gnfdCli.BroadcastTx([]sdk.Msg{transfer}, txOpt)
 ```
 before using it, you need to construct the appropriate type of `Msg`, refer to `gnfd-cosmos-sdk` for msg types supported
