@@ -165,6 +165,7 @@ func (c *GreenfieldClient) constructTx(msgs []sdk.Msg, txOpt *types.TxOption, tx
 			return err
 		}
 	}
+
 	if err := txBuilder.SetMsgs(msgs...); err != nil {
 		return err
 	}
