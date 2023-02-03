@@ -26,11 +26,8 @@ you are in the greenfield. It provides following interface:
 
 ```go
 type KeyManager interface {
-
-    Sign(signByte []byte) ([]byte, error)
     GetPrivKey() ctypes.PrivKey
     GetAddr() types.AccAddress
-
 }
 ```
 
@@ -64,6 +61,12 @@ keyManager, _ := keys.NewMnemonicKeyManager(mnemonic)
 
 ```go
 client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
+
+query := banktypes.QueryBalanceRequest{
+		Address: testutil.TEST_ADDR,
+		Denom:   "bnb",
+}
+res, err := client.BankQueryClient.Balance(context.Background(), &query)  
 ```
 
 #### Init client with key manager, for signing and sending tx
@@ -103,4 +106,57 @@ txOpt := &types.TxOption{
 }
 response, _ := gnfdCli.BroadcastTx([]sdk.Msg{transfer}, txOpt)
 ```
-before using it, you need to construct the appropriate type of `Msg`, refer to `gnfd-cosmos-sdk` for msg types supported
+
+#### Simulate TX
+
+For the purpose of simulating a tx and get the gas info, `SimulateTx` is provided.
+
+```go
+SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
+```
+
+### Sign Tx
+
+`SignTx` is provided which sign the `msgs` and returns raw bytes 
+
+```go
+SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
+```
+
+#### Support msg type
+
+Currently below `sdk.Msg` type are supported.
+```go
+    MsgGrant  = authztypes.MsgGrant
+    MsgRevoke = authztypes.MsgRevoke
+    
+    MsgSend = banktypes.MsgSend
+    
+    MsgCreateValidator           = stakingtypes.MsgCreateValidator
+    MsgEditValidator             = stakingtypes.MsgEditValidator
+    MsgDelegate                  = stakingtypes.MsgDelegate
+    MsgBeginRedelegate           = stakingtypes.MsgBeginRedelegate
+    MsgUndelegate                = stakingtypes.MsgUndelegate
+    MsgCancelUnbondingDelegation = stakingtypes.MsgCancelUnbondingDelegation
+    
+    MsgSetWithdrawAddress          = distrtypes.MsgSetWithdrawAddress
+    MsgWithdrawDelegatorReward     = distrtypes.MsgWithdrawDelegatorReward
+    MsgWithdrawValidatorCommission = distrtypes.MsgWithdrawValidatorCommission
+    MsgFundCommunityPool           = distrtypes.MsgFundCommunityPool
+    
+    MsgSubmitProposal    = govv1.MsgSubmitProposal
+    MsgExecLegacyContent = govv1.MsgExecLegacyContent
+    MsgVote              = govv1.MsgVote
+    MsgDeposit           = govv1.MsgDeposit
+    MsgVoteWeighted      = govv1.MsgVoteWeighted
+    
+    MsgUnjail  = slashingtypes.MsgUnjail
+    MsgImpeach = slashingtypes.MsgImpeach
+    
+    MsgGrantAllowance  = feegranttypes.MsgGrantAllowance
+    MsgRevokeAllowance = feegranttypes.MsgRevokeAllowance
+    
+    MsgClaim = oracletypes.MsgClaim
+    
+    MsgTransferOut = bridgetypes.MsgTransferOut
+```
