@@ -27,7 +27,6 @@ you are in the greenfield. It provides following interface:
 ```go
 type KeyManager interface {
 
-    Sign(signByte []byte) ([]byte, error)
     GetPrivKey() ctypes.PrivKey
     GetAddr() types.AccAddress
 
