@@ -11,6 +11,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	feegranttypes "github.com/cosmos/cosmos-sdk/x/feegrant"
+	gashubtypes "github.com/cosmos/cosmos-sdk/x/gashub/types"
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -30,6 +31,7 @@ type StakingMsgClient = stakingtypes.MsgClient
 type AuthQueryClient = authtypes.QueryClient
 type BankQueryClient = banktypes.QueryClient
 type BankMsgClient = banktypes.MsgClient
+type GashubQueryClient = gashubtypes.QueryClient
 type GovQueryClient = v1beta1.QueryClient
 type GovMsgClient = v1beta1.MsgClient
 type AuthzQueryClient = authztypes.QueryClient
@@ -53,6 +55,7 @@ type GreenfieldClient struct {
 	AuthQueryClient
 	BankQueryClient
 	BankMsgClient
+	GashubQueryClient
 	GovQueryClient
 	GovMsgClient
 	AuthzQueryClient
@@ -92,6 +95,7 @@ func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 		authtypes.NewQueryClient(conn),
 		banktypes.NewQueryClient(conn),
 		banktypes.NewMsgClient(conn),
+		gashubtypes.NewQueryClient(conn),
 		v1beta1.NewQueryClient(conn),
 		v1beta1.NewMsgClient(conn),
 		authztypes.NewQueryClient(conn),
