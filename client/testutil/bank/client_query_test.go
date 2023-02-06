@@ -34,18 +34,6 @@ func TestBankAllBalances(t *testing.T) {
 	t.Log(res.Balances.String())
 }
 
-func TestBankDenomMetadata(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
-
-	query := banktypes.QueryDenomMetadataRequest{
-		Denom: "bnb",
-	}
-	res, err := client.BankQueryClient.DenomMetadata(context.Background(), &query)
-	assert.NoError(t, err)
-
-	t.Log(res.String())
-}
-
 func TestBankDenomOwners(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
