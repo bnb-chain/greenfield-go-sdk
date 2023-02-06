@@ -10,9 +10,12 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	crosschaintypes "github.com/cosmos/cosmos-sdk/x/crosschain/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	feegranttypes "github.com/cosmos/cosmos-sdk/x/feegrant"
+	gashubtypes "github.com/cosmos/cosmos-sdk/x/gashub/types"
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+	oracletypes "github.com/cosmos/cosmos-sdk/x/oracle/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -21,26 +24,30 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type UpgradeQueryClient = upgradetypes.QueryClient
+type AuthQueryClient = authtypes.QueryClient
+type AuthzQueryClient = authztypes.QueryClient
+type AuthzMsgClient = authztypes.MsgClient
+type BankQueryClient = banktypes.QueryClient
+type BankMsgClient = banktypes.MsgClient
+type CrosschainQueryClient = crosschaintypes.QueryClient
 type DistrQueryClient = distrtypes.QueryClient
 type DistrMsgClient = distrtypes.MsgClient
+type FeegrantQueryClient = feegranttypes.QueryClient
+type FeegrantMsgClient = feegranttypes.MsgClient
+type GashubQueryClient = gashubtypes.QueryClient
+type GnfdQueryClient = gnfdtypes.QueryClient
+type GnfdMsgClient = gnfdtypes.MsgClient
+type GovQueryClient = v1beta1.QueryClient
+type GovMsgClient = v1beta1.MsgClient
+type OracleQueryClient = oracletypes.QueryClient
+type OracleMsgClient = oracletypes.MsgClient
+type ParamsQueryClient = paramstypes.QueryClient
 type SlashingQueryClient = slashingtypes.QueryClient
 type SlashingMsgClient = slashingtypes.MsgClient
 type StakingQueryClient = stakingtypes.QueryClient
 type StakingMsgClient = stakingtypes.MsgClient
-type AuthQueryClient = authtypes.QueryClient
-type BankQueryClient = banktypes.QueryClient
-type BankMsgClient = banktypes.MsgClient
-type GovQueryClient = v1beta1.QueryClient
-type GovMsgClient = v1beta1.MsgClient
-type AuthzQueryClient = authztypes.QueryClient
-type AuthzMsgClient = authztypes.MsgClient
-type FeegrantQueryClient = feegranttypes.QueryClient
-type FeegrantMsgClient = feegranttypes.MsgClient
-type ParamsQueryClient = paramstypes.QueryClient
-type GnfdQueryClient = gnfdtypes.QueryClient
-type GnfdMsgClient = gnfdtypes.MsgClient
 type TxClient = tx.ServiceClient
+type UpgradeQueryClient = upgradetypes.QueryClient
 
 type GreenfieldClient struct {
 	TxClient
@@ -54,6 +61,7 @@ type GreenfieldClient struct {
 	AuthQueryClient
 	BankQueryClient
 	BankMsgClient
+	GashubQueryClient
 	GovQueryClient
 	GovMsgClient
 	AuthzQueryClient
@@ -94,6 +102,7 @@ func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 		authtypes.NewQueryClient(conn),
 		banktypes.NewQueryClient(conn),
 		banktypes.NewMsgClient(conn),
+		gashubtypes.NewQueryClient(conn),
 		v1beta1.NewQueryClient(conn),
 		v1beta1.NewMsgClient(conn),
 		authztypes.NewQueryClient(conn),
