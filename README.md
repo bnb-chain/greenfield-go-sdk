@@ -2,8 +2,8 @@
 
 The `Greenfield-GO-SDK` provides a thin wrapper for interacting with `greenfield` in two ways:
 
-1. Interact using `gnfd-tendermint` RPC client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
-2. Interact using `gnfd-cosmos-sdk` GRPC clients, this includes querying accounts, chain info and broadcasting transaction.
+1. Interact using `gnfd-cosmos-sdk` GRPC clients, you may perform querying accounts, chain info and broadcasting transaction.
+2. Interact using `gnfd-tendermint` RPC client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
 
 ### Requirement
 
@@ -55,7 +55,7 @@ mnemonic := "dragon shy author wave swamp avoid lens hen please series heavy squ
 keyManager, _ := keys.NewMnemonicKeyManager(mnemonic)
 ```
 
-### Use GRPC Client
+### Use Greenfield Client
 
 #### Init client without key manager, you should use it for only querying purpose.
 
@@ -97,6 +97,7 @@ Example:
 
 ```go
 payerAddr, _ := sdk.AccAddressFromHexUnsafe("0x76d244CE05c3De4BbC6fDd7F56379B145709ade9")
+transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("bnb", 12)))
 txOpt := &types.TxOption{
     Async:     true,
     GasLimit:  1000000,
@@ -125,3 +126,11 @@ SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
 
 #### Support transaction type
 Please refer to [msgTypes.go](./types/msgTypes.go) to see all types of `sdk.Msg` supported 
+
+
+### Use Tendermint RPC Client
+
+```go
+client := NewTendermintClient("http://0.0.0.0:26750")
+abci, err := client.TmClient.ABCIInfo(context.Background())
+```

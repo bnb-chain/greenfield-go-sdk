@@ -25,7 +25,7 @@ type TransactionClient interface {
 // BroadcastTx signs and broadcasts a tx with simulated gas(if not provided in txOpt)
 func (c *GreenfieldClient) BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
 
-	txConfig := authtx.NewTxConfig(types.Cdc(), []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
+	txConfig := authtx.NewTxConfig(c.codec, []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
 	txBuilder := txConfig.NewTxBuilder()
 
 	// txBuilder holds tx info
@@ -59,7 +59,7 @@ func (c *GreenfieldClient) BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, op
 
 // SimulateTx simulates a tx and gets Gas info
 func (c *GreenfieldClient) SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
-	txConfig := authtx.NewTxConfig(types.Cdc(), []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
+	txConfig := authtx.NewTxConfig(c.codec, []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
 	txBuilder := txConfig.NewTxBuilder()
 	err := c.constructTx(msgs, txOpt, txBuilder)
 	if err != nil {
@@ -92,7 +92,7 @@ func (c *GreenfieldClient) simulateTx(txBytes []byte, opts ...grpc.CallOption) (
 
 // SignTx signs the tx with private key and returns bytes
 func (c *GreenfieldClient) SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error) {
-	txConfig := authtx.NewTxConfig(types.Cdc(), []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
+	txConfig := authtx.NewTxConfig(c.codec, []signing.SignMode{signing.SignMode_SIGN_MODE_EIP_712})
 	txBuilder := txConfig.NewTxBuilder()
 	if err := c.constructTxWithGasLimit(msgs, txOpt, txConfig, txBuilder); err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func (c *GreenfieldClient) getAccount() (authtypes.AccountI, error) {
 		return nil, err
 	}
 	var account authtypes.AccountI
-	if err := types.Cdc().InterfaceRegistry().UnpackAny(acct.Account, &account); err != nil {
+	if err := c.codec.InterfaceRegistry().UnpackAny(acct.Account, &account); err != nil {
 		return nil, err
 	}
 	return account, nil

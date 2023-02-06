@@ -22,7 +22,7 @@ func httpClient(addr string) *chttp.HTTP {
 	return cli
 }
 
-func NewRPCClient(addr string) TendermintClient {
+func NewTendermintClient(addr string) TendermintClient {
 	return TendermintClient{
 		TmClient: httpClient(addr),
 	}
