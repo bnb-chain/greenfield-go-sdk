@@ -2,8 +2,8 @@
 
 The `Greenfield-GO-SDK` provides a thin wrapper for interacting with `greenfield` in two ways:
 
-1. Interact using `gnfd-tendermint` RPC client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
-2. Interact using `gnfd-cosmos-sdk` GRPC clients, this includes querying accounts, chain info and broadcasting transaction.
+1. Interact using `GreenfieldClient` client, you may perform querying accounts, chain info and broadcasting transaction.
+2. Interact using `TendermintClient` client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
 
 ### Requirement
 
@@ -55,7 +55,7 @@ mnemonic := "dragon shy author wave swamp avoid lens hen please series heavy squ
 keyManager, _ := keys.NewMnemonicKeyManager(mnemonic)
 ```
 
-### Use GRPC Client
+### Use Greenfield Client
 
 #### Init client without key manager, you should use it for only querying purpose.
 
@@ -97,6 +97,7 @@ Example:
 
 ```go
 payerAddr, _ := sdk.AccAddressFromHexUnsafe("0x76d244CE05c3De4BbC6fDd7F56379B145709ade9")
+transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("bnb", 12)))
 txOpt := &types.TxOption{
     Async:     true,
     GasLimit:  1000000,
@@ -123,40 +124,13 @@ SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.
 SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
 ```
 
-#### Support msg type
+#### Support transaction type
+Please refer to [msgTypes.go](./types/msgTypes.go) to see all types of `sdk.Msg` supported 
 
-Currently below `sdk.Msg` type are supported.
+
+### Use Tendermint RPC Client
+
 ```go
-    MsgGrant  = authztypes.MsgGrant
-    MsgRevoke = authztypes.MsgRevoke
-    
-    MsgSend = banktypes.MsgSend
-    
-    MsgCreateValidator           = stakingtypes.MsgCreateValidator
-    MsgEditValidator             = stakingtypes.MsgEditValidator
-    MsgDelegate                  = stakingtypes.MsgDelegate
-    MsgBeginRedelegate           = stakingtypes.MsgBeginRedelegate
-    MsgUndelegate                = stakingtypes.MsgUndelegate
-    MsgCancelUnbondingDelegation = stakingtypes.MsgCancelUnbondingDelegation
-    
-    MsgSetWithdrawAddress          = distrtypes.MsgSetWithdrawAddress
-    MsgWithdrawDelegatorReward     = distrtypes.MsgWithdrawDelegatorReward
-    MsgWithdrawValidatorCommission = distrtypes.MsgWithdrawValidatorCommission
-    MsgFundCommunityPool           = distrtypes.MsgFundCommunityPool
-    
-    MsgSubmitProposal    = govv1.MsgSubmitProposal
-    MsgExecLegacyContent = govv1.MsgExecLegacyContent
-    MsgVote              = govv1.MsgVote
-    MsgDeposit           = govv1.MsgDeposit
-    MsgVoteWeighted      = govv1.MsgVoteWeighted
-    
-    MsgUnjail  = slashingtypes.MsgUnjail
-    MsgImpeach = slashingtypes.MsgImpeach
-    
-    MsgGrantAllowance  = feegranttypes.MsgGrantAllowance
-    MsgRevokeAllowance = feegranttypes.MsgRevokeAllowance
-    
-    MsgClaim = oracletypes.MsgClaim
-    
-    MsgTransferOut = bridgetypes.MsgTransferOut
+client := NewTendermintClient("http://0.0.0.0:26750")
+abci, err := client.TmClient.ABCIInfo(context.Background())
 ```

@@ -2,7 +2,7 @@ package bank
 
 import (
 	"context"
-	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/grpc"
+	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/rpc"
 	"github.com/bnb-chain/gnfd-go-sdk/client/testutil"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/assert"

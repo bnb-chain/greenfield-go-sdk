@@ -42,7 +42,7 @@ func NewMnemonicKeyManager(mnemonic string) (KeyManager, error) {
 	return &k, err
 }
 
-// NewKeyStoreKeyManager TODO to be implemented
+//TODO NewKeyStoreKeyManager to be implemented
 
 func (m *keyManager) recoveryFromPrivateKey(privateKey string) error {
 	priBytes, err := hex.DecodeString(privateKey)

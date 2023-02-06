@@ -5,6 +5,7 @@ import (
 	"github.com/bnb-chain/gnfd-go-sdk/keys"
 	"github.com/bnb-chain/gnfd-go-sdk/types"
 	gnfdtypes "github.com/bnb-chain/greenfield/x/greenfield/types"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
@@ -67,6 +68,7 @@ type GreenfieldClient struct {
 	GnfdMsgClient
 	keyManager keys.KeyManager
 	chainId    string
+	codec      *codec.ProtoCodec
 }
 
 func grpcConn(addr string) *grpc.ClientConn {
@@ -82,7 +84,7 @@ func grpcConn(addr string) *grpc.ClientConn {
 
 func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 	conn := grpcConn(grpcAddr)
-
+	cdc := types.Cdc()
 	return GreenfieldClient{
 		tx.NewServiceClient(conn),
 		upgradetypes.NewQueryClient(conn),
@@ -107,6 +109,7 @@ func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 		gnfdtypes.NewMsgClient(conn),
 		nil,
 		chainId,
+		cdc,
 	}
 }
 
