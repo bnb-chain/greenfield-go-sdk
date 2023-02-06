@@ -50,27 +50,30 @@ type TxClient = tx.ServiceClient
 type UpgradeQueryClient = upgradetypes.QueryClient
 
 type GreenfieldClient struct {
-	TxClient
-	UpgradeQueryClient
+	AuthQueryClient
+	AuthzQueryClient
+	AuthzMsgClient
+	BankQueryClient
+	BankMsgClient
+	CrosschainQueryClient
 	DistrQueryClient
 	DistrMsgClient
+	FeegrantQueryClient
+	FeegrantMsgClient
+	GashubQueryClient
+	GnfdQueryClient
+	GnfdMsgClient
+	GovQueryClient
+	GovMsgClient
+	OracleQueryClient
+	OracleMsgClient
+	ParamsQueryClient
 	SlashingQueryClient
 	SlashingMsgClient
 	StakingQueryClient
 	StakingMsgClient
-	AuthQueryClient
-	BankQueryClient
-	BankMsgClient
-	GashubQueryClient
-	GovQueryClient
-	GovMsgClient
-	AuthzQueryClient
-	AuthzMsgClient
-	FeegrantQueryClient
-	FeegrantMsgClient
-	ParamsQueryClient
-	GnfdQueryClient
-	GnfdMsgClient
+	TxClient
+	UpgradeQueryClient
 	keyManager keys.KeyManager
 	chainId    string
 	codec      *codec.ProtoCodec
@@ -91,27 +94,30 @@ func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 	conn := grpcConn(grpcAddr)
 	cdc := types.Cdc()
 	return GreenfieldClient{
-		tx.NewServiceClient(conn),
-		upgradetypes.NewQueryClient(conn),
+		authtypes.NewQueryClient(conn),
+		authztypes.NewQueryClient(conn),
+		authztypes.NewMsgClient(conn),
+		banktypes.NewQueryClient(conn),
+		banktypes.NewMsgClient(conn),
+		crosschaintypes.NewQueryClient(conn),
 		distrtypes.NewQueryClient(conn),
 		distrtypes.NewMsgClient(conn),
+		feegranttypes.NewQueryClient(conn),
+		feegranttypes.NewMsgClient(conn),
+		gashubtypes.NewQueryClient(conn),
+		gnfdtypes.NewQueryClient(conn),
+		gnfdtypes.NewMsgClient(conn),
+		v1beta1.NewQueryClient(conn),
+		v1beta1.NewMsgClient(conn),
+		oracletypes.NewQueryClient(conn),
+		oracletypes.NewMsgClient(conn),
+		paramstypes.NewQueryClient(conn),
 		slashingtypes.NewQueryClient(conn),
 		slashingtypes.NewMsgClient(conn),
 		stakingtypes.NewQueryClient(conn),
 		stakingtypes.NewMsgClient(conn),
-		authtypes.NewQueryClient(conn),
-		banktypes.NewQueryClient(conn),
-		banktypes.NewMsgClient(conn),
-		gashubtypes.NewQueryClient(conn),
-		v1beta1.NewQueryClient(conn),
-		v1beta1.NewMsgClient(conn),
-		authztypes.NewQueryClient(conn),
-		authztypes.NewMsgClient(conn),
-		feegranttypes.NewQueryClient(conn),
-		feegranttypes.NewMsgClient(conn),
-		paramstypes.NewQueryClient(conn),
-		gnfdtypes.NewQueryClient(conn),
-		gnfdtypes.NewMsgClient(conn),
+		tx.NewServiceClient(conn),
+		upgradetypes.NewQueryClient(conn),
 		nil,
 		chainId,
 		cdc,
