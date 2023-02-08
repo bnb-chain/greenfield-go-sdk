@@ -10,8 +10,6 @@ import (
 )
 
 // TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
-// Panics if t.Log(res.String())
-// Removing .String() lets the test case pass, but the error is printed instead
 func TestStakingValidator(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
@@ -21,7 +19,9 @@ func TestStakingValidator(t *testing.T) {
 	res, err := client.StakingQueryClient.Validator(context.Background(), &query)
 	assert.NoError(t, err)
 
-	t.Log(res)
+	// Panics if t.Log(res.String())
+	// Removing .String() lets the test case pass, but the error is printed instead
+	t.Log(res.String())
 }
 
 // TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
@@ -34,7 +34,7 @@ func TestStakingValidators(t *testing.T) {
 	res, err := client.StakingQueryClient.Validators(context.Background(), &query)
 	assert.NoError(t, err)
 
-	t.Log(res)
+	t.Log(res.String())
 }
 
 // TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
