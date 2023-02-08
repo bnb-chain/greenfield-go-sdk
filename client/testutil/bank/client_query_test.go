@@ -4,6 +4,7 @@ import (
 	"context"
 	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/rpc"
 	"github.com/bnb-chain/gnfd-go-sdk/client/testutil"
+	"github.com/bnb-chain/gnfd-go-sdk/keys"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -23,6 +24,8 @@ func TestBankBalance(t *testing.T) {
 }
 
 func TestBankAllBalances(t *testing.T) {
+	km, err := keys.NewPrivateKeyManager("e3ac46e277677f0f103774019d03bd89c7b4b5ecc554b2650bd5d5127992c20c")
+	println(km)
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := banktypes.QueryAllBalancesRequest{
@@ -36,6 +39,24 @@ func TestBankAllBalances(t *testing.T) {
 
 func TestBankDenomMetadata(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
+
+	//expMetadata := banktypes.Metadata{
+	//	Description: "The native staking token of the Cosmos Hub.",
+	//	DenomUnits: []*banktypes.DenomUnit{
+	//		{
+	//			Denom:    "uatom",
+	//			Exponent: 0,
+	//			Aliases:  []string{"microatom"},
+	//		},
+	//		{
+	//			Denom:    "atom",
+	//			Exponent: 6,
+	//			Aliases:  []string{"ATOM"},
+	//		},
+	//	},
+	//	Base:    "uatom",
+	//	Display: "atom",
+	//}
 
 	query := banktypes.QueryDenomMetadataRequest{
 		Denom: "bnb",

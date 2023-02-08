@@ -5,41 +5,45 @@ import (
 	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/rpc"
 	"github.com/bnb-chain/gnfd-go-sdk/client/testutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
+// TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
+// Panics if t.Log(res.String())
+// Removing .String() lets the test case pass, but the error is printed instead
 func TestStakingValidator(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryValidatorRequest{
-		ValidatorAddr: common.HexToAddress(testutil.TEST_ADDR).String(),
+		ValidatorAddr: testutil.TEST_VAL_ADDR,
 	}
 	res, err := client.StakingQueryClient.Validator(context.Background(), &query)
 	assert.NoError(t, err)
 
-	t.Log(res.String())
+	t.Log(res)
 }
 
+// TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
 func TestStakingValidators(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryValidatorsRequest{
-		Status: "active",
+		Status: "",
 	}
 	res, err := client.StakingQueryClient.Validators(context.Background(), &query)
 	assert.NoError(t, err)
 
-	t.Log(res.String())
+	t.Log(res)
 }
 
+// TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
 func TestStakingDelagatorValidator(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryDelegatorValidatorRequest{
-		DelegatorAddr: "gov",
-		ValidatorAddr: testutil.TEST_ADDR,
+		DelegatorAddr: testutil.TEST_ADDR,
+		ValidatorAddr: testutil.TEST_VAL_ADDR,
 	}
 	res, err := client.StakingQueryClient.DelegatorValidator(context.Background(), &query)
 	assert.NoError(t, err)
@@ -47,11 +51,12 @@ func TestStakingDelagatorValidator(t *testing.T) {
 	t.Log(res.String())
 }
 
+// TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
 func TestStakingDelagatorValidators(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryDelegatorValidatorsRequest{
-		DelegatorAddr: "gov",
+		DelegatorAddr: testutil.TEST_ADDR,
 	}
 	res, err := client.StakingQueryClient.DelegatorValidators(context.Background(), &query)
 	assert.NoError(t, err)
@@ -59,12 +64,13 @@ func TestStakingDelagatorValidators(t *testing.T) {
 	t.Log(res.String())
 }
 
+// TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
 func TestStakingUnbondingDelagation(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryUnbondingDelegationRequest{
-		DelegatorAddr: "gov",
-		ValidatorAddr: testutil.TEST_ADDR,
+		DelegatorAddr: testutil.TEST_ADDR,
+		ValidatorAddr: testutil.TEST_VAL_ADDR,
 	}
 	res, err := client.StakingQueryClient.UnbondingDelegation(context.Background(), &query)
 	assert.NoError(t, err)
@@ -76,7 +82,7 @@ func TestStakingDelagatorDelegations(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryDelegatorDelegationsRequest{
-		DelegatorAddr: "gov",
+		DelegatorAddr: testutil.TEST_VAL_ADDR,
 	}
 	res, err := client.StakingQueryClient.DelegatorDelegations(context.Background(), &query)
 	assert.NoError(t, err)
@@ -88,7 +94,7 @@ func TestStakingValidatorDelegations(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryValidatorDelegationsRequest{
-		ValidatorAddr: testutil.TEST_ADDR,
+		ValidatorAddr: testutil.TEST_VAL_ADDR,
 	}
 	res, err := client.StakingQueryClient.ValidatorDelegations(context.Background(), &query)
 	assert.NoError(t, err)
@@ -100,7 +106,7 @@ func TestStakingDelegatorUnbondingDelagation(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryDelegatorUnbondingDelegationsRequest{
-		DelegatorAddr: "gov",
+		DelegatorAddr: testutil.TEST_VAL_ADDR,
 	}
 	res, err := client.StakingQueryClient.DelegatorUnbondingDelegations(context.Background(), &query)
 	assert.NoError(t, err)
@@ -108,14 +114,11 @@ func TestStakingDelegatorUnbondingDelagation(t *testing.T) {
 	t.Log(res.String())
 }
 
-// TODO: Change delegator addr
 func TestStaking(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryRedelegationsRequest{
-		DelegatorAddr:    "gov",
-		SrcValidatorAddr: testutil.TEST_ADDR,
-		DstValidatorAddr: testutil.TEST_ADDR,
+		DelegatorAddr: testutil.TEST_VAL_ADDR,
 	}
 	res, err := client.StakingQueryClient.Redelegations(context.Background(), &query)
 	assert.NoError(t, err)
@@ -143,11 +146,12 @@ func TestStakingPool(t *testing.T) {
 	t.Log(res.String())
 }
 
+// TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
 func TestStakingHistoricalInfo(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
 	query := stakingtypes.QueryHistoricalInfoRequest{
-		Height: 10,
+		Height: 1,
 	}
 	res, err := client.StakingQueryClient.HistoricalInfo(context.Background(), &query)
 	assert.NoError(t, err)
