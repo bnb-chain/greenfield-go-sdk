@@ -9,7 +9,6 @@ import (
 	"testing"
 )
 
-// TODO: panic: reflect.Value.Interface: cannot return value obtained from unexported field or method [recovered]
 func TestGashubParams(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
