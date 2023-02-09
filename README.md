@@ -134,3 +134,10 @@ Please refer to [msgTypes.go](./types/msgTypes.go) to see all types of `sdk.Msg`
 client := NewTendermintClient("http://0.0.0.0:26750")
 abci, err := client.TmClient.ABCIInfo(context.Background())
 ```
+
+### Use Storage Provider Client
+
+```go
+client, err := spClient.NewSpClient("http://0.0.0.0:26750", spClient.Options{})
+err = client.PutObject(ctx, bucketName, ObjectName, txnHash, newReader, meta, signer.NewAuthInfo(false, "")))
+```
