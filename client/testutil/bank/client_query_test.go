@@ -40,27 +40,7 @@ func TestBankAllBalances(t *testing.T) {
 func TestBankDenomMetadata(t *testing.T) {
 	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
 
-	//expMetadata := banktypes.Metadata{
-	//	Description: "The native staking token of the Cosmos Hub.",
-	//	DenomUnits: []*banktypes.DenomUnit{
-	//		{
-	//			Denom:    "uatom",
-	//			Exponent: 0,
-	//			Aliases:  []string{"microatom"},
-	//		},
-	//		{
-	//			Denom:    "atom",
-	//			Exponent: 6,
-	//			Aliases:  []string{"ATOM"},
-	//		},
-	//	},
-	//	Base:    "uatom",
-	//	Display: "atom",
-	//}
-
-	query := banktypes.QueryDenomMetadataRequest{
-		Denom: "bnb",
-	}
+	query := banktypes.QueryDenomMetadataRequest{}
 	res, err := client.BankQueryClient.DenomMetadata(context.Background(), &query)
 	assert.NoError(t, err)
 
