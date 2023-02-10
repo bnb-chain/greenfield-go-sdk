@@ -42,8 +42,8 @@ func (t *UploadResult) String() string {
 	return fmt.Sprintf("upload finish, bucket name  %s, objectname %s, etag %s", t.BucketName, t.ObjectName, t.ETag)
 }
 
-// PrePutObject get approval of creating object and send txn to greenfield chain
-func (c *SPClient) PrePutObject(ctx context.Context, bucketName, objectName string,
+// CreateObject get approval of creating object and send txn to greenfield chain
+func (c *SPClient) CreateObject(ctx context.Context, bucketName, objectName string,
 	meta PutObjectMeta, reader io.Reader, authInfo AuthInfo) (string, error) {
 	// get approval of creating bucket from sp
 	signature, err := c.GetApproval(ctx, bucketName, objectName, authInfo)
