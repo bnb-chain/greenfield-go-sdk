@@ -4,6 +4,7 @@ The `Greenfield-GO-SDK` provides a thin wrapper for interacting with `greenfield
 
 1. Interact using `GreenfieldClient` client, you may perform querying accounts, chain info and broadcasting transaction.
 2. Interact using `TendermintClient` client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
+3. Interact using `SPClient` client, you may perform  request for the service of storage provider like putObject, getObject
 
 ### Requirement
 
@@ -125,7 +126,7 @@ SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
 ```
 
 #### Support transaction type
-Please refer to [msgTypes.go](./types/msgTypes.go) to see all types of `sdk.Msg` supported 
+Please refer to [msgTypes.go](./types/msgTypes.go) to get all types of `sdk.Msg` supported 
 
 
 ### Use Tendermint RPC Client
@@ -133,4 +134,55 @@ Please refer to [msgTypes.go](./types/msgTypes.go) to see all types of `sdk.Msg`
 ```go
 client := NewTendermintClient("http://0.0.0.0:26750")
 abci, err := client.TmClient.ABCIInfo(context.Background())
+```
+
+### Use Storage Provider Client
+
+#### Auth Mechanism
+
+SPclient support two auto type. The first type is to use the local signer.Sign method, which will call 
+the private key of keyManager to sign the request message. The second type is to use the metamask wallet
+to generate an authentication token
+
+For the first type, you need to specify the SignType of AuthInfo as AuthV1 using the NewAuthInfo function, 
+and pass it as a parameter to the API.
+
+```
+authInfo := NewAuthInfo(false, "")
+err = client.GetApproval(context.Background(), bucketName, "", authInfo)
+```
+
+For the first type, you only need get the metaMask sign Token and specify the SignType of AuthInfo as AuthV2.
+The metaMask sign Token can be designs like JWT token with expiration in it. It needs to be implemented externally
+and pass it as a parameter to the API.
+
+```
+authInfo := NewAuthInfo(true, "this is metamask auto token")
+err = client.GetApproval(context.Background(), bucketName, "", authInfo)
+```
+
+#### Init client
+
+if SPclient use the AuthV1, the client need to init with key manager
+```
+// if client keep the private key in keyManager locally
+client := NewSpClientWithKeyManager("http://0.0.0.0:26750", &spClient.Option{}, keyManager)
+```
+if SPclient use the AuthV2, the client can init without key manager
+```
+// If the client does not manage the private key locally and use local
+client := NewSpClient("http://0.0.0.0:26750", &spClient.Option{})
+```
+
+#### call API and send request to storage provider
+
+```go
+fileReader, err := os.Open(filePath)
+
+meta := spClient.ObjectMeta{
+    ObjectSize:  length,
+    ContentType: "application/octet-stream",
+}
+
+err = client.PutObject(ctx, bucketName, ObjectName, txnHash, fileReader, meta, NewAuthInfo(false, "")))
 ```
