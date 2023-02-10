@@ -1,8 +1,9 @@
-package signer
+package keys
 
 import (
 	"fmt"
 
+	"github.com/bnb-chain/gnfd-go-sdk/keys"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
@@ -12,29 +13,31 @@ import (
 
 // MsgSigner defines a type that for signing msg in the way that is same with MsgEthereumTx
 type MsgSigner struct {
-	privKey cryptotypes.PrivKey
+	// privKey cryptotypes.PrivKey
+	keyManager keys.KeyManager
 }
 
-func NewMsgSigner(sk cryptotypes.PrivKey) *MsgSigner {
+func NewMsgSigner(key keys.KeyManager) *MsgSigner {
 	return &MsgSigner{
-		privKey: sk,
+		keyManager: key,
 	}
 }
 
 // Sign signs the message using the underlying private key
 func (m MsgSigner) Sign(msg []byte) ([]byte, cryptotypes.PubKey, error) {
-	if m.privKey.Type() != ethsecp256k1.KeyType {
+	privKey := m.keyManager.GetPrivKey()
+	if privKey.Type() != ethsecp256k1.KeyType {
 		return nil, nil, fmt.Errorf(
-			"invalid private key type, expected %s, got %s", ethsecp256k1.KeyType, m.privKey.Type(),
+			"invalid private key type, expected %s, got %s", ethsecp256k1.KeyType, privKey.Type(),
 		)
 	}
 
-	sig, err := m.privKey.Sign(msg)
+	sig, err := privKey.Sign(msg)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return sig, m.privKey.PubKey(), nil
+	return sig, privKey.PubKey(), nil
 }
 
 // RecoverAddr recover the sender address from msg and signature

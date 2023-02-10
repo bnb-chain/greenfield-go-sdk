@@ -1,12 +1,14 @@
-package greenfield
+package client
 
 import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+
+	"github.com/bnb-chain/gnfd-go-sdk/utils"
+	"github.com/rs/zerolog/log"
 )
 
 /* **** SAMPLE ERROR RESPONSE ****
@@ -23,7 +25,7 @@ type ErrResponse struct {
 	XMLName    xml.Name       `xml:"Error" json:"-"`
 	Response   *http.Response `xml:"-"`
 	Code       string
-	StatusCode int `xml:"-" json:"-"`
+	StatusCode int
 	Message    string
 	Resource   string
 	RequestID  string `xml:"RequestId"`
@@ -37,7 +39,7 @@ func (r ErrResponse) Error() string {
 	decodeURL := ""
 	method := ""
 	if r.Response != nil {
-		decodeURL, _ = decodeURIComponent(r.Response.Request.URL.String())
+		decodeURL, _ = utils.DecodeURIComponent(r.Response.Request.URL.String())
 		method = r.Response.Request.Method
 	}
 
@@ -85,7 +87,7 @@ func constructErrResponse(r *http.Response, bucketName, objectName string) error
 	if readErr == nil && data != nil {
 		decodeErr = xml.Unmarshal(data, &errorResp)
 		if decodeErr != nil {
-			log.Println("unmarshal xml body fail ", decodeErr)
+			log.Error().Err(decodeErr).Msg("unmarshal xml body fail ")
 		}
 	}
 

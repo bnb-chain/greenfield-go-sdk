@@ -1,4 +1,4 @@
-package s3utils
+package utils
 
 import (
 	"encoding/hex"

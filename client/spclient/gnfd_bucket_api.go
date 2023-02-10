@@ -1,4 +1,4 @@
-package greenfield
+package client
 
 import (
 	"context"
@@ -8,8 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/s3utils"
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/signer"
+	"github.com/bnb-chain/gnfd-go-sdk/utils"
 )
 
 type ListObjectsResult struct {
@@ -18,7 +17,7 @@ type ListObjectsResult struct {
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *SPClient) CreateBucket(ctx context.Context, bucketName string, authInfo signer.AuthInfo) error {
+func (c *SPClient) CreateBucket(ctx context.Context, bucketName string, authInfo AuthInfo) error {
 	// get approval of creating bucket from sp
 	signature, err := c.GetApproval(ctx, bucketName, "", authInfo)
 	if err != nil {
@@ -32,8 +31,8 @@ func (c *SPClient) CreateBucket(ctx context.Context, bucketName string, authInfo
 }
 
 // ListObjects return object name list of the specific bucket
-func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix string, maxkeys int, authInfo signer.AuthInfo) (ListObjectsResult, error) {
-	if err := s3utils.IsValidBucketName(bucketName); err != nil {
+func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix string, maxkeys int, authInfo AuthInfo) (ListObjectsResult, error) {
+	if err := utils.IsValidBucketName(bucketName); err != nil {
 		return ListObjectsResult{}, err
 	}
 
@@ -58,7 +57,7 @@ func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix str
 		log.Printf("listObjects of bucket %s fail: %s \n", bucketName, err.Error())
 		return ListObjectsResult{}, err
 	}
-	defer closeResponse(resp)
+	defer utils.CloseResponse(resp)
 
 	listObjectsResult := ListObjectsResult{}
 	// decode the xml content from response body

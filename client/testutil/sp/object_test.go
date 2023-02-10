@@ -1,4 +1,4 @@
-package greenfield
+package sp
 
 import (
 	"bytes"
@@ -12,7 +12,8 @@ import (
 	"testing"
 
 	spClient "github.com/bnb-chain/gnfd-go-sdk/client/spclient"
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/signer"
+	"github.com/bnb-chain/gnfd-go-sdk/utils"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +25,7 @@ func TestPutObject(t *testing.T) {
 	ObjectName := "testobject"
 
 	reader := bytes.NewReader([]byte("test content of object"))
-	length, err := spClient.GetContentLength(reader)
+	length, err := utils.GetContentLength(reader)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
@@ -42,7 +43,7 @@ func TestPutObject(t *testing.T) {
 		ContentType: spClient.ContentDefault,
 	}
 	_, err = client.PutObject(context.Background(), bucketName,
-		ObjectName, txnHash, newReader, meta, signer.NewAuthInfo(false, ""))
+		ObjectName, txnHash, newReader, meta, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 }
 
@@ -52,7 +53,7 @@ func TestFPutObject(t *testing.T) {
 
 	bucketName := "testbucket"
 	ObjectName := "testobject"
-	filePath := "./error.go"
+	filePath := "./object_test.go"
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
 		testMethod(t, r, "PUT")
@@ -62,7 +63,7 @@ func TestFPutObject(t *testing.T) {
 		require.NoError(t, err)
 		defer fileReader.Close()
 
-		length, err := spClient.GetContentLength(fileReader)
+		length, err := utils.GetContentLength(fileReader)
 		require.NoError(t, err)
 		testHeader(t, r, "Content-Length", strconv.FormatInt(length, 10))
 	})
@@ -70,7 +71,7 @@ func TestFPutObject(t *testing.T) {
 	txnHash := "test hash"
 
 	_, err := client.FPutObject(context.Background(), bucketName,
-		ObjectName, filePath, txnHash, spClient.ContentDefault, signer.NewAuthInfo(false, ""))
+		ObjectName, filePath, txnHash, spClient.ContentDefault, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 }
 
@@ -93,7 +94,7 @@ func TestGetObject(t *testing.T) {
 		w.Write([]byte(bodyContent))
 	})
 
-	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.GetObjectOptions{}, signer.NewAuthInfo(false, ""))
+	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.GetObjectOptions{}, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	buf := new(strings.Builder)

@@ -1,1 +1,0 @@
-package gnfd_go_sdk

@@ -1,48 +1,22 @@
-package signer
+package sp
 
 import (
 	"encoding/hex"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 
+	spClient "github.com/bnb-chain/gnfd-go-sdk/client/spclient"
+	"github.com/bnb-chain/gnfd-go-sdk/keys"
+	signer "github.com/bnb-chain/gnfd-go-sdk/keys/signer"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSigner(t *testing.T) {
-	privKey, _, addr := testdata.KeyEthSecp256k1TestPubAddr()
-	rawdata := []byte("this is a test stringToSign content")
-	// generate signed string bytes
-	stringToSign := crypto.Keccak256(rawdata)
-
-	signer := NewMsgSigner(privKey)
-	signature, _, err := signer.Sign(stringToSign)
-	require.NoError(t, err)
-	fmt.Println("origin addr:", addr.String())
-
-	// recover the sender addr
-	recoverAcc, pk, err := RecoverAddr(stringToSign, signature)
-	require.NoError(t, err)
-
-	fmt.Println("recover sender addr:", recoverAcc.String())
-	if !addr.Equals(recoverAcc) {
-		t.Errorf("recover addr not same")
-	}
-
-	// verify the signature
-	verifySucc := secp256k1.VerifySignature(pk.Bytes(), stringToSign, signature[:len(signature)-1])
-	if !verifySucc {
-		t.Errorf("verify fail")
-	}
-}
-
-func TestMsgSignV1(t *testing.T) {
+func TestRequestSignV1(t *testing.T) {
 	// client actions: new request and sign the request
 	urlmap := url.Values{}
 	urlmap.Add("greenfield", "chain")
@@ -55,22 +29,20 @@ func TestMsgSignV1(t *testing.T) {
 
 	privKey, _, addr := testdata.KeyEthSecp256k1TestPubAddr()
 
-	authInfo := AuthInfo{
-		SignType:        AuthV1,
-		MetaMaskSignStr: "",
-	}
+	keyManager, err := keys.NewPrivateKeyManager(hex.EncodeToString(privKey.Bytes()))
+	require.NoError(t, err)
 
-	err = SignRequest(req, privKey, authInfo)
+	err = spClient.SignRequest(req, keyManager, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	// server actions
 	// (1) get the header, verify header and check data
-	authHeader := req.Header.Get(HTTPHeaderAuthorization)
+	authHeader := req.Header.Get(spClient.HTTPHeaderAuthorization)
 	if authHeader == "" {
 		t.Errorf("authorization header should not be empty")
 	}
 
-	if !strings.Contains(authHeader, AuthV1) {
+	if !strings.Contains(authHeader, spClient.AuthV1) {
 		t.Errorf("auth type error")
 	}
 
@@ -87,12 +59,12 @@ func TestMsgSignV1(t *testing.T) {
 	require.NoError(t, err)
 
 	// (2) server get sender addr
-	signMsg := GetMsgToSign(req)
+	signMsg := spClient.GetMsgToSign(req)
 	if hex.EncodeToString(signMsg) != signStr {
 		t.Errorf("string to sign not same")
 	}
 
-	recoverAddr, pk, err := RecoverAddr(signMsg, sigBytes)
+	recoverAddr, pk, err := signer.RecoverAddr(signMsg, sigBytes)
 
 	require.NoError(t, err)
 

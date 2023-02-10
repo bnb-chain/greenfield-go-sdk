@@ -1,4 +1,4 @@
-package greenfield
+package client
 
 import (
 	"context"
@@ -12,8 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/s3utils"
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/signer"
+	"github.com/bnb-chain/gnfd-go-sdk/utils"
 )
 
 // ObjectInfo contain the meta of downloaded objects
@@ -31,11 +30,11 @@ type GetObjectOptions struct {
 }
 
 // GetObject download s3 object payload and return the related object info
-func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts GetObjectOptions, authInfo signer.AuthInfo) (io.ReadCloser, ObjectInfo, error) {
-	if err := s3utils.IsValidBucketName(bucketName); err != nil {
+func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts GetObjectOptions, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
+	if err := utils.IsValidBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
-	if err := s3utils.IsValidObjectName(objectName); err != nil {
+	if err := utils.IsValidObjectName(objectName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
 
@@ -71,7 +70,7 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 	ObjInfo, err := getObjInfo(bucketName, objectName, resp.Header)
 	if err != nil {
 		log.Printf("get ObjectInfo %s fail: %s \n", objectName, err.Error())
-		closeResponse(resp)
+		utils.CloseResponse(resp)
 		return nil, ObjectInfo{}, err
 	}
 
@@ -80,7 +79,7 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName string, filePath string, opts GetObjectOptions, authinfo signer.AuthInfo) error {
+func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts GetObjectOptions, authinfo AuthInfo) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {

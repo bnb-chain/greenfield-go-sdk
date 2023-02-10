@@ -1,4 +1,4 @@
-package signer
+package client
 
 import (
 	"bytes"
@@ -9,9 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bnb-chain/greenfield-sdk-go/pkg/s3utils"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/bnb-chain/gnfd-go-sdk/keys"
+	signer "github.com/bnb-chain/gnfd-go-sdk/keys/signer"
+	"github.com/bnb-chain/gnfd-go-sdk/utils"
 )
 
 const (
@@ -68,13 +70,13 @@ func getCanonicalHeaders(req *http.Request) string {
 			content.WriteByte('\n')
 		} else {
 			containHostHeader = true
-			content.WriteString(GetHostInfo(req))
+			content.WriteString(getHostInfo(req))
 			content.WriteByte('\n')
 		}
 	}
 
 	if !containHostHeader {
-		content.WriteString(GetHostInfo(req))
+		content.WriteString(getHostInfo(req))
 		content.WriteByte('\n')
 	}
 
@@ -106,7 +108,7 @@ func GetCanonicalRequest(req *http.Request) string {
 	req.URL.RawQuery = strings.ReplaceAll(req.URL.Query().Encode(), "+", "%20")
 	canonicalRequest := strings.Join([]string{
 		req.Method,
-		s3utils.EncodePath(req.URL.Path),
+		utils.EncodePath(req.URL.Path),
 		req.URL.RawQuery,
 		getCanonicalHeaders(req),
 		getSignedHeaders(req),
@@ -122,17 +124,17 @@ func GetMsgToSign(req *http.Request) []byte {
 }
 
 // SignRequest sign the request and set authorization before send to server
-func SignRequest(req *http.Request, privKey cryptotypes.PrivKey, info AuthInfo) error {
+func SignRequest(req *http.Request, keyManager keys.KeyManager, info AuthInfo) error {
 	var signature []byte
 	var err error
 	var authStr []string
 	if info.SignType == AuthV1 {
-		if privKey == nil {
+		if keyManager.GetPrivKey() == nil {
 			return errors.New("private key must be set when using sign v1 mode")
 		}
 		signMsg := GetMsgToSign(req)
 		// sign the request header info, generate the signature
-		signer := NewMsgSigner(privKey)
+		signer := signer.NewMsgSigner(keyManager)
 		signature, _, err = signer.Sign(signMsg)
 		if err != nil {
 			return err
@@ -170,8 +172,8 @@ func calcSHA256(msg []byte) (sum []byte) {
 	return
 }
 
-// GetHostInfo returns host header from the request
-func GetHostInfo(req *http.Request) string {
+// getHostInfo returns host header from the request
+func getHostInfo(req *http.Request) string {
 	host := req.Header.Get("host")
 	if host != "" {
 		return host

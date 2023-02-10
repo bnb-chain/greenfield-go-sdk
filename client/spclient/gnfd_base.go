@@ -1,4 +1,4 @@
-package greenfield
+package client
 
 import (
 	"bytes"
@@ -13,11 +13,12 @@ import (
 	"strings"
 	"time"
 
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/bnb-chain/gnfd-go-sdk/types"
+	common "github.com/bnb-chain/greenfield-common/go"
+	sdktype "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/s3utils"
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/signer"
+	"github.com/bnb-chain/gnfd-go-sdk/keys"
+	"github.com/bnb-chain/gnfd-go-sdk/utils"
 )
 
 // SPClient is a client manages communication with the inscription API.
@@ -27,20 +28,20 @@ type SPClient struct {
 	userAgent string
 	host      string
 
-	conf    *CliConfig
-	sender  sdk.AccAddress      // sender greenfield chain address
-	privKey cryptotypes.PrivKey // sender private key
+	conf       *SPClientConfig
+	sender     sdktype.AccAddress // sender greenfield chain address
+	keyManager keys.KeyManager
 }
 
-// CliConfig is the config info of client
-type CliConfig struct {
+// SPClientConfig is the config info of client
+type SPClientConfig struct {
 	Secure           bool // use https or not
 	Transport        http.RoundTripper
 	RetryOpt         RetryOptions
 	UploadLimitSpeed uint64
 }
 
-type Options struct {
+type Option struct {
 	secure bool
 }
 
@@ -51,8 +52,8 @@ type RetryOptions struct {
 }
 
 // NewSpClient returns a new greenfield client
-func NewSpClient(endpoint string, opts *Options) (*SPClient, error) {
-	url, err := getEndpointURL(endpoint, opts.secure)
+func NewSpClient(endpoint string, opt *Option) (*SPClient, error) {
+	url, err := utils.GetEndpointURL(endpoint, opt.secure)
 	if err != nil {
 		log.Println("get url error:", err.Error())
 		return nil, err
@@ -63,7 +64,7 @@ func NewSpClient(endpoint string, opts *Options) (*SPClient, error) {
 		client:    httpClient,
 		userAgent: UserAgent,
 		endpoint:  url,
-		conf: &CliConfig{
+		conf: &SPClientConfig{
 			RetryOpt: RetryOptions{
 				Count:    3,
 				Interval: time.Duration(0),
@@ -72,6 +73,24 @@ func NewSpClient(endpoint string, opts *Options) (*SPClient, error) {
 	}
 
 	return c, nil
+}
+
+// NewSpClientWithKeyManager returns a new greenfield client with keyManager in it
+func NewSpClientWithKeyManager(endpoint string, opt *Option, keyManager keys.KeyManager) (*SPClient, error) {
+	spClient, err := NewSpClient(endpoint, opt)
+	if err != nil {
+		return nil, err
+	}
+	spClient.keyManager = keyManager
+	return spClient, nil
+}
+
+// GetKeyManager return the keyManager object
+func (c *SPClient) GetKeyManager() (keys.KeyManager, error) {
+	if c.keyManager == nil {
+		return nil, types.KeyManagerNotInitError
+	}
+	return c.keyManager, nil
 }
 
 // GetURL returns the URL of the S3 endpoint.
@@ -110,19 +129,13 @@ func (c *SPClient) SetHost(hostName string) {
 	c.host = hostName
 }
 
-// SetPriKey set private key of client
-// it is needed to be set when dapp sign the request using private key
-func (c *SPClient) SetPriKey(key cryptotypes.PrivKey) {
-	c.privKey = key
-}
-
 // GetHost get host name of request
 func (c *SPClient) GetHost() string {
 	return c.host
 }
 
 // GetAccount get sender address info
-func (c *SPClient) GetAccount() sdk.AccAddress {
+func (c *SPClient) GetAccount() sdktype.AccAddress {
 	return c.sender
 }
 
@@ -133,7 +146,7 @@ func (c *SPClient) GetAgent() string {
 
 // newRequest construct the http request, set url, body and headers
 func (c *SPClient) newRequest(ctx context.Context,
-	method string, meta requestMeta, body interface{}, txnHash string, isAdminAPi bool, authInfo signer.AuthInfo) (req *http.Request, err error) {
+	method string, meta requestMeta, body interface{}, txnHash string, isAdminAPi bool, authInfo AuthInfo) (req *http.Request, err error) {
 	// construct the target url
 	desURL, err := c.GenerateURL(meta.bucketName, meta.objectName, meta.urlRelPath, meta.urlValues, isAdminAPi)
 	if err != nil {
@@ -158,7 +171,7 @@ func (c *SPClient) newRequest(ctx context.Context,
 			}
 			contentType = contentTypeXML
 			reader = bytes.NewReader(content)
-			sha256Hex = CalcSHA256Hex(content)
+			sha256Hex = utils.CalcSHA256Hex(content)
 		}
 	}
 
@@ -208,20 +221,18 @@ func (c *SPClient) newRequest(ctx context.Context,
 		req.Header.Set(HTTPHeaderRange, meta.Range)
 	}
 
-	// set request host
-	if !isAdminAPi {
-		if c.host != "" {
-			req.Host = c.host
-		} else if req.URL.Host != "" {
-			req.Host = req.URL.Host
-		}
-	}
-
 	if isAdminAPi {
 		if meta.objectName == "" {
 			req.Header.Set(HTTPHeaderResource, meta.bucketName)
 		} else {
 			req.Header.Set(HTTPHeaderResource, meta.bucketName+"/"+meta.objectName)
+		}
+	} else {
+		// set request host
+		if c.host != "" {
+			req.Host = c.host
+		} else if req.URL.Host != "" {
+			req.Host = req.URL.Host
 		}
 	}
 
@@ -233,11 +244,13 @@ func (c *SPClient) newRequest(ctx context.Context,
 	req.Header.Set(HTTPHeaderUserAgent, c.userAgent)
 
 	// sign the total http request info when auth type v1
-	if authInfo.SignType == signer.AuthV1 && c.privKey != nil {
-		err = signer.SignRequest(req, c.privKey, authInfo)
-		if err != nil {
-			return req, err
-		}
+	keyManager, err := c.GetKeyManager()
+	if err != nil {
+		return req, err
+	}
+	err = SignRequest(req, keyManager, authInfo)
+	if err != nil {
+		return req, err
 	}
 
 	return
@@ -274,7 +287,7 @@ func (c *SPClient) doAPI(ctx context.Context, req *http.Request, meta requestMet
 	}
 	defer func() {
 		if closeBody {
-			closeResponse(resp)
+			utils.CloseResponse(resp)
 		}
 	}()
 
@@ -288,7 +301,7 @@ func (c *SPClient) doAPI(ctx context.Context, req *http.Request, meta requestMet
 }
 
 // sendReq new restful request, send the message and handle the response
-func (c *SPClient) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo signer.AuthInfo) (res *http.Response, err error) {
+func (c *SPClient) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo AuthInfo) (res *http.Response, err error) {
 	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, authInfo)
 	if err != nil {
 		log.Printf("new request error: %s , stop send request\n", err.Error())
@@ -330,23 +343,23 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
 		// generate s3 virtual hosted style url
-		if CheckDomainName(host) {
+		if utils.CheckDomainName(host) {
 			urlStr = scheme + "://" + bucketName + "." + host + "/"
 		} else {
 			urlStr = scheme + "://" + host + "/"
 		}
 
 		if objectName != "" {
-			urlStr += s3utils.EncodePath(objectName)
+			urlStr += utils.EncodePath(objectName)
 		}
 	}
 
 	if relativePath != "" {
-		urlStr += s3utils.EncodePath(relativePath)
+		urlStr += utils.EncodePath(relativePath)
 	}
 
 	if len(queryValues) > 0 {
-		urlStrNew, err := addQueryValues(urlStr, queryValues)
+		urlStrNew, err := utils.AddQueryValues(urlStr, queryValues)
 		if err != nil {
 			return nil, err
 		}
@@ -357,13 +370,13 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 }
 
 // GetApproval return the signature info for the approval of preCreating resources
-func (c *SPClient) GetApproval(ctx context.Context, bucketName, objectName string, authInfo signer.AuthInfo) (string, error) {
-	if err := s3utils.IsValidBucketName(bucketName); err != nil {
+func (c *SPClient) GetApproval(ctx context.Context, bucketName, objectName string, authInfo AuthInfo) (string, error) {
+	if err := utils.IsValidBucketName(bucketName); err != nil {
 		return "", err
 	}
 
 	if objectName != "" {
-		if err := s3utils.IsValidObjectName(objectName); err != nil {
+		if err := utils.IsValidObjectName(objectName); err != nil {
 			return "", err
 		}
 	}
@@ -377,10 +390,11 @@ func (c *SPClient) GetApproval(ctx context.Context, bucketName, objectName strin
 	}
 
 	reqMeta := requestMeta{
-		bucketName: bucketName,
-		objectName: objectName,
-		urlValues:  urlVal,
-		urlRelPath: "get-approval",
+		bucketName:    bucketName,
+		objectName:    objectName,
+		urlValues:     urlVal,
+		urlRelPath:    "get-approval",
+		contentSHA256: EmptyStringSHA256,
 	}
 
 	sendOpt := sendOptions{
@@ -406,7 +420,7 @@ func (c *SPClient) GetApproval(ctx context.Context, bucketName, objectName strin
 // GetPieceHashRoots return primary pieces Hash and secondary piece Hash roots list and object size
 // It is used for generate meta of object on the chain
 func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64, ecShards int) (string, []string, int64, error) {
-	pieceHashRoots, size, err := SplitAndComputerHash(reader, segSize, ecShards)
+	pieceHashRoots, size, err := common.SplitAndComputerHash(reader, segSize, ecShards)
 	if err != nil {
 		log.Println("get hash roots fail", err.Error())
 		return "", nil, 0, err

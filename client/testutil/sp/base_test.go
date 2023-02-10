@@ -1,7 +1,8 @@
-package greenfield
+package sp
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -11,7 +12,7 @@ import (
 	"testing"
 
 	spClient "github.com/bnb-chain/gnfd-go-sdk/client/spclient"
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/signer"
+	"github.com/bnb-chain/gnfd-go-sdk/keys"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	"github.com/stretchr/testify/require"
 )
@@ -38,12 +39,15 @@ func setup() {
 
 	var err error
 
-	client, err = spClient.NewSpClient(server.URL[len("http://"):], &spClient.Options{})
+	keyManager, err := keys.NewPrivateKeyManager(hex.EncodeToString(privKey.Bytes()))
+	if err != nil {
+		log.Fatal("new key manager fail", err.Error())
+	}
+	client, err = spClient.NewSpClientWithKeyManager(server.URL[len("http://"):], &spClient.Option{}, keyManager)
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
 
-	client.SetPriKey(privKey)
 }
 
 func shutdown() {
@@ -93,12 +97,14 @@ func TestNewClient(t *testing.T) {
 	server_temp := httptest.NewServer(mux_temp)
 	privKey, _, _ := testdata.KeyEthSecp256k1TestPubAddr()
 
-	c, err := spClient.NewSpClient(server_temp.URL[7:], &spClient.Options{})
+	keyManager, err := keys.NewPrivateKeyManager(hex.EncodeToString(privKey.Bytes()))
 	if err != nil {
-		t.Errorf("new client fail %s", err.Error())
+		log.Fatal("new key manager fail")
 	}
-	fmt.Println("url:", server_temp.URL[7:])
-	c.SetPriKey(privKey)
+	c, err := spClient.NewSpClientWithKeyManager(server_temp.URL[7:], &spClient.Option{}, keyManager)
+	if err != nil {
+		log.Fatal("create client  fail")
+	}
 
 	if got, want := c.GetAgent(), spClient.UserAgent; got != want {
 		t.Errorf("NewSpClient UserAgent is %v, want %v", got, want)
@@ -138,7 +144,7 @@ func TestGetApproval(t *testing.T) {
 	})
 
 	// test preCreateBucket
-	gotSign, err := client.GetApproval(context.Background(), bucketName, "", signer.NewAuthInfo(false, ""))
+	gotSign, err := client.GetApproval(context.Background(), bucketName, "", spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	if gotSign != signature {
@@ -146,7 +152,7 @@ func TestGetApproval(t *testing.T) {
 	}
 
 	//test preCreateObject
-	gotSign, err = client.GetApproval(context.Background(), bucketName, ObjectName, signer.NewAuthInfo(false, ""))
+	gotSign, err = client.GetApproval(context.Background(), bucketName, ObjectName, spClient.NewAuthInfo(false, ""))
 
 	require.NoError(t, err)
 

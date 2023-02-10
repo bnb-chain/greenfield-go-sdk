@@ -155,8 +155,8 @@ github.com/bnb-chain/gnfd-tendermint v0.0.1 h1:KWFuxWv8m6t1vUi3ADyVcEG0qVnEzQt1t
 github.com/bnb-chain/gnfd-tendermint v0.0.1/go.mod h1:/v9z9F6cq0+f7EGG92lYSLBcPYQDILoK91X8YM28hWo=
 github.com/bnb-chain/greenfield v0.0.4 h1:FiI/euLsOP3dxlF45nRC4569UpCb7blXkKvlJNboSPg=
 github.com/bnb-chain/greenfield v0.0.4/go.mod h1:p6R55ewcP7e0tGrbOCFUGvsII9+dlZg7W3AIVI3k0UE=
-github.com/bnb-chain/greenfield-sdk-go v0.0.0-20230208161205-03ff5beb1419 h1:pMl5XQIBAL51WqkWWYUHITv6epA4y2ZmOjiDr9avbCk=
-github.com/bnb-chain/greenfield-sdk-go v0.0.0-20230208161205-03ff5beb1419/go.mod h1:+b9Ow9h0I6rmPxg54KlqUmrjUgGub7qu0RsUYUQzpYs=
+github.com/bnb-chain/greenfield-common/go v0.0.0-20230209233558-ff9447ce4045 h1:e67IRpb3lREyJsDoUTHxZV/Yxx323YLK0w7CRdAvsbg=
+github.com/bnb-chain/greenfield-common/go v0.0.0-20230209233558-ff9447ce4045/go.mod h1:YGGg4qkQU7zaRaFltOjBjyMizVPucH2sfUnvvouzaGU=
 github.com/bnb-chain/greenfield-storage-provider v0.0.0-20230117021020-392fc2dd84c7 h1:qy4Bgdb5BgaONfzS//cYiy4pm8rTxJ0Stqkhafln1ks=
 github.com/bnb-chain/greenfield-storage-provider v0.0.0-20230117021020-392fc2dd84c7/go.mod h1:RCmKvvjwlQtcadrE/BbqtTTFwTM0qYBDf6yhV+BJ9L8=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
@@ -704,8 +704,8 @@ github.com/klauspost/cpuid/v2 v2.1.1/go.mod h1:RVVoqg1df56z8g3pUjL/3lE5UfnlrJX8t
 github.com/klauspost/crc32 v0.0.0-20161016154125-cb6bfca970f6/go.mod h1:+ZoRqAPRLkC4NPOvfYeR5KNOrY6TD+/sAC3HXPZgDYg=
 github.com/klauspost/pgzip v1.0.2-0.20170402124221-0bf5dcad4ada/go.mod h1:Ch1tH69qFZu15pkjo5kYi6mth2Zzwzt50oCQKQE9RUs=
 github.com/klauspost/reedsolomon v1.9.3/go.mod h1:CwCi+NUr9pqSVktrkN+Ondf06rkhYZ/pcNv7fu+8Un4=
-github.com/klauspost/reedsolomon v1.11.3 h1:rX9UNNvDhJ0Bq45y6uBy/eYehcjyz5faokTuZmu1Q9U=
-github.com/klauspost/reedsolomon v1.11.3/go.mod h1:FXLZzlJIdfqEnQLdUKWNRuMZg747hZ4oYp2Ml60Lb/k=
+github.com/klauspost/reedsolomon v1.11.6 h1:h0MUpEzmretucmlelC3EefQHKgk6vWpKz/ctB/tmaEs=
+github.com/klauspost/reedsolomon v1.11.6/go.mod h1:cuXqklb3LNaurR5MVjy7WLXAEUqGz4I0Uc+rnQ7POUg=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

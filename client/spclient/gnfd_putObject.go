@@ -1,4 +1,4 @@
-package greenfield
+package client
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/bnb-chain/gnfd-go-sdk/client/spclient/pkg/signer"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -41,7 +40,7 @@ func (t *UploadResult) String() string {
 
 // PrePutObject get approval of creating object and send txn to greenfield chain
 func (c *SPClient) PrePutObject(ctx context.Context, bucketName, objectName string,
-	meta PutObjectMeta, reader io.Reader, authInfo signer.AuthInfo) (string, error) {
+	meta PutObjectMeta, reader io.Reader, authInfo AuthInfo) (string, error) {
 	// get approval of creating bucket from sp
 	signature, err := c.GetApproval(ctx, bucketName, objectName, authInfo)
 	if err != nil {
@@ -50,7 +49,7 @@ func (c *SPClient) PrePutObject(ctx context.Context, bucketName, objectName stri
 	log.Println("get approve from sp finish,signature is: ", signature)
 
 	// get hash and objectSize from reader
-	_, _, err = SplitAndComputerHash(reader, SegmentSize, EncodeShards)
+	_, _, _, err = c.GetPieceHashRoots(reader, SegmentSize, EncodeShards)
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +62,7 @@ func (c *SPClient) PrePutObject(ctx context.Context, bucketName, objectName stri
 
 // PutObject supports the second stage of uploading the object to bucket.
 func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string,
-	reader io.Reader, meta ObjectMeta, authInfo signer.AuthInfo) (res UploadResult, err error) {
+	reader io.Reader, meta ObjectMeta, authInfo AuthInfo) (res UploadResult, err error) {
 	if txnHash == "" {
 		return UploadResult{}, errors.New("txn hash empty")
 	}
@@ -107,7 +106,7 @@ func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHas
 
 // FPutObject support upload object from local file
 func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
-	filePath, txnHash, contentType string, authInfo signer.AuthInfo) (res UploadResult, err error) {
+	filePath, txnHash, contentType string, authInfo AuthInfo) (res UploadResult, err error) {
 	fReader, err := os.Open(filePath)
 	// If any error fail quickly here.
 	if err != nil {
