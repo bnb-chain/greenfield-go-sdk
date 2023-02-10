@@ -1,4 +1,4 @@
-package testutil
+package test
 
 const (
 	TEST_PRIVATE_KEY = "ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf"

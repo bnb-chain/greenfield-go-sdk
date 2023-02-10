@@ -126,7 +126,7 @@ SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
 ```
 
 #### Support transaction type
-Please refer to [msgTypes.go](./types/msgTypes.go) to see all types of `sdk.Msg` supported 
+Please refer to [msgTypes.go](./types/msgTypes.go) to get all types of `sdk.Msg` supported 
 
 
 ### Use Tendermint RPC Client
