@@ -1,7 +1,9 @@
 package types
 
 import (
-	gnfdtypes "github.com/bnb-chain/greenfield/x/greenfield/types"
+	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
+	paymenttypes "github.com/bnb-chain/greenfield/x/payment/types"
+	sptypes "github.com/bnb-chain/greenfield/x/sp/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -18,7 +20,6 @@ import (
 func Cdc() *codec.ProtoCodec {
 	interfaceRegistry := types.NewInterfaceRegistry()
 	cryptocodec.RegisterInterfaces(interfaceRegistry)
-	gnfdtypes.RegisterInterfaces(interfaceRegistry)
 	authtypes.RegisterInterfaces(interfaceRegistry)
 	authztypes.RegisterInterfaces(interfaceRegistry)
 	banktypes.RegisterInterfaces(interfaceRegistry)
@@ -27,5 +28,8 @@ func Cdc() *codec.ProtoCodec {
 	proposaltypes.RegisterInterfaces(interfaceRegistry)
 	slashingtypes.RegisterInterfaces(interfaceRegistry)
 	stakingtypes.RegisterInterfaces(interfaceRegistry)
+	bridgetypes.RegisterInterfaces(interfaceRegistry)
+	sptypes.RegisterInterfaces(interfaceRegistry)
+	paymenttypes.RegisterInterfaces(interfaceRegistry)
 	return codec.NewProtoCodec(interfaceRegistry)
 }
