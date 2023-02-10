@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	spClient "github.com/bnb-chain/gnfd-go-sdk/client/spclient"
+	spClient "github.com/bnb-chain/gnfd-go-sdk/client/sp"
 	"github.com/bnb-chain/gnfd-go-sdk/utils"
 
 	"github.com/stretchr/testify/require"

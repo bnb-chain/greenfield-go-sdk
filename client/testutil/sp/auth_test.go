@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	spClient "github.com/bnb-chain/gnfd-go-sdk/client/spclient"
+	spClient "github.com/bnb-chain/gnfd-go-sdk/client/sp"
 	"github.com/bnb-chain/gnfd-go-sdk/keys"
 	signer "github.com/bnb-chain/gnfd-go-sdk/keys/signer"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"

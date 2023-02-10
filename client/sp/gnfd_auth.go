@@ -25,22 +25,23 @@ const (
 
 // AuthInfo is the authorization info of requests
 type AuthInfo struct {
-	SignType        string // if using metamask sign, set authV2
-	MetaMaskSignStr string
+	SignType      string // if using wallet sign, set authV2
+	WalletSignStr string
 }
 
-// NewAuthInfo return the AuthInfo base on whether use metamask
-// useMetaMask indicate whether you need use metamask to sign, and the signStr indicate the metamask signature
-func NewAuthInfo(useMetaMask bool, signStr string) AuthInfo {
-	if !useMetaMask {
+// NewAuthInfo return the AuthInfo which need to pass to api
+// useWalletSign indicate whether you need use wallet to sign
+// signStr indicate the wallet signature or jwt token
+func NewAuthInfo(useWalletSign bool, signStr string) AuthInfo {
+	if !useWalletSign {
 		return AuthInfo{
-			SignType:        AuthV1,
-			MetaMaskSignStr: "",
+			SignType:      AuthV1,
+			WalletSignStr: "",
 		}
 	} else {
 		return AuthInfo{
-			SignType:        AuthV2,
-			MetaMaskSignStr: signStr,
+			SignType:      AuthV2,
+			WalletSignStr: signStr,
 		}
 	}
 }
@@ -147,13 +148,13 @@ func SignRequest(req *http.Request, keyManager keys.KeyManager, info AuthInfo) e
 		}
 
 	} else if info.SignType == AuthV2 {
-		if info.MetaMaskSignStr == "" {
-			return errors.New("MetaMask sign can not be empty when using sign v2 types")
+		if info.WalletSignStr == "" {
+			return errors.New("wallet signature can not be empty when using sign v2 types")
 		}
-		// metamask should use same sign algorithm
+		// wallet should use same sign algorithm
 		authStr = []string{
 			AuthV2 + " " + SignAlgorithm,
-			" Signature=" + info.MetaMaskSignStr,
+			" Signature=" + info.WalletSignStr,
 		}
 	} else {
 		return errors.New("sign type error")
