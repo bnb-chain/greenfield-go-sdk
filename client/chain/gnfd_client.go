@@ -7,6 +7,7 @@ import (
 	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
 	paymenttypes "github.com/bnb-chain/greenfield/x/payment/types"
 	sptypes "github.com/bnb-chain/greenfield/x/sp/types"
+	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -43,6 +44,8 @@ type SpQueryClient = sptypes.QueryClient
 type SpMsgClient = sptypes.MsgClient
 type BridgeQueryClient = bridgetypes.QueryClient
 type BridgeMsgClient = bridgetypes.MsgClient
+type StorageQueryClient = storagetypes.QueryClient
+type StorageMsgClient = storagetypes.MsgClient
 type GovQueryClient = v1beta1.QueryClient
 type GovMsgClient = v1beta1.MsgClient
 type OracleQueryClient = oracletypes.QueryClient
@@ -73,6 +76,8 @@ type GreenfieldClient struct {
 	SpMsgClient
 	BridgeQueryClient
 	BridgeMsgClient
+	StorageQueryClient
+	StorageMsgClient
 	GovQueryClient
 	GovMsgClient
 	OracleQueryClient
@@ -121,6 +126,8 @@ func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 		sptypes.NewMsgClient(conn),
 		bridgetypes.NewQueryClient(conn),
 		bridgetypes.NewMsgClient(conn),
+		storagetypes.NewQueryClient(conn),
+		storagetypes.NewMsgClient(conn),
 		v1beta1.NewQueryClient(conn),
 		v1beta1.NewMsgClient(conn),
 		oracletypes.NewQueryClient(conn),
