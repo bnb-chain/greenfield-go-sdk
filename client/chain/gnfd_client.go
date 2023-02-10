@@ -2,6 +2,7 @@ package chain
 
 import (
 	_ "encoding/json"
+
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
