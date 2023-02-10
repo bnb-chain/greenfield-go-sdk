@@ -4,7 +4,10 @@ import (
 	_ "encoding/json"
 	"github.com/bnb-chain/gnfd-go-sdk/keys"
 	"github.com/bnb-chain/gnfd-go-sdk/types"
-	gnfdtypes "github.com/bnb-chain/greenfield/x/greenfield/types"
+	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
+	paymenttypes "github.com/bnb-chain/greenfield/x/payment/types"
+	sptypes "github.com/bnb-chain/greenfield/x/sp/types"
+	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -35,8 +38,14 @@ type DistrMsgClient = distrtypes.MsgClient
 type FeegrantQueryClient = feegranttypes.QueryClient
 type FeegrantMsgClient = feegranttypes.MsgClient
 type GashubQueryClient = gashubtypes.QueryClient
-type GnfdQueryClient = gnfdtypes.QueryClient
-type GnfdMsgClient = gnfdtypes.MsgClient
+type PaymentQueryClient = paymenttypes.QueryClient
+type PaymentMsgClient = paymenttypes.MsgClient
+type SpQueryClient = sptypes.QueryClient
+type SpMsgClient = sptypes.MsgClient
+type BridgeQueryClient = bridgetypes.QueryClient
+type BridgeMsgClient = bridgetypes.MsgClient
+type StorageQueryClient = storagetypes.QueryClient
+type StorageMsgClient = storagetypes.MsgClient
 type GovQueryClient = v1beta1.QueryClient
 type GovMsgClient = v1beta1.MsgClient
 type OracleQueryClient = oracletypes.QueryClient
@@ -61,8 +70,14 @@ type GreenfieldClient struct {
 	FeegrantQueryClient
 	FeegrantMsgClient
 	GashubQueryClient
-	GnfdQueryClient
-	GnfdMsgClient
+	PaymentQueryClient
+	PaymentMsgClient
+	SpQueryClient
+	SpMsgClient
+	BridgeQueryClient
+	BridgeMsgClient
+	StorageQueryClient
+	StorageMsgClient
 	GovQueryClient
 	GovMsgClient
 	OracleQueryClient
@@ -105,8 +120,14 @@ func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 		feegranttypes.NewQueryClient(conn),
 		feegranttypes.NewMsgClient(conn),
 		gashubtypes.NewQueryClient(conn),
-		gnfdtypes.NewQueryClient(conn),
-		gnfdtypes.NewMsgClient(conn),
+		paymenttypes.NewQueryClient(conn),
+		paymenttypes.NewMsgClient(conn),
+		sptypes.NewQueryClient(conn),
+		sptypes.NewMsgClient(conn),
+		bridgetypes.NewQueryClient(conn),
+		bridgetypes.NewMsgClient(conn),
+		storagetypes.NewQueryClient(conn),
+		storagetypes.NewMsgClient(conn),
 		v1beta1.NewQueryClient(conn),
 		v1beta1.NewMsgClient(conn),
 		oracletypes.NewQueryClient(conn),
