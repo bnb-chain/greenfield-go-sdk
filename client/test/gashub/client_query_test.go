@@ -2,15 +2,15 @@ package gashub
 
 import (
 	"context"
-	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/rpc"
-	"github.com/bnb-chain/gnfd-go-sdk/client/testutil"
+	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/chain"
+	"github.com/bnb-chain/gnfd-go-sdk/client/test"
 	gashubtypes "github.com/cosmos/cosmos-sdk/x/gashub/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestGashubParams(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(testutil.TEST_GRPC_ADDR, testutil.TEST_CHAIN_ID)
+	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := gashubtypes.QueryParamsRequest{}
 	res, err := client.GashubQueryClient.Params(context.Background(), &query)
