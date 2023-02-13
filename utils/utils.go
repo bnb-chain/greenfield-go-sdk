@@ -58,14 +58,14 @@ func GetEndpointURL(endpoint string, secure bool) (*url.URL, error) {
 		return nil, err
 	}
 	// check endpoint if it is valid
-	if err := isValidEndpointURL(*endpointURL); err != nil {
+	if err := isValidEndpoint(*endpointURL); err != nil {
 		return nil, err
 	}
 	return endpointURL, nil
 }
 
-// Verify if input endpoint URL is valid.
-func isValidEndpointURL(endpointURL url.URL) error {
+// isValidEndpoint verify if endpoint is valid.
+func isValidEndpoint(endpointURL url.URL) error {
 	if endpointURL == EmptyURL {
 		return errors.New("Endpoint url is empty.")
 	}
@@ -75,13 +75,8 @@ func isValidEndpointURL(endpointURL url.URL) error {
 	}
 
 	host := endpointURL.Hostname()
-	if !CheckIP(host) {
-		msg := endpointURL.Host + " does not meet ip address standards."
-		return errors.New(msg)
-	}
-
-	if !CheckDomainName(host) {
-		msg := endpointURL.Host + " does not meet domain name standards."
+	if !CheckIP(host) && !CheckDomainName(host) {
+		msg := endpointURL.Host + " does not meet ip address or domain name standards"
 		return errors.New(msg)
 	}
 

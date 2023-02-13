@@ -3,6 +3,7 @@ package sp
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/xml"
 	"errors"
 	"io"
@@ -13,7 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bnb-chain/greenfield-go-sdk/types"
+	signer "github.com/bnb-chain/gnfd-go-sdk/keys/signer"
+	"github.com/bnb-chain/gnfd-go-sdk/types"
 	common "github.com/bnb-chain/greenfield-common/go"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
 
@@ -55,8 +57,7 @@ type RetryOptions struct {
 func NewSpClient(endpoint string, opt *Option) (*SPClient, error) {
 	url, err := utils.GetEndpointURL(endpoint, opt.secure)
 	if err != nil {
-		log.Println("get url error:", err.Error())
-		return nil, err
+		return nil, toInvalidArgumentResp(err.Error())
 	}
 
 	httpClient := &http.Client{}
@@ -244,11 +245,7 @@ func (c *SPClient) newRequest(ctx context.Context,
 	req.Header.Set(HTTPHeaderUserAgent, c.userAgent)
 
 	// sign the total http request info when auth type v1
-	keyManager, err := c.GetKeyManager()
-	if err != nil {
-		return req, err
-	}
-	err = SignRequest(req, keyManager, authInfo)
+	err = c.SignRequest(req, authInfo)
 	if err != nil {
 		return req, err
 	}
@@ -367,6 +364,51 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 	}
 
 	return url.Parse(urlStr)
+}
+
+// SignRequest sign the request and set authorization before send to server
+func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
+	var signature []byte
+	var authStr []string
+	if info.SignType == AuthV1 {
+		keyManager, err := c.GetKeyManager()
+		if err != nil {
+			return errors.New("get key manager fail when using sign v1 mode")
+		}
+		if keyManager.GetPrivKey() == nil {
+			return errors.New("private key must be set when using sign v1 mode")
+		}
+		signMsg := GetMsgToSign(req)
+		// sign the request header info, generate the signature
+		signer := signer.NewMsgSigner(c.keyManager)
+		signature, _, err = signer.Sign(signMsg)
+		if err != nil {
+			return err
+		}
+
+		authStr = []string{
+			AuthV1 + " " + SignAlgorithm,
+			" SignedMsg=" + hex.EncodeToString(signMsg),
+			"Signature=" + hex.EncodeToString(signature),
+		}
+
+	} else if info.SignType == AuthV2 {
+		if info.WalletSignStr == "" {
+			return errors.New("wallet signature can not be empty when using sign v2 types")
+		}
+		// wallet should use same sign algorithm
+		authStr = []string{
+			AuthV2 + " " + SignAlgorithm,
+			" Signature=" + info.WalletSignStr,
+		}
+	} else {
+		return errors.New("sign type error")
+	}
+
+	// set auth header
+	req.Header.Set(HTTPHeaderAuthorization, strings.Join(authStr, ", "))
+
+	return nil
 }
 
 // GetApproval return the signature info for the approval of preCreating resources
