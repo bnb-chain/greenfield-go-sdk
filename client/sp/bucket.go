@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bnb-chain/gnfd-go-sdk/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
 type ListObjectsResult struct {

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	spClient "github.com/bnb-chain/gnfd-go-sdk/client/sp"
-	"github.com/bnb-chain/gnfd-go-sdk/keys"
+	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
+	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	"github.com/stretchr/testify/require"
 )

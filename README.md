@@ -16,7 +16,7 @@ Go version above 1.19
 
 ```go
 import (
-    "github.com/bnb-chain/gnfd-go-sdk" latest
+    "github.com/bnb-chain/greenfield-go-sdk" latest
 )
 ```
 

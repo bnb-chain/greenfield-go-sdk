@@ -1,4 +1,4 @@
-module github.com/bnb-chain/gnfd-go-sdk
+module github.com/bnb-chain/greenfield-go-sdk
 
 go 1.19
 

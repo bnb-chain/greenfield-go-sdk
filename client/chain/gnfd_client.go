@@ -2,8 +2,8 @@ package chain
 
 import (
 	_ "encoding/json"
-	"github.com/bnb-chain/gnfd-go-sdk/keys"
-	"github.com/bnb-chain/gnfd-go-sdk/types"
+	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
 	paymenttypes "github.com/bnb-chain/greenfield/x/payment/types"
 	sptypes "github.com/bnb-chain/greenfield/x/sp/types"

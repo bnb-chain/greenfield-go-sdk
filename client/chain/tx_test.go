@@ -1,9 +1,9 @@
 package chain
 
 import (
-	"github.com/bnb-chain/gnfd-go-sdk/client/test"
-	"github.com/bnb-chain/gnfd-go-sdk/keys"
-	"github.com/bnb-chain/gnfd-go-sdk/types"
+	"github.com/bnb-chain/greenfield-go-sdk/client/test"
+	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/assert"

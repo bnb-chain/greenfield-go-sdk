@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bnb-chain/gnfd-go-sdk/types"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	common "github.com/bnb-chain/greenfield-common/go"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/bnb-chain/gnfd-go-sdk/keys"
-	"github.com/bnb-chain/gnfd-go-sdk/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
 // SPClient is a client manages communication with the inscription API.
