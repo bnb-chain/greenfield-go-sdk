@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	signer "github.com/bnb-chain/gnfd-go-sdk/keys/signer"
-	"github.com/bnb-chain/gnfd-go-sdk/types"
 	common "github.com/bnb-chain/greenfield-common/go"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	signer "github.com/bnb-chain/greenfield-go-sdk/keys/signer"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
@@ -33,6 +33,7 @@ type SPClient struct {
 	conf       *SPClientConfig
 	sender     sdktype.AccAddress // sender greenfield chain address
 	keyManager keys.KeyManager
+	signer     *signer.MsgSigner
 }
 
 // SPClientConfig is the config info of client
@@ -82,7 +83,19 @@ func NewSpClientWithKeyManager(endpoint string, opt *Option, keyManager keys.Key
 	if err != nil {
 		return nil, err
 	}
+
+	if keyManager == nil {
+		return nil, errors.New("keyManager can not be nil")
+	}
+
 	spClient.keyManager = keyManager
+	if keyManager.GetPrivKey() == nil {
+		return nil, errors.New("private key must be set")
+	}
+
+	signer := signer.NewMsgSigner(keyManager)
+	spClient.signer = signer
+	
 	return spClient, nil
 }
 
@@ -92,6 +105,14 @@ func (c *SPClient) GetKeyManager() (keys.KeyManager, error) {
 		return nil, types.KeyManagerNotInitError
 	}
 	return c.keyManager, nil
+}
+
+// GetMsgSigner return the signer
+func (c *SPClient) GetMsgSigner() (*signer.MsgSigner, error) {
+	if c.signer == nil {
+		return nil, errors.New("signer is nil")
+	}
+	return c.signer, nil
 }
 
 // GetURL returns the URL of the S3 endpoint.
@@ -340,7 +361,7 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
 		// generate s3 virtual hosted style url
-		if utils.CheckDomainName(host) {
+		if utils.IsDomainNameValid(host) {
 			urlStr = scheme + "://" + bucketName + "." + host + "/"
 		} else {
 			urlStr = scheme + "://" + host + "/"
@@ -368,20 +389,16 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 
 // SignRequest sign the request and set authorization before send to server
 func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
-	var signature []byte
 	var authStr []string
 	if info.SignType == AuthV1 {
-		keyManager, err := c.GetKeyManager()
-		if err != nil {
-			return errors.New("get key manager fail when using sign v1 mode")
-		}
-		if keyManager.GetPrivKey() == nil {
-			return errors.New("private key must be set when using sign v1 mode")
-		}
 		signMsg := GetMsgToSign(req)
+
+		if c.signer == nil {
+			return errors.New("signer can not be nil with auth v1 type")
+		}
+
 		// sign the request header info, generate the signature
-		signer := signer.NewMsgSigner(c.keyManager)
-		signature, _, err = signer.Sign(signMsg)
+		signature, _, err := c.signer.Sign(signMsg)
 		if err != nil {
 			return err
 		}
@@ -394,7 +411,7 @@ func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 
 	} else if info.SignType == AuthV2 {
 		if info.WalletSignStr == "" {
-			return errors.New("wallet signature can not be empty when using sign v2 types")
+			return errors.New("wallet signature can not be empty with auth v2 type")
 		}
 		// wallet should use same sign algorithm
 		authStr = []string{

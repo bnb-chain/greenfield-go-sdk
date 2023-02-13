@@ -16,12 +16,12 @@ import (
 
 var EmptyURL = url.URL{}
 
-func CheckIP(ip string) bool {
+func IsIPValid(ip string) bool {
 	return net.ParseIP(ip) != nil
 }
 
-// CheckDomainName CheckdDomainName validates if input string is a valid domain name.
-func CheckDomainName(hostName string) bool {
+// IsDomainNameValid CheckdDomainName validates if input string is a valid domain name.
+func IsDomainNameValid(hostName string) bool {
 	// See RFC 1035, RFC 3696.
 	hostName = strings.TrimSpace(hostName)
 	if len(hostName) == 0 || len(hostName) > 255 {
@@ -58,14 +58,14 @@ func GetEndpointURL(endpoint string, secure bool) (*url.URL, error) {
 		return nil, err
 	}
 	// check endpoint if it is valid
-	if err := isValidEndpoint(*endpointURL); err != nil {
+	if err := checkEndpointUrl(*endpointURL); err != nil {
 		return nil, err
 	}
 	return endpointURL, nil
 }
 
-// isValidEndpoint verify if endpoint is valid.
-func isValidEndpoint(endpointURL url.URL) error {
+// checkEndpointUrl verify if endpoint url is valid, and return error
+func checkEndpointUrl(endpointURL url.URL) error {
 	if endpointURL == EmptyURL {
 		return errors.New("Endpoint url is empty.")
 	}
@@ -75,7 +75,7 @@ func isValidEndpoint(endpointURL url.URL) error {
 	}
 
 	host := endpointURL.Hostname()
-	if !CheckIP(host) && !CheckDomainName(host) {
+	if !IsIPValid(host) && !IsDomainNameValid(host) {
 		msg := endpointURL.Host + " does not meet ip address or domain name standards"
 		return errors.New(msg)
 	}

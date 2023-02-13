@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/b nb-chain/gnfd-go-sdk/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
 const (
