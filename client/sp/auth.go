@@ -11,9 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/bnb-chain/gnfd-go-sdk/keys"
-	signer "github.com/bnb-chain/gnfd-go-sdk/keys/signer"
-	"github.com/bnb-chain/gnfd-go-sdk/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	signer "github.com/bnb-chain/greenfield-go-sdk/keys/signer"
+	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
 const (

@@ -2,8 +2,8 @@ package gashub
 
 import (
 	"context"
-	gnfdclient "github.com/bnb-chain/gnfd-go-sdk/client/chain"
-	"github.com/bnb-chain/gnfd-go-sdk/client/test"
+	gnfdclient "github.com/bnb-chain/greenfield-go-sdk/client/chain"
+	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	gashubtypes "github.com/cosmos/cosmos-sdk/x/gashub/types"
 	"github.com/stretchr/testify/assert"
 	"testing"

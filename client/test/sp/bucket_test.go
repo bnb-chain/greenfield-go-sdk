@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	spClient "github.com/bnb-chain/gnfd-go-sdk/client/sp"
+	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 )
 
 // TestCreateBucket test creating a new bucket

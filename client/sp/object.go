@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bnb-chain/gnfd-go-sdk/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 

@@ -2,7 +2,7 @@ package chain
 
 import (
 	"context"
-	"github.com/bnb-chain/gnfd-go-sdk/client/test"
+	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/types"

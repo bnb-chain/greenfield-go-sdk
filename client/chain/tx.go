@@ -2,7 +2,7 @@ package chain
 
 import (
 	"context"
-	"github.com/bnb-chain/gnfd-go-sdk/types"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	clitx "github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
