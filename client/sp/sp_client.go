@@ -3,6 +3,7 @@ package sp
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/xml"
 	"errors"
 	"io"
@@ -13,11 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 	common "github.com/bnb-chain/greenfield-common/go"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	signer "github.com/bnb-chain/greenfield-go-sdk/keys/signer"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
@@ -31,6 +33,7 @@ type SPClient struct {
 	conf       *SPClientConfig
 	sender     sdktype.AccAddress // sender greenfield chain address
 	keyManager keys.KeyManager
+	signer     *signer.MsgSigner
 }
 
 // SPClientConfig is the config info of client
@@ -55,8 +58,7 @@ type RetryOptions struct {
 func NewSpClient(endpoint string, opt *Option) (*SPClient, error) {
 	url, err := utils.GetEndpointURL(endpoint, opt.secure)
 	if err != nil {
-		log.Println("get url error:", err.Error())
-		return nil, err
+		return nil, toInvalidArgumentResp(err.Error())
 	}
 
 	httpClient := &http.Client{}
@@ -81,7 +83,19 @@ func NewSpClientWithKeyManager(endpoint string, opt *Option, keyManager keys.Key
 	if err != nil {
 		return nil, err
 	}
+
+	if keyManager == nil {
+		return nil, errors.New("keyManager can not be nil")
+	}
+
 	spClient.keyManager = keyManager
+	if keyManager.GetPrivKey() == nil {
+		return nil, errors.New("private key must be set")
+	}
+
+	signer := signer.NewMsgSigner(keyManager)
+	spClient.signer = signer
+	
 	return spClient, nil
 }
 
@@ -91,6 +105,14 @@ func (c *SPClient) GetKeyManager() (keys.KeyManager, error) {
 		return nil, types.KeyManagerNotInitError
 	}
 	return c.keyManager, nil
+}
+
+// GetMsgSigner return the signer
+func (c *SPClient) GetMsgSigner() (*signer.MsgSigner, error) {
+	if c.signer == nil {
+		return nil, errors.New("signer is nil")
+	}
+	return c.signer, nil
 }
 
 // GetURL returns the URL of the S3 endpoint.
@@ -244,11 +266,7 @@ func (c *SPClient) newRequest(ctx context.Context,
 	req.Header.Set(HTTPHeaderUserAgent, c.userAgent)
 
 	// sign the total http request info when auth type v1
-	keyManager, err := c.GetKeyManager()
-	if err != nil {
-		return req, err
-	}
-	err = SignRequest(req, keyManager, authInfo)
+	err = c.SignRequest(req, authInfo)
 	if err != nil {
 		return req, err
 	}
@@ -343,7 +361,7 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
 		// generate s3 virtual hosted style url
-		if utils.CheckDomainName(host) {
+		if utils.IsDomainNameValid(host) {
 			urlStr = scheme + "://" + bucketName + "." + host + "/"
 		} else {
 			urlStr = scheme + "://" + host + "/"
@@ -367,6 +385,47 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 	}
 
 	return url.Parse(urlStr)
+}
+
+// SignRequest sign the request and set authorization before send to server
+func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
+	var authStr []string
+	if info.SignType == AuthV1 {
+		signMsg := GetMsgToSign(req)
+
+		if c.signer == nil {
+			return errors.New("signer can not be nil with auth v1 type")
+		}
+
+		// sign the request header info, generate the signature
+		signature, _, err := c.signer.Sign(signMsg)
+		if err != nil {
+			return err
+		}
+
+		authStr = []string{
+			AuthV1 + " " + SignAlgorithm,
+			" SignedMsg=" + hex.EncodeToString(signMsg),
+			"Signature=" + hex.EncodeToString(signature),
+		}
+
+	} else if info.SignType == AuthV2 {
+		if info.WalletSignStr == "" {
+			return errors.New("wallet signature can not be empty with auth v2 type")
+		}
+		// wallet should use same sign algorithm
+		authStr = []string{
+			AuthV2 + " " + SignAlgorithm,
+			" Signature=" + info.WalletSignStr,
+		}
+	} else {
+		return errors.New("sign type error")
+	}
+
+	// set auth header
+	req.Header.Set(HTTPHeaderAuthorization, strings.Join(authStr, ", "))
+
+	return nil
 }
 
 // GetApproval return the signature info for the approval of preCreating resources
