@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	spClient "github.com/bnb-chain/gnfd-go-sdk/client/sp"
-	"github.com/bnb-chain/gnfd-go-sdk/keys"
-	signer "github.com/bnb-chain/gnfd-go-sdk/keys/signer"
+	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
+	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	signer "github.com/bnb-chain/greenfield-go-sdk/keys/signer"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,9 @@ func TestRequestSignV1(t *testing.T) {
 	keyManager, err := keys.NewPrivateKeyManager(hex.EncodeToString(privKey.Bytes()))
 	require.NoError(t, err)
 
-	err = spClient.SignRequest(req, keyManager, spClient.NewAuthInfo(false, ""))
+	client, err = spClient.NewSpClientWithKeyManager("gnfd.nodereal.com", &spClient.Option{}, keyManager)
+	require.NoError(t, err)
+	err = client.SignRequest(req, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	// server actions

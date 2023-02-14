@@ -2,7 +2,7 @@ package chain
 
 import (
 	"context"
-	"github.com/bnb-chain/gnfd-go-sdk/types"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	clitx "github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -40,8 +40,8 @@ func (c *GreenfieldClient) BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, op
 	}
 
 	mode := tx.BroadcastMode_BROADCAST_MODE_SYNC
-	if txOpt != nil && txOpt.Async {
-		mode = tx.BroadcastMode_BROADCAST_MODE_ASYNC
+	if txOpt != nil && txOpt.Mode != nil {
+		mode = *txOpt.Mode
 	}
 	txRes, err := c.TxClient.BroadcastTx(
 		context.Background(),

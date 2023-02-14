@@ -1,10 +1,11 @@
 package chain
 
 import (
-	"github.com/bnb-chain/gnfd-go-sdk/client/test"
-	"github.com/bnb-chain/gnfd-go-sdk/keys"
-	"github.com/bnb-chain/gnfd-go-sdk/types"
+	"github.com/bnb-chain/greenfield-go-sdk/client/test"
+	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -31,8 +32,9 @@ func TestSendTokenWithTxOptionSucceed(t *testing.T) {
 	assert.NoError(t, err)
 	transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("bnb", 100)))
 	payerAddr, err := sdk.AccAddressFromHexUnsafe(km.GetAddr().String())
+	mode := tx.BroadcastMode_BROADCAST_MODE_ASYNC
 	txOpt := &types.TxOption{
-		Async:     false,
+		Mode:      &mode,
 		GasLimit:  123456,
 		Memo:      "test",
 		FeeAmount: sdk.Coins{{"bnb", sdk.NewInt(1)}},

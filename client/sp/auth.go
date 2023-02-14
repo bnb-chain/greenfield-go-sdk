@@ -3,17 +3,13 @@ package sp
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
-	"errors"
 	"net/http"
 	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/bnb-chain/gnfd-go-sdk/keys"
-	signer "github.com/bnb-chain/gnfd-go-sdk/keys/signer"
-	"github.com/bnb-chain/gnfd-go-sdk/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
 const (
@@ -122,48 +118,6 @@ func GetCanonicalRequest(req *http.Request) string {
 func GetMsgToSign(req *http.Request) []byte {
 	signBytes := calcSHA256([]byte(GetCanonicalRequest(req)))
 	return crypto.Keccak256(signBytes)
-}
-
-// SignRequest sign the request and set authorization before send to server
-func SignRequest(req *http.Request, keyManager keys.KeyManager, info AuthInfo) error {
-	var signature []byte
-	var err error
-	var authStr []string
-	if info.SignType == AuthV1 {
-		if keyManager.GetPrivKey() == nil {
-			return errors.New("private key must be set when using sign v1 mode")
-		}
-		signMsg := GetMsgToSign(req)
-		// sign the request header info, generate the signature
-		signer := signer.NewMsgSigner(keyManager)
-		signature, _, err = signer.Sign(signMsg)
-		if err != nil {
-			return err
-		}
-
-		authStr = []string{
-			AuthV1 + " " + SignAlgorithm,
-			" SignedMsg=" + hex.EncodeToString(signMsg),
-			"Signature=" + hex.EncodeToString(signature),
-		}
-
-	} else if info.SignType == AuthV2 {
-		if info.WalletSignStr == "" {
-			return errors.New("wallet signature can not be empty when using sign v2 types")
-		}
-		// wallet should use same sign algorithm
-		authStr = []string{
-			AuthV2 + " " + SignAlgorithm,
-			" Signature=" + info.WalletSignStr,
-		}
-	} else {
-		return errors.New("sign type error")
-	}
-
-	// set auth header
-	req.Header.Set(HTTPHeaderAuthorization, strings.Join(authStr, ", "))
-
-	return nil
 }
 
 func calcSHA256(msg []byte) (sum []byte) {
