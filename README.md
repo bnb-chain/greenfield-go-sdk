@@ -87,7 +87,7 @@ BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx
 `txOpt` is provided to customize your transaction. It is optional, and all fields are optional.
 ```go
 type TxOption struct {
-    Async     bool   // default to `sync` mode
+    Mode      *tx.BroadcastMode   // default to `sync` mode
     GasLimit  uint64 // default to use simulated gas 
     Memo      string
     FeeAmount sdk.Coins
@@ -99,8 +99,9 @@ Example:
 ```go
 payerAddr, _ := sdk.AccAddressFromHexUnsafe("0x76d244CE05c3De4BbC6fDd7F56379B145709ade9")
 transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("bnb", 12)))
+broadcastMode := tx.BroadcastMode_BROADCAST_MODE_ASYNC
 txOpt := &types.TxOption{
-    Async:     true,
+    Mode       &broadcastMode
     GasLimit:  1000000,
     Memo:      "test",
     FeeAmount: sdk.Coins{{"bnb", sdk.NewInt(1)}},
