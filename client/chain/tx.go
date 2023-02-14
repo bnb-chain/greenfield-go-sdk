@@ -40,8 +40,8 @@ func (c *GreenfieldClient) BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, op
 	}
 
 	mode := tx.BroadcastMode_BROADCAST_MODE_SYNC
-	if txOpt != nil && txOpt.Async {
-		mode = tx.BroadcastMode_BROADCAST_MODE_ASYNC
+	if txOpt != nil && txOpt.Mode != nil {
+		mode = *txOpt.Mode
 	}
 	txRes, err := c.TxClient.BroadcastTx(
 		context.Background(),
