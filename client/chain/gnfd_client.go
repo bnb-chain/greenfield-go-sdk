@@ -2,6 +2,7 @@ package chain
 
 import (
 	_ "encoding/json"
+
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
@@ -24,7 +25,6 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type AuthQueryClient = authtypes.QueryClient
@@ -70,10 +70,10 @@ type GreenfieldClient struct {
 	codec      *codec.ProtoCodec
 }
 
-func grpcConn(addr string) *grpc.ClientConn {
+func grpcConn(addr string, opts ...grpc.DialOption) *grpc.ClientConn {
 	conn, err := grpc.Dial(
 		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		opts...,
 	)
 	if err != nil {
 		panic(err)
@@ -81,8 +81,8 @@ func grpcConn(addr string) *grpc.ClientConn {
 	return conn
 }
 
-func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
-	conn := grpcConn(grpcAddr)
+func NewGreenfieldClient(grpcAddr, chainId string, opts ...grpc.DialOption) GreenfieldClient {
+	conn := grpcConn(grpcAddr, opts...)
 	cdc := types.Cdc()
 	return GreenfieldClient{
 		authtypes.NewQueryClient(conn),
@@ -109,8 +109,8 @@ func NewGreenfieldClient(grpcAddr, chainId string) GreenfieldClient {
 	}
 }
 
-func NewGreenfieldClientWithKeyManager(grpcAddr, chainId string, keyManager keys.KeyManager) GreenfieldClient {
-	gnfdClient := NewGreenfieldClient(grpcAddr, chainId)
+func NewGreenfieldClientWithKeyManager(grpcAddr, chainId string, keyManager keys.KeyManager, opts ...grpc.DialOption) GreenfieldClient {
+	gnfdClient := NewGreenfieldClient(grpcAddr, chainId, opts...)
 	gnfdClient.keyManager = keyManager
 	return gnfdClient
 }
