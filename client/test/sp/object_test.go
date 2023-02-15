@@ -14,7 +14,6 @@ import (
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -92,10 +91,15 @@ func TestGetObject(t *testing.T) {
 		w.Header().Set("Etag", etag)
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(200)
-		w.Write([]byte(bodyContent))
+
+		if r.Header.Get("Range") != "" {
+			w.Write([]byte(bodyContent)[1:10])
+		} else {
+			w.Write([]byte(bodyContent))
+		}
 	})
 
-	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.GetObjectOptions{}, spClient.NewAuthInfo(false, ""))
+	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.DownloadOption{}, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	buf := new(strings.Builder)
@@ -109,4 +113,17 @@ func TestGetObject(t *testing.T) {
 		t.Errorf("etag error")
 		fmt.Println("etag", info.Etag)
 	}
+
+	option := spClient.DownloadOption{}
+	option.SetRange(1, 10)
+	part_data, _, err := client.GetObject(context.Background(), bucketName, ObjectName, option, spClient.NewAuthInfo(false, ""))
+	require.NoError(t, err)
+
+	buf = new(strings.Builder)
+	io.Copy(buf, part_data)
+	// check download content
+	if buf.String() != bodyContent[1:10] {
+		t.Errorf("download range fail")
+	}
+
 }

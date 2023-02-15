@@ -161,3 +161,44 @@ func TestGetApproval(t *testing.T) {
 	}
 
 }
+
+// TestChallenge test challenge sdk request
+func TestChallenge(t *testing.T) {
+	setup()
+	defer shutdown()
+
+	pieceHashes := "hash1,hash2,hash3,hash4,hash5,hash6"
+	interityHash := "hash"
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		startHandle(t, r)
+		testMethod(t, r, "GET")
+		url := getUrl(r)
+		want := "/greenfield/admin/v1/challenge"
+		if url != want {
+			t.Errorf("url error")
+		}
+
+		w.Header().Set(spClient.HTTPHeaderPieceHash, pieceHashes)
+		w.Header().Set(spClient.HTTPHeaderIntegrityHash, interityHash)
+		w.WriteHeader(200)
+	})
+	
+	info := spClient.ChallengeInfo{
+		ObjectId:        "xxx",
+		RedundancyIndex: 1,
+		PieceIndex:      1,
+	}
+
+	res, err := client.ChallengeSP(context.Background(), info, spClient.NewAuthInfo(false, ""))
+	require.NoError(t, err)
+
+	if pieceHashes != strings.Join(res.PiecesHash, ",") {
+		t.Errorf("fetch piece hashes error")
+	}
+
+	if interityHash != res.IntegrityHash {
+		t.Errorf("fetch interity hash error")
+	}
+
+	fmt.Println("get hash result", res.PiecesHash)
+}

@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
@@ -24,7 +25,7 @@ func (c *SPClient) CreateBucket(ctx context.Context, bucketName string, authInfo
 		return err
 	}
 
-	log.Println("get approve from sp finish,signature is:", signature)
+	log.Info().Msg("get approve from sp finish,signature is:" + signature)
 	// TODO(leo) call chain sdk to send a createBucket txn to greenfield with signature
 
 	return nil
@@ -54,7 +55,7 @@ func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix str
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Printf("listObjects of bucket %s fail: %s \n", bucketName, err.Error())
+		log.Error().Msg("listObjects of bucket:" + bucketName + " failed: " + err.Error())
 		return ListObjectsResult{}, err
 	}
 	defer utils.CloseResponse(resp)

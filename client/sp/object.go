@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/bnb-chain/greenfield-go-sdk/utils"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/rs/zerolog/log"
+
+	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
 // PutObjectMeta  represents meta which is used to construct PutObjectMsg
@@ -50,16 +50,15 @@ func (c *SPClient) CreateObject(ctx context.Context, bucketName, objectName stri
 	if err != nil {
 		return "", err
 	}
-	log.Println("get approve from sp finish,signature is: ", signature)
+	log.Info().Msg("get approve from sp finish,signature is: " + signature)
 
 	// get hash and objectSize from reader
-	_, _, _, err = c.GetPieceHashRoots(reader, SegmentSize, EncodeShards)
+	_, _, _, err = c.GetPieceHashRoots(reader, SegmentSize, DataShards, ParityShards)
 	if err != nil {
 		return "", err
 	}
 
 	// TODO(leo) call chain sdk to send a createObject txn to greenfield, return txnHash
-	// return txnHash, err
 
 	return "", err
 }
@@ -145,14 +144,30 @@ type ObjectInfo struct {
 	Size        int64
 }
 
-// GetObjectOptions contains the options of getObject
-type GetObjectOptions struct {
-	ResponseContentType string `url:"response-content-type,omitempty" header:"-"`
-	Range               string `url:"-" header:"Range,omitempty"`
+// DownloadOption contains the options of getObject
+type DownloadOption struct {
+	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+}
+
+func (o *DownloadOption) SetRange(start, end int64) error {
+	switch {
+	case 0 < start && end == 0:
+		// `bytes=N-`.
+		o.Range = fmt.Sprintf("bytes=%d-", start)
+	case 0 <= start && start <= end:
+		// `bytes=N-M`
+		o.Range = fmt.Sprintf("bytes=%d-%d", start, end)
+	default:
+		return toInvalidArgumentResp(
+			fmt.Sprintf(
+				"Invalid Range : start=%d end=%d",
+				start, end))
+	}
+	return nil
 }
 
 // GetObject download s3 object payload and return the related object info
-func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts GetObjectOptions, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
+func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts DownloadOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
 	if err := utils.IsValidBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
@@ -166,14 +181,6 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 		contentSHA256: EmptyStringSHA256,
 	}
 
-	//  use for override certain response header values
-	//  https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
-	if opts.ResponseContentType != "" {
-		urlVal := make(url.Values)
-		urlVal["response-content-type"] = []string{opts.ResponseContentType}
-		reqMeta.urlValues = urlVal
-	}
-
 	if opts.Range != "" {
 		reqMeta.Range = opts.Range
 	}
@@ -185,23 +192,22 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Printf("get Object %s fail: %s \n", objectName, err.Error())
+		log.Error().Msg("get Object :" + objectName + "fail:" + err.Error())
 		return nil, ObjectInfo{}, err
 	}
 
 	ObjInfo, err := getObjInfo(bucketName, objectName, resp.Header)
 	if err != nil {
-		log.Printf("get ObjectInfo %s fail: %s \n", objectName, err.Error())
+		log.Error().Msg("get ObjectInfo of :" + objectName + "fail:" + err.Error())
 		utils.CloseResponse(resp)
 		return nil, ObjectInfo{}, err
 	}
 
 	return resp.Body, ObjInfo, nil
-
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts GetObjectOptions, authinfo AuthInfo) error {
+func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts DownloadOption, authinfo AuthInfo) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {
