@@ -4,19 +4,36 @@ import (
 	"context"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/bnb-chain/greenfield/sdk/client"
+	jsonrpcclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
 	"sync"
 )
 
 type (
 	GreenfieldClient       = client.GreenfieldClient
-	TendermintClient       = client.TendermintClient
+	TmClient               = client.TendermintClient
 	GreenfieldClientOption = client.GreenfieldClientOption
 )
 
 var WithKeyManager = client.WithKeyManager
 var WithGrpcDialOption = client.WithGrpcDialOption
 var NewGreenfieldClient = client.NewGreenfieldClient
-var NewTendermintClient = client.NewTendermintClient
+
+type TendermintClient struct {
+	RpcClient     *TmClient
+	JsonRpcClient *jsonrpcclient.Client // need it for interacting with votepool
+}
+
+func NewTendermintClient(provider string) *TendermintClient {
+	rpcClient := client.NewTendermintClient(provider)
+	jsonRpc, err := jsonrpcclient.New(provider)
+	if err != nil {
+		panic(err)
+	}
+	return &TendermintClient{
+		&rpcClient,
+		jsonRpc,
+	}
+}
 
 type GnfdClient struct {
 	*GreenfieldClient
@@ -44,7 +61,7 @@ func NewGreenfieldClients(grpcAddrs, rpcAddrs []string, chainId string, opts ...
 		tmClient := NewTendermintClient(rpcAddrs[i])
 		clients = append(clients, &GnfdClient{
 			NewGreenfieldClient(grpcAddrs[i], chainId, opts...),
-			&tmClient,
+			tmClient,
 			rpcAddrs[i],
 			0,
 		})
@@ -89,7 +106,7 @@ func (gc *GreenfieldClients) GetClient() (*GnfdClient, error) {
 
 func calClientHeight(clientChan chan *GnfdClient, errChan chan error, wg *sync.WaitGroup, client *GnfdClient) {
 	defer wg.Done()
-	status, err := client.TmClient.Status(context.Background())
+	status, err := client.RpcClient.TmClient.Status(context.Background())
 	if err != nil {
 		errChan <- err
 		return
