@@ -1,78 +1,61 @@
 package types
 
 import (
-	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
-	paymenttypes "github.com/bnb-chain/greenfield/x/payment/types"
-	sptypes "github.com/bnb-chain/greenfield/x/sp/types"
-	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
-	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	feegranttypes "github.com/cosmos/cosmos-sdk/x/feegrant"
-	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	oracletypes "github.com/cosmos/cosmos-sdk/x/oracle/types"
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/bnb-chain/greenfield/sdk/types"
 )
 
 type (
-	MsgGrant  = authztypes.MsgGrant
-	MsgRevoke = authztypes.MsgRevoke
+	MsgGrant  = types.MsgGrant
+	MsgRevoke = types.MsgRevoke
 
-	MsgSend = banktypes.MsgSend
+	MsgSend = types.MsgSend
 
-	MsgCreateValidator           = stakingtypes.MsgCreateValidator
-	MsgEditValidator             = stakingtypes.MsgEditValidator
-	MsgDelegate                  = stakingtypes.MsgDelegate
-	MsgBeginRedelegate           = stakingtypes.MsgBeginRedelegate
-	MsgUndelegate                = stakingtypes.MsgUndelegate
-	MsgCancelUnbondingDelegation = stakingtypes.MsgCancelUnbondingDelegation
+	MsgCreateValidator           = types.MsgCreateValidator
+	MsgEditValidator             = types.MsgEditValidator
+	MsgDelegate                  = types.MsgDelegate
+	MsgBeginRedelegate           = types.MsgBeginRedelegate
+	MsgUndelegate                = types.MsgUndelegate
+	MsgCancelUnbondingDelegation = types.MsgCancelUnbondingDelegation
 
-	MsgSetWithdrawAddress          = distrtypes.MsgSetWithdrawAddress
-	MsgWithdrawDelegatorReward     = distrtypes.MsgWithdrawDelegatorReward
-	MsgWithdrawValidatorCommission = distrtypes.MsgWithdrawValidatorCommission
-	MsgFundCommunityPool           = distrtypes.MsgFundCommunityPool
+	MsgSetWithdrawAddress          = types.MsgSetWithdrawAddress
+	MsgWithdrawDelegatorReward     = types.MsgWithdrawDelegatorReward
+	MsgWithdrawValidatorCommission = types.MsgWithdrawValidatorCommission
+	MsgFundCommunityPool           = types.MsgFundCommunityPool
 
-	MsgSubmitProposal    = govv1.MsgSubmitProposal
-	MsgExecLegacyContent = govv1.MsgExecLegacyContent
-	MsgVote              = govv1.MsgVote
-	MsgGovDeposit        = govv1.MsgDeposit
-	MsgVoteWeighted      = govv1.MsgVoteWeighted
+	MsgSubmitProposal    = types.MsgSubmitProposal
+	MsgExecLegacyContent = types.MsgExecLegacyContent
+	MsgVote              = types.MsgVote
+	MsgGovDeposit        = types.MsgGovDeposit
+	MsgVoteWeighted      = types.MsgVoteWeighted
 
-	MsgUnjail  = slashingtypes.MsgUnjail
-	MsgImpeach = slashingtypes.MsgImpeach
+	MsgUnjail  = types.MsgUnjail
+	MsgImpeach = types.MsgImpeach
 
-	MsgGrantAllowance  = feegranttypes.MsgGrantAllowance
-	MsgRevokeAllowance = feegranttypes.MsgRevokeAllowance
+	MsgGrantAllowance  = types.MsgGrantAllowance
+	MsgRevokeAllowance = types.MsgRevokeAllowance
 
-	MsgClaim = oracletypes.MsgClaim
+	MsgClaim = types.MsgClaim
 
-	MsgTransferOut = bridgetypes.MsgTransferOut
+	MsgTransferOut = types.MsgTransferOut
 
-	MsgCreatePaymentAccount        = paymenttypes.MsgCreatePaymentAccount
-	MsgPaymentDeposit              = paymenttypes.MsgDeposit
-	MsgWithdraw                    = paymenttypes.MsgWithdraw
-	MsgDisableRefund               = paymenttypes.MsgDisableRefund
-	MsgMockCreateBucket            = paymenttypes.MsgMockCreateBucket
-	MsgMockPutObject               = paymenttypes.MsgMockPutObject
-	MsgMockSealObject              = paymenttypes.MsgMockSealObject
-	MsgMockDeleteObject            = paymenttypes.MsgMockDeleteObject
-	MsgMockSetBucketPaymentAccount = paymenttypes.MsgMockSetBucketPaymentAccount
-	MsgMockUpdateBucketReadPacket  = paymenttypes.MsgMockUpdateBucketReadPacket
+	MsgCreatePaymentAccount = types.MsgCreatePaymentAccount
+	MsgPaymentDeposit       = types.MsgPaymentDeposit
+	MsgWithdraw             = types.MsgWithdraw
+	MsgDisableRefund        = types.MsgDisableRefund
 
-	MsgCreateStorageProvider = sptypes.MsgCreateStorageProvider
-	MsgSpDeposit             = sptypes.MsgDeposit
-	MsgEditStorageProvider   = sptypes.MsgEditStorageProvider
+	MsgCreateStorageProvider = types.MsgCreateStorageProvider
+	MsgSpDeposit             = types.MsgSpDeposit
+	MsgEditStorageProvider   = types.MsgEditStorageProvider
 
-	MsgCreateBucket      = storagetypes.MsgCreateBucket
-	MsgDeleteBucket      = storagetypes.MsgDeleteBucket
-	MsgCreateObject      = storagetypes.MsgCreateObject
-	MsgSealObject        = storagetypes.MsgSealObject
-	MsgRejectSealObject  = storagetypes.MsgRejectSealObject
-	MsgCopyObject        = storagetypes.MsgCopyObject
-	MsgDeleteObject      = storagetypes.MsgDeleteObject
-	MsgCreateGroup       = storagetypes.MsgCreateGroup
-	MsgDeleteGroup       = storagetypes.MsgDeleteGroup
-	MsgUpdateGroupMember = storagetypes.MsgUpdateGroupMember
-	MsgLeaveGroup        = storagetypes.MsgLeaveGroup
+	MsgCreateBucket      = types.MsgCreateBucket
+	MsgDeleteBucket      = types.MsgDeleteBucket
+	MsgCreateObject      = types.MsgCreateObject
+	MsgSealObject        = types.MsgSealObject
+	MsgRejectSealObject  = types.MsgRejectSealObject
+	MsgCopyObject        = types.MsgCopyObject
+	MsgDeleteObject      = types.MsgDeleteObject
+	MsgCreateGroup       = types.MsgCreateGroup
+	MsgDeleteGroup       = types.MsgDeleteGroup
+	MsgUpdateGroupMember = types.MsgUpdateGroupMember
+	MsgLeaveGroup        = types.MsgLeaveGroup
 )

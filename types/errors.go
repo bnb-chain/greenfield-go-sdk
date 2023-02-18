@@ -3,6 +3,7 @@ package types
 import "errors"
 
 var (
-	KeyManagerNotInitError = errors.New("Key manager is not initialized yet ")
-	ChainIdNotSetError     = errors.New("ChainID is not set yet ")
+	ErrorKeyManagerNotInit = errors.New("Key manager is not initialized yet ")
+	ErrorUrlNotProvided    = errors.New("Url address not provided yet ")
+	ErrorUrlsMismatch      = errors.New("Number of Urls does not match ")
 )

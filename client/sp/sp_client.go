@@ -95,14 +95,14 @@ func NewSpClientWithKeyManager(endpoint string, opt *Option, keyManager keys.Key
 
 	signer := signer.NewMsgSigner(keyManager)
 	spClient.signer = signer
-	
+
 	return spClient, nil
 }
 
 // GetKeyManager return the keyManager object
 func (c *SPClient) GetKeyManager() (keys.KeyManager, error) {
 	if c.keyManager == nil {
-		return nil, types.KeyManagerNotInitError
+		return nil, types.ErrorKeyManagerNotInit
 	}
 	return c.keyManager, nil
 }

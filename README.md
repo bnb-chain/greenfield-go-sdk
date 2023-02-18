@@ -65,7 +65,7 @@ client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
 
 query := banktypes.QueryBalanceRequest{
 		Address: testutil.TEST_ADDR,
-		Denom:   "bnb",
+		Denom:   TEST_DENOM,
 }
 res, err := client.BankQueryClient.Balance(context.Background(), &query)  
 ```
@@ -98,16 +98,16 @@ Example:
 
 ```go
 payerAddr, _ := sdk.AccAddressFromHexUnsafe("0x76d244CE05c3De4BbC6fDd7F56379B145709ade9")
-transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("bnb", 12)))
+transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin(TEST_DENOM, 12)))
 broadcastMode := tx.BroadcastMode_BROADCAST_MODE_ASYNC
 txOpt := &types.TxOption{
     Mode       &broadcastMode
     GasLimit:  1000000,
     Memo:      "test",
-    FeeAmount: sdk.Coins{{"bnb", sdk.NewInt(1)}},
+    FeeAmount: sdk.Coins{{TEST_DENOM, sdk.NewInt(1)}},
     FeePayer:  payerAddr,
 }
-response, _ := gnfdCli.BroadcastTx([]sdk.Msg{transfer}, txOpt)
+response, _ := gnfdClient.BroadcastTx([]sdk.Msg{transfer}, txOpt)
 ```
 
 #### Simulate TX
