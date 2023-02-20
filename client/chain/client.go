@@ -20,7 +20,7 @@ var NewGreenfieldClient = client.NewGreenfieldClient
 
 type TendermintClient struct {
 	RpcClient     *TmClient
-	JsonRpcClient *jsonrpcclient.Client // need it for interacting with votepool
+	JsonRpcClient *jsonrpcclient.Client // for interacting with votepool
 }
 
 func NewTendermintClient(provider string) *TendermintClient {
@@ -35,19 +35,17 @@ func NewTendermintClient(provider string) *TendermintClient {
 	}
 }
 
-type GnfdClient struct {
+type GnfdCompositeClient struct {
 	*GreenfieldClient
 	*TendermintClient
-	Provider string
-	Height   int64
+	Height int64
 }
 
-type GreenfieldClients struct {
-	mutex   sync.RWMutex
-	clients []*GnfdClient
+type GnfdCompositeClients struct {
+	clients []*GnfdCompositeClient
 }
 
-func NewGreenfieldClients(grpcAddrs, rpcAddrs []string, chainId string, opts ...GreenfieldClientOption) *GreenfieldClients {
+func NewGnfdClients(grpcAddrs, rpcAddrs []string, chainId string, opts ...GreenfieldClientOption) *GnfdCompositeClients {
 	if len(grpcAddrs) == 0 || len(rpcAddrs) == 0 {
 		panic(types.ErrorUrlNotProvided)
 	}
@@ -55,32 +53,29 @@ func NewGreenfieldClients(grpcAddrs, rpcAddrs []string, chainId string, opts ...
 		panic(types.ErrorUrlsMismatch)
 	}
 
-	clients := make([]*GnfdClient, 0)
+	clients := make([]*GnfdCompositeClient, 0)
 
 	for i := 0; i < len(grpcAddrs); i++ {
 		tmClient := NewTendermintClient(rpcAddrs[i])
-		clients = append(clients, &GnfdClient{
+		clients = append(clients, &GnfdCompositeClient{
 			NewGreenfieldClient(grpcAddrs[i], chainId, opts...),
 			tmClient,
-			rpcAddrs[i],
 			0,
 		})
-
 	}
-	return &GreenfieldClients{
+	return &GnfdCompositeClients{
 		clients: clients,
 	}
 }
 
-func (gc *GreenfieldClients) GetClient() (*GnfdClient, error) {
+func (gc *GnfdCompositeClients) GetClient() (*GnfdCompositeClient, error) {
 	wg := new(sync.WaitGroup)
 	wg.Add(len(gc.clients))
-	clientCh := make(chan *GnfdClient)
-	errCh := make(chan error)
+	clientCh := make(chan *GnfdCompositeClient)
 	waitCh := make(chan struct{})
 	go func() {
 		for _, c := range gc.clients {
-			go calClientHeight(clientCh, errCh, wg, c)
+			go getClientBlockHeight(clientCh, wg, c)
 		}
 		wg.Wait()
 		close(waitCh)
@@ -89,14 +84,10 @@ func (gc *GreenfieldClients) GetClient() (*GnfdClient, error) {
 	maxHeightClient := gc.clients[0]
 	for {
 		select {
-		case err := <-errCh:
-			return nil, err
 		case c := <-clientCh:
 			if c.Height > maxHeight {
-				gc.mutex.Lock()
 				maxHeight = c.Height
 				maxHeightClient = c
-				gc.mutex.Unlock()
 			}
 		case <-waitCh:
 			return maxHeightClient, nil
@@ -104,11 +95,10 @@ func (gc *GreenfieldClients) GetClient() (*GnfdClient, error) {
 	}
 }
 
-func calClientHeight(clientChan chan *GnfdClient, errChan chan error, wg *sync.WaitGroup, client *GnfdClient) {
+func getClientBlockHeight(clientChan chan *GnfdCompositeClient, wg *sync.WaitGroup, client *GnfdCompositeClient) {
 	defer wg.Done()
 	status, err := client.RpcClient.TmClient.Status(context.Background())
 	if err != nil {
-		errChan <- err
 		return
 	}
 	latestHeight := status.SyncInfo.LatestBlockHeight

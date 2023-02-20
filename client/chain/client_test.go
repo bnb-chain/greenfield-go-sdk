@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-func TestMultipleGrpcAddresses(t *testing.T) {
-	gnfdClients := NewGreenfieldClients(
+func TestGnfdCompositeClient(t *testing.T) {
+	gnfdClients := NewGnfdClients(
 		[]string{test.TEST_GRPC_ADDR, test.TEST_GRPC_ADDR2, test.TEST_GRPC_ADDR3},
 		[]string{test.TEST_RPC_ADDR, test.TEST_RPC_ADDR2, test.TEST_RPC_ADDR3},
 		test.TEST_CHAIN_ID,

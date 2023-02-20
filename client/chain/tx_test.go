@@ -66,7 +66,7 @@ func TestSimulateTx(t *testing.T) {
 func TestSendTokenSucceedWithSimulatedGas1(t *testing.T) {
 	km, err := keys.NewPrivateKeyManager(test.TEST_PRIVATE_KEY)
 	assert.NoError(t, err)
-	gnfdClients := NewGreenfieldClients(
+	gnfdClients := NewGnfdClients(
 		[]string{test.TEST_GRPC_ADDR, test.TEST_GRPC_ADDR2, test.TEST_GRPC_ADDR3},
 		[]string{test.TEST_RPC_ADDR, test.TEST_RPC_ADDR2, test.TEST_RPC_ADDR3},
 		test.TEST_CHAIN_ID,

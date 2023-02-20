@@ -2,20 +2,15 @@ module github.com/bnb-chain/greenfield-go-sdk
 
 go 1.19
 
-replace (
-	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/gnfd-cosmos-sdk v0.0.2-0.20230216105555-b94a14479b11 // todo Change
-	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tendermint/tendermint => github.com/bnb-chain/gnfd-tendermint v0.0.1
-)
-
 require (
-	github.com/bnb-chain/greenfield v0.0.0-20230218043343-0872fc03a586 // todo Change back afte fix-gas pr is merged
+	github.com/bnb-chain/greenfield v0.0.0-20230220032958-f72b8a3582cb
 	github.com/bnb-chain/greenfield-common/go v0.0.0-20230209233558-ff9447ce4045
 	github.com/cosmos/cosmos-sdk v0.46.4
 	github.com/ethereum/go-ethereum v1.10.19
 	github.com/evmos/ethermint v0.6.1-0.20220919141022-34226aa7b1fa
 	github.com/rs/zerolog v1.27.0
 	github.com/stretchr/testify v1.8.1
+	github.com/tendermint/tendermint v0.34.22
 	google.golang.org/grpc v1.52.0
 )
 
@@ -123,7 +118,6 @@ require (
 	github.com/tendermint/btcd v0.1.1 // indirect
 	github.com/tendermint/crypto v0.0.0-20191022145703-50d29ede1e15 // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
-	github.com/tendermint/tendermint v0.34.22 // indirect
 	github.com/tendermint/tm-db v0.6.7 // indirect
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
@@ -148,4 +142,10 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
+)
+
+replace (
+	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/gnfd-cosmos-sdk v0.0.2-0.20230216105555-b94a14479b11
+	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	github.com/tendermint/tendermint => github.com/bnb-chain/gnfd-tendermint v0.0.1
 )
