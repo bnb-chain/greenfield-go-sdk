@@ -7,9 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const (

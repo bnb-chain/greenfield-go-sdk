@@ -4,19 +4,18 @@ import (
 	"context"
 	"testing"
 
-	gnfdclient "github.com/bnb-chain/greenfield-go-sdk/client/chain"
+	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
-	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBankBalance(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QueryBalanceRequest{
 		Address: test.TEST_ADDR,
-		Denom:   "bnb",
+		Denom:   test.TEST_DENOM,
 	}
 	res, err := client.BankQueryClient.Balance(context.Background(), &query)
 	assert.NoError(t, err)
@@ -25,9 +24,7 @@ func TestBankBalance(t *testing.T) {
 }
 
 func TestBankAllBalances(t *testing.T) {
-	km, err := keys.NewPrivateKeyManager("e3ac46e277677f0f103774019d03bd89c7b4b5ecc554b2650bd5d5127992c20c")
-	println(km)
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QueryAllBalancesRequest{
 		Address: test.TEST_ADDR,
@@ -39,7 +36,7 @@ func TestBankAllBalances(t *testing.T) {
 }
 
 func TestBankDenomMetadata(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QueryDenomMetadataRequest{}
 	res, err := client.BankQueryClient.DenomMetadata(context.Background(), &query)
@@ -49,10 +46,10 @@ func TestBankDenomMetadata(t *testing.T) {
 }
 
 func TestBankDenomOwners(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QueryDenomOwnersRequest{
-		Denom: "bnb",
+		Denom: test.TEST_DENOM,
 	}
 	res, err := client.BankQueryClient.DenomOwners(context.Background(), &query)
 	assert.NoError(t, err)
@@ -61,7 +58,7 @@ func TestBankDenomOwners(t *testing.T) {
 }
 
 func TestBankDenomsMetadata(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QueryDenomsMetadataRequest{}
 	res, err := client.BankQueryClient.DenomsMetadata(context.Background(), &query)
@@ -71,7 +68,7 @@ func TestBankDenomsMetadata(t *testing.T) {
 }
 
 func TestBankParams(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QueryParamsRequest{}
 	res, err := client.BankQueryClient.Params(context.Background(), &query)
@@ -81,7 +78,7 @@ func TestBankParams(t *testing.T) {
 }
 
 func TestBankSpendableBalance(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QuerySpendableBalancesRequest{
 		Address: test.TEST_ADDR,
@@ -93,10 +90,10 @@ func TestBankSpendableBalance(t *testing.T) {
 }
 
 func TestBankSupplyOf(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QuerySupplyOfRequest{
-		Denom: "bnb",
+		Denom: test.TEST_DENOM,
 	}
 	res, err := client.BankQueryClient.SupplyOf(context.Background(), &query)
 	assert.NoError(t, err)
@@ -105,7 +102,7 @@ func TestBankSupplyOf(t *testing.T) {
 }
 
 func TestBankTotalSupply(t *testing.T) {
-	client := gnfdclient.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QueryTotalSupplyRequest{}
 	res, err := client.BankQueryClient.TotalSupply(context.Background(), &query)

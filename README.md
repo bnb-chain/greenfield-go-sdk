@@ -1,6 +1,6 @@
 # Greenfield Go SDK
 
-The `Greenfield-GO-SDK` provides a thin wrapper for interacting with `greenfield` in two ways:
+The `Greenfield-GO-SDK` provides a thin wrapper for interacting with `greenfield` in three ways:
 
 1. Interact using `GreenfieldClient` client, you may perform querying accounts, chain info and broadcasting transaction.
 2. Interact using `TendermintClient` client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
@@ -64,8 +64,8 @@ keyManager, _ := keys.NewMnemonicKeyManager(mnemonic)
 client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
 
 query := banktypes.QueryBalanceRequest{
-		Address: testutil.TEST_ADDR,
-		Denom:   "bnb",
+		Address: "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9",
+		Denom:   "BNB",
 }
 res, err := client.BankQueryClient.Balance(context.Background(), &query)  
 ```
@@ -74,7 +74,11 @@ res, err := client.BankQueryClient.Balance(context.Background(), &query)
 
 ```go
 keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
-client := NewGreenfieldClientWithKeyManager("localhost:9090", "greenfield_9000-121", keyManager)
+gnfdClient := NewGreenfieldClient("localhost:9090", 
+	                            "greenfield_9000-121",
+	                            WithKeyManager(km),
+                                    WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials()))
+)
 ```
 
 #### Broadcast TX
@@ -98,16 +102,15 @@ Example:
 
 ```go
 payerAddr, _ := sdk.AccAddressFromHexUnsafe("0x76d244CE05c3De4BbC6fDd7F56379B145709ade9")
-transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("bnb", 12)))
+transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("BNB", 12)))
 broadcastMode := tx.BroadcastMode_BROADCAST_MODE_ASYNC
 txOpt := &types.TxOption{
     Mode       &broadcastMode
     GasLimit:  1000000,
     Memo:      "test",
-    FeeAmount: sdk.Coins{{"bnb", sdk.NewInt(1)}},
     FeePayer:  payerAddr,
 }
-response, _ := gnfdCli.BroadcastTx([]sdk.Msg{transfer}, txOpt)
+response, _ := gnfdClient.BroadcastTx([]sdk.Msg{transfer}, txOpt)
 ```
 
 #### Simulate TX
@@ -135,6 +138,19 @@ Please refer to [msgTypes.go](./types/msgTypes.go) to get all types of `sdk.Msg`
 ```go
 client := NewTendermintClient("http://0.0.0.0:26750")
 abci, err := client.TmClient.ABCIInfo(context.Background())
+```
+
+There is an option which multiple providers are available, and by the time you interact with Blockchain, it will choose the
+provider with the highest block height
+
+```go
+gnfdClients := NewGnfdCompositClients(
+    []string{test.TEST_GRPC_ADDR, test.TEST_GRPC_ADDR2, test.TEST_GRPC_ADDR3},
+    []string{test.TEST_RPC_ADDR, test.TEST_RPC_ADDR2, test.TEST_RPC_ADDR3},
+    test.TEST_CHAIN_ID,
+    WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+
+client, err := gnfdClients.GetClient()
 ```
 
 ### Use Storage Provider Client
