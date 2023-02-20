@@ -1,14 +1,9 @@
 package types
 
-import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/tx"
-)
+import "github.com/bnb-chain/greenfield/sdk/types"
 
-type TxOption struct {
-	Mode      *tx.BroadcastMode
-	GasLimit  uint64
-	Memo      string
-	FeeAmount sdk.Coins
-	FeePayer  sdk.AccAddress
-}
+const Denom = types.Denom
+
+type (
+	TxOption = types.TxOption
+)
