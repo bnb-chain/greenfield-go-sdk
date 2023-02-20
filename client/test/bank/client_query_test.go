@@ -6,7 +6,6 @@ import (
 
 	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
-	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,8 +24,6 @@ func TestBankBalance(t *testing.T) {
 }
 
 func TestBankAllBalances(t *testing.T) {
-	km, err := keys.NewPrivateKeyManager("e3ac46e277677f0f103774019d03bd89c7b4b5ecc554b2650bd5d5127992c20c")
-	println(km)
 	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
 
 	query := banktypes.QueryAllBalancesRequest{

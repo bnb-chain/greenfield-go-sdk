@@ -45,7 +45,7 @@ type GnfdCompositeClients struct {
 	clients []*GnfdCompositeClient
 }
 
-func NewGnfdClients(grpcAddrs, rpcAddrs []string, chainId string, opts ...GreenfieldClientOption) *GnfdCompositeClients {
+func NewGnfdCompositClients(grpcAddrs, rpcAddrs []string, chainId string, opts ...GreenfieldClientOption) *GnfdCompositeClients {
 	if len(grpcAddrs) == 0 || len(rpcAddrs) == 0 {
 		panic(types.ErrorUrlNotProvided)
 	}

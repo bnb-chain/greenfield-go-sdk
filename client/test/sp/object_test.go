@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"os"
@@ -26,7 +27,7 @@ func TestPutObject(t *testing.T) {
 
 	reader := bytes.NewReader([]byte("test content of object"))
 	length, err := utils.GetContentLength(reader)
-
+	assert.NoError(t, err)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
 		testMethod(t, r, "PUT")
