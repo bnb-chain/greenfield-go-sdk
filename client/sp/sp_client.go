@@ -7,7 +7,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,6 +17,7 @@ import (
 	lib "github.com/bnb-chain/greenfield-common/go"
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
+	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	signer "github.com/bnb-chain/greenfield-go-sdk/keys/signer"
@@ -101,6 +101,23 @@ func NewSpClientWithKeyManager(endpoint string, opt *Option, keyManager keys.Key
 	return spClient, nil
 }
 
+// SetKeyManager set the keyManager and signer of client
+func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
+	if keyManager == nil {
+		return errors.New("keyManager can not be nil")
+	}
+
+	if keyManager.GetPrivKey() == nil {
+		return errors.New("private key must be set")
+	}
+
+	c.keyManager = keyManager
+
+	signer := signer.NewMsgSigner(keyManager)
+	c.signer = signer
+	return nil
+}
+
 // GetKeyManager return the keyManager object
 func (c *SPClient) GetKeyManager() (keys.KeyManager, error) {
 	if c.keyManager == nil {
@@ -131,6 +148,7 @@ type requestMeta struct {
 	urlValues        url.Values // url values to be added into url
 	Range            string
 	ApproveAction    string
+	TxnMsg           string
 	SignType         string
 	contentType      string
 	contentLength    int64
@@ -267,6 +285,11 @@ func (c *SPClient) newRequest(ctx context.Context,
 			req.Header.Set(HTTPHeaderRedundancyIndex, strconv.Itoa(info.RedundancyIndex))
 			req.Header.Set(HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
 		}
+
+		if meta.TxnMsg != "" {
+			req.Header.Set(HTTPHeaderUnSignedMsg, meta.TxnMsg)
+		}
+
 	} else {
 		// set request host
 		if c.host != "" {
@@ -340,13 +363,13 @@ func (c *SPClient) doAPI(ctx context.Context, req *http.Request, meta requestMet
 func (c *SPClient) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo AuthInfo) (res *http.Response, err error) {
 	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, authInfo)
 	if err != nil {
-		log.Printf("new request error: %s , stop send request\n", err.Error())
+		log.Error().Msg("new request error stop send request" + err.Error())
 		return nil, err
 	}
 
 	resp, err := c.doAPI(ctx, req, metadata, !opt.disableCloseBody)
 	if err != nil {
-		log.Printf("do api request fail: %s \n", err.Error())
+		log.Error().Msg("do api request fail: " + err.Error())
 		return nil, err
 	}
 	return resp, nil
@@ -374,7 +397,7 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
 		if bucketName == "" {
-			err := errors.New("no bucketName in path")
+			err := errors.New("no BucketName in path")
 			return nil, err
 		}
 
@@ -451,7 +474,7 @@ func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64, dataShards, parityShards int) (string, []string, int64, error) {
 	pieceHashRoots, size, err := lib.ComputerHash(reader, segSize, dataShards, parityShards)
 	if err != nil {
-		log.Println("get hash roots fail", err.Error())
+		log.Error().Msg("get hash roots fail" + err.Error())
 		return "", nil, 0, err
 	}
 

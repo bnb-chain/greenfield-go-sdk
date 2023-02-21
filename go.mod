@@ -3,8 +3,8 @@ module github.com/bnb-chain/greenfield-go-sdk
 go 1.19
 
 require (
-	github.com/bnb-chain/greenfield v0.0.0-20230220032958-f72b8a3582cb
-	github.com/bnb-chain/greenfield-common/go v0.0.0-20230209233558-ff9447ce4045
+	github.com/bnb-chain/greenfield v0.0.0-20230221014623-0ec07586bf95
+	github.com/bnb-chain/greenfield-common/go v0.0.0-20230220095438-937c5b838b69
 	github.com/cosmos/cosmos-sdk v0.46.4
 	github.com/ethereum/go-ethereum v1.10.19
 	github.com/evmos/ethermint v0.6.1-0.20220919141022-34226aa7b1fa

@@ -10,20 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
-
-// PutObjectMeta  represents meta which is used to construct PutObjectMsg
-type PutObjectMeta struct {
-	PaymentAccount sdk.AccAddress
-	PrimarySp      string
-	IsPublic       bool
-	ObjectSize     int64
-	ContentType    string
-}
 
 // ObjectMeta represents meta which may needed when upload payload
 type ObjectMeta struct {
@@ -40,27 +30,6 @@ type UploadResult struct {
 
 func (t *UploadResult) String() string {
 	return fmt.Sprintf("upload finish, bucket name  %s, objectname %s, etag %s", t.BucketName, t.ObjectName, t.ETag)
-}
-
-// CreateObject get approval of creating object and send txn to greenfield chain
-func (c *SPClient) CreateObject(ctx context.Context, bucketName, objectName string,
-	meta PutObjectMeta, reader io.Reader, authInfo AuthInfo) (string, error) {
-	// get approval of creating bucket from sp
-	signature, err := c.GetApproval(ctx, bucketName, objectName, authInfo)
-	if err != nil {
-		return "", err
-	}
-	log.Info().Msg("get approve from sp finish,signature is: " + signature)
-
-	// get hash and objectSize from reader
-	_, _, _, err = c.GetPieceHashRoots(reader, SegmentSize, DataShards, ParityShards)
-	if err != nil {
-		return "", err
-	}
-
-	// TODO(leo) call chain sdk to send a createObject txn to greenfield, return txnHash
-
-	return "", err
 }
 
 // PutObject supports the second stage of uploading the object to bucket.

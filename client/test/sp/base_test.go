@@ -101,7 +101,8 @@ func TestNewClient(t *testing.T) {
 	if err != nil {
 		log.Fatal("new key manager fail")
 	}
-	c, err := spClient.NewSpClientWithKeyManager(server_temp.URL[7:], &spClient.Option{}, keyManager)
+	c, err := spClient.NewSpClientWithKeyManager("gf-sp-b.bk.nodereal.cc", &spClient.Option{}, keyManager)
+	fmt.Println("endpoint:", server_temp.URL[7:])
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
@@ -182,7 +183,7 @@ func TestChallenge(t *testing.T) {
 		w.Header().Set(spClient.HTTPHeaderIntegrityHash, interityHash)
 		w.WriteHeader(200)
 	})
-	
+
 	info := spClient.ChallengeInfo{
 		ObjectId:        "xxx",
 		RedundancyIndex: 1,
