@@ -46,9 +46,9 @@ type CreateObjectOptions struct {
 }
 
 type GnfdResponse struct {
-	txnHash string
-	err     error
-	txnType string
+	TxnHash string
+	Err     error
+	TxnType string
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
