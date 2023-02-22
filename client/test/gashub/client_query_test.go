@@ -2,13 +2,9 @@ package gashub
 
 import (
 	"context"
-<<<<<<< HEAD
-	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
-=======
 	"testing"
 
-	gnfdclient "github.com/bnb-chain/greenfield-go-sdk/client/chain"
->>>>>>> 70dd951 (support get approval new version)
+	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	gashubtypes "github.com/cosmos/cosmos-sdk/x/gashub/types"
 	"github.com/stretchr/testify/assert"

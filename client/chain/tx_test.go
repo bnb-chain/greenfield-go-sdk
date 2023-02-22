@@ -10,12 +10,17 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestSendTokenSucceedWithSimulatedGas(t *testing.T) {
 	km, err := keys.NewPrivateKeyManager(test.TEST_PRIVATE_KEY)
 	assert.NoError(t, err)
-	gnfdCli := NewChainClientWithKeyManager(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID, km)
+	gnfdClient := NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID,
+		WithKeyManager(km),
+		WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+	)
 	to, err := sdk.AccAddressFromHexUnsafe(test.TEST_ADDR)
 	assert.NoError(t, err)
 	transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin(test.TEST_DENOM, 12)))
@@ -28,7 +33,8 @@ func TestSendTokenSucceedWithSimulatedGas(t *testing.T) {
 func TestSendTokenWithTxOptionSucceed(t *testing.T) {
 	km, err := keys.NewPrivateKeyManager(test.TEST_PRIVATE_KEY)
 	assert.NoError(t, err)
-	gnfdCli := NewChainClientWithKeyManager(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID, km)
+	gnfdClient := NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID, WithKeyManager(km),
+		WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 	to, err := sdk.AccAddressFromHexUnsafe(test.TEST_ADDR)
 	assert.NoError(t, err)
 	transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin(test.TEST_DENOM, 100)))
@@ -50,7 +56,8 @@ func TestSendTokenWithTxOptionSucceed(t *testing.T) {
 func TestSimulateTx(t *testing.T) {
 	km, err := keys.NewPrivateKeyManager(test.TEST_PRIVATE_KEY)
 	assert.NoError(t, err)
-	gnfdCli := NewChainClientWithKeyManager(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID, km)
+	gnfdClient := NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID, WithKeyManager(km),
+		WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 	to, err := sdk.AccAddressFromHexUnsafe(test.TEST_ADDR)
 	assert.NoError(t, err)
 	transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin(test.TEST_DENOM, 100)))
