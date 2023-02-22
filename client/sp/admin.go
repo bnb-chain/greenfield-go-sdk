@@ -2,6 +2,7 @@ package sp
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -107,7 +108,7 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, bucketMeta Creat
 		urlValues:     urlVal,
 		urlRelPath:    "get-approval",
 		contentSHA256: EmptyStringSHA256,
-		TxnMsg:        string(msgBytes),
+		TxnMsg:        hex.EncodeToString(msgBytes),
 	}
 
 	sendOpt := sendOptions{
@@ -157,7 +158,7 @@ func (c *SPClient) GetCreateObjectApproval(ctx context.Context, objectMeta Creat
 		urlValues:     urlVal,
 		urlRelPath:    "get-approval",
 		contentSHA256: EmptyStringSHA256,
-		TxnMsg:        string(msgBytes),
+		TxnMsg:        hex.EncodeToString(msgBytes),
 	}
 
 	sendOpt := sendOptions{

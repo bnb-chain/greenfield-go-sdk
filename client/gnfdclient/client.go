@@ -14,26 +14,26 @@ type IntegratedClient struct {
 }
 
 type ChainClientInfo struct {
-	rpcAddr  string
-	grpcAddr string
+	RpcAddr  string
+	GrpcAddr string
 }
 
 type SPClientInfo struct {
-	endpoint string
+	Endpoint string
 	opt      *sp.Option
 }
 
 func NewIntegratedClient(chainInfo ChainClientInfo, spInfo SPClientInfo) (*IntegratedClient, error) {
 	var err error
 	spClient := &sp.SPClient{}
-	if spInfo.endpoint != "" {
+	if spInfo.Endpoint != "" {
 		if spInfo.opt == nil {
-			spClient, err = sp.NewSpClient(spInfo.endpoint, &sp.Option{})
+			spClient, err = sp.NewSpClient(spInfo.Endpoint, &sp.Option{})
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			spClient, err = sp.NewSpClient(spInfo.endpoint, spInfo.opt)
+			spClient, err = sp.NewSpClient(spInfo.Endpoint, spInfo.opt)
 			if err != nil {
 				return nil, err
 			}
@@ -41,8 +41,8 @@ func NewIntegratedClient(chainInfo ChainClientInfo, spInfo SPClientInfo) (*Integ
 	}
 
 	chainClient := &chain.GreenfieldClient{}
-	if chainInfo.rpcAddr != "" && chainInfo.grpcAddr != "" {
-		chainClient = chain.NewGreenfieldClient(chainInfo.rpcAddr, chainInfo.grpcAddr)
+	if chainInfo.RpcAddr != "" && chainInfo.GrpcAddr != "" {
+		chainClient = chain.NewGreenfieldClient(chainInfo.RpcAddr, chainInfo.GrpcAddr)
 	}
 
 	return &IntegratedClient{

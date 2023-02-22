@@ -31,9 +31,14 @@ func (c *IntegratedClient) CreateBucket(ctx context.Context, bucketMeta sp.Creat
 		return nil, err
 	}
 
+	decodedMsg, err := hex.DecodeString(signedCreateBucketMsg)
+	if err != nil {
+		return nil, err
+	}
+
 	var signedMsg storage_type.MsgCreateBucket
 
-	ModuleCdc.MustUnmarshalJSON([]byte(signedCreateBucketMsg), &signedMsg)
+	ModuleCdc.MustUnmarshalJSON(decodedMsg, &signedMsg)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{&signedMsg}, &txOpts)
 	if err != nil {
@@ -87,8 +92,12 @@ func (c *IntegratedClient) CreateObject(ctx context.Context, objectMeta sp.Creat
 		return nil, err
 	}
 
+	decodedMsg, err := hex.DecodeString(signedCreateObjectMsg)
+	if err != nil {
+		return nil, err
+	}
 	var signedMsg storage_type.MsgCreateObject
-	ModuleCdc.MustUnmarshalJSON([]byte(signedCreateObjectMsg), &signedMsg)
+	ModuleCdc.MustUnmarshalJSON(decodedMsg, &signedMsg)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{&signedMsg}, &txOpts)
 	if err != nil {
