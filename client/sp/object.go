@@ -33,6 +33,7 @@ func (t *UploadResult) String() string {
 }
 
 // PutObject supports the second stage of uploading the object to bucket.
+// txnHash should be the str which hex.encoding from txn hash bytes
 func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string,
 	reader io.Reader, meta ObjectMeta, authInfo AuthInfo) (res UploadResult, err error) {
 	if txnHash == "" {

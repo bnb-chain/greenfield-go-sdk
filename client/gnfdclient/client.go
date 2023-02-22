@@ -2,6 +2,7 @@ package gnfdclient
 
 import (
 	chain "github.com/bnb-chain/greenfield/sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
@@ -11,11 +12,12 @@ import (
 type IntegratedClient struct {
 	ChainClient *chain.GreenfieldClient
 	SPClient    *sp.SPClient
+	sender      sdk.AccAddress
 }
 
 type ChainClientInfo struct {
-	RpcAddr  string
-	GrpcAddr string
+	RpcAddr string
+	ChainId string
 }
 
 type SPClientInfo struct {
@@ -41,16 +43,18 @@ func NewIntegratedClient(chainInfo ChainClientInfo, spInfo SPClientInfo) (*Integ
 	}
 
 	chainClient := &chain.GreenfieldClient{}
-	if chainInfo.RpcAddr != "" && chainInfo.GrpcAddr != "" {
-		chainClient = chain.NewGreenfieldClient(chainInfo.RpcAddr, chainInfo.GrpcAddr)
+	if chainInfo.RpcAddr != "" && chainInfo.ChainId != "" {
+		chainClient = chain.NewGreenfieldClient(chainInfo.RpcAddr, chainInfo.ChainId)
 	}
 
 	return &IntegratedClient{
 		ChainClient: chainClient,
 		SPClient:    spClient,
+		sender:      nil,
 	}, nil
 }
 
+// NewIntegratedWithKeyManager return client with keyManager and set the sender
 func NewIntegratedWithKeyManager(chainInfo ChainClientInfo, spInfo SPClientInfo,
 	keyManager keys.KeyManager) (*IntegratedClient, error) {
 	GreenfieldClient, err := NewIntegratedClient(chainInfo, spInfo)
@@ -63,5 +67,7 @@ func NewIntegratedWithKeyManager(chainInfo ChainClientInfo, spInfo SPClientInfo,
 	if err != nil {
 		return nil, err
 	}
+
+	GreenfieldClient.sender = keyManager.GetAddr()
 	return GreenfieldClient, nil
 }
