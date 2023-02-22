@@ -3,6 +3,7 @@ package gnfdclient
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"io"
 
 	lib "github.com/bnb-chain/greenfield-common/go"
@@ -66,18 +67,33 @@ func (c *IntegratedClient) DelBucket(operator sdk.AccAddress, bucketName string,
 	return resp, err
 }
 
+func (c *IntegratedClient) ComputeHash(reader io.Reader) ([]string, int64, error) {
+	query := storage_type.QueryParamsRequest{}
+	querytResp, err := c.ChainClient.StorageQueryClient.Params(context.Background(), &query)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dataShards := querytResp.Params.GetRedundantDataChunkNum()
+	parityShards := querytResp.Params.GetRedundantParityChunkNum()
+	segSize := querytResp.Params.GetMaxSegmentSize()
+
+	log.Info().Msg(fmt.Sprintf("get segSize %d, dataShards: %d , parityShards: %d", segSize, dataShards, parityShards))
+	// get hash and objectSize from reader
+	return lib.ComputerHash(reader, int64(segSize), int(dataShards), int(parityShards))
+}
+
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
 func (c *IntegratedClient) CreateObject(ctx context.Context, objectMeta sp.CreateObjectMeta,
 	reader io.Reader, txOpts types.TxOption) (*tx.BroadcastTxResponse, error) {
-
-	// get hash and objectSize from reader
-	pieceHashRoots, size, err := lib.ComputerHash(reader, sp.SegmentSize, sp.DataShards, sp.ParityShards)
+	// compute hash root of payload
+	pieceHashRoots, size, err := c.ComputeHash(reader)
 	if err != nil {
 		log.Error().Msg("get hash roots fail" + err.Error())
 		return nil, err
 	}
 
-	expectCheckSums := make([][]byte, 0)
+	expectCheckSums := make([][]byte, len(pieceHashRoots))
 	for index, hash := range pieceHashRoots {
 		hashByte, err := hex.DecodeString(hash)
 		if err != nil {
@@ -85,6 +101,7 @@ func (c *IntegratedClient) CreateObject(ctx context.Context, objectMeta sp.Creat
 		}
 		expectCheckSums[index] = hashByte
 	}
+
 	// get approval of creating bucket from sp
 	signedCreateObjectMsg, err := c.SPClient.GetCreateObjectApproval(ctx, objectMeta,
 		uint64(size), expectCheckSums, sp.NewAuthInfo(false, ""))

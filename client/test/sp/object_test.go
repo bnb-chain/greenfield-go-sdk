@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
@@ -84,12 +85,15 @@ func TestGetObject(t *testing.T) {
 
 	bodyContent := "test content of object"
 	etag := "test etag"
+	size := int64(len(bodyContent))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
 		testMethod(t, r, "GET")
 
 		w.Header().Set("Etag", etag)
 		w.Header().Set("Content-Type", "text/plain")
+		s := strconv.FormatInt(size, 10) // s == "97" (decimal)
+		w.Header().Set(spClient.HTTPHeaderContentLength, s)
 		w.WriteHeader(200)
 
 		if r.Header.Get("Range") != "" {
@@ -112,6 +116,10 @@ func TestGetObject(t *testing.T) {
 	if info.Etag != etag {
 		t.Errorf("etag error")
 		fmt.Println("etag", info.Etag)
+	}
+
+	if info.Size != size {
+		t.Errorf("size error")
 	}
 
 	option := spClient.DownloadOption{}

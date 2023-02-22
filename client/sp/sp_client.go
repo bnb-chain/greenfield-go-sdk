@@ -287,7 +287,7 @@ func (c *SPClient) newRequest(ctx context.Context,
 		}
 
 		if meta.TxnMsg != "" {
-			req.Header.Set(HTTPHeaderUnSignedMsg, meta.TxnMsg)
+			req.Header.Set(HTTPHeaderUnsignedMsg, meta.TxnMsg)
 		}
 
 	} else {

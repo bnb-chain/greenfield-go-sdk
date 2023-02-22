@@ -9,7 +9,7 @@ const (
 	HTTPHeaderTransactionHash = "X-Gnfd-Txn-Hash"
 	HTTPHeaderResource        = "X-Gnfd-Resource"
 	HTTPHeaderPreSignature    = "X-Gnfd-Pre-Signature"
-	HTTPHeaderUnSignedMsg     = "X-Gnfd-Unsigned-Msg"
+	HTTPHeaderUnsignedMsg     = "X-Gnfd-Unsigned-Msg"
 	HTTPHeaderSignedMsg       = "X-Gnfd-Signed-Msg"
 	HTTPHeaderPieceIndex      = "X-Gnfd-Piece-Index"
 	HTTPHeaderRedundancyIndex = "X-Gnfd-Redundancy-Index"
@@ -37,7 +37,7 @@ const (
 	ParityShards       = 2
 
 	libName        = "Greenfield-go-sdk"
-	Version        = "v0.0.3"
+	Version        = "v0.0.4"
 	UserAgent      = "Greenfield (" + runtime.GOOS + "; " + runtime.GOARCH + ") " + libName + "/" + Version
 	contentTypeXML = "application/xml"
 	ContentDefault = "application/octet-stream"
