@@ -37,6 +37,13 @@ type CreateObjectOptions struct {
 	ContentType     string
 }
 
+// ComputeHashOptions  indicates the meta of redundancy strategy
+type ComputeHashOptions struct {
+	SegmentSize  uint64
+	DataShards   uint32
+	ParityShards uint32
+}
+
 type GnfdResponse struct {
 	TxnHash string
 	Err     error
@@ -44,7 +51,8 @@ type GnfdResponse struct {
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddr sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
+func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddr sdk.AccAddress,
+	opts CreateBucketOptions) GnfdResponse {
 	approveOpts := sp.ApproveBucketOptions{}
 	if opts.PaymentAddress != nil {
 		approveOpts.PaymentAddress = opts.PaymentAddress
@@ -105,20 +113,27 @@ func (c *GnfdClient) DelBucket(operator sdk.AccAddress, bucketName string, txOpt
 	return GnfdResponse{resp.TxResponse.TxHash, err, "DeleteBucket"}
 }
 
-func (c *GnfdClient) ComputeHash(reader io.Reader) ([]string, int64, error) {
-	query := storage_type.QueryParamsRequest{}
-	queryResp, err := c.ChainClient.StorageQueryClient.Params(context.Background(), &query)
-	if err != nil {
-		return nil, 0, err
+func (c *GnfdClient) ComputeHash(reader io.Reader, opts ComputeHashOptions) ([]string, int64, error) {
+	var dataBlocks, parityBlocks uint32
+	var segSize uint64
+	if opts.DataShards == 0 || opts.ParityShards == 0 || opts.SegmentSize == 0 {
+		query := storage_type.QueryParamsRequest{}
+		queryResp, err := c.ChainClient.StorageQueryClient.Params(context.Background(), &query)
+		if err != nil {
+			return nil, 0, err
+		}
+		dataBlocks = queryResp.Params.GetRedundantDataChunkNum()
+		parityBlocks = queryResp.Params.GetRedundantParityChunkNum()
+		segSize = queryResp.Params.GetMaxSegmentSize()
+	} else {
+		dataBlocks = opts.DataShards
+		parityBlocks = opts.ParityShards
+		segSize = opts.SegmentSize
 	}
 
-	dataShards := queryResp.Params.GetRedundantDataChunkNum()
-	parityShards := queryResp.Params.GetRedundantParityChunkNum()
-	segSize := queryResp.Params.GetMaxSegmentSize()
-
-	log.Info().Msg(fmt.Sprintf("get segSize %d, dataShards: %d , parityShards: %d", segSize, dataShards, parityShards))
+	log.Info().Msg(fmt.Sprintf("get segSize %d, DataShards: %d , ParityShards: %d", segSize, dataBlocks, parityBlocks))
 	// get hash and objectSize from reader
-	return lib.ComputerHash(reader, int64(segSize), int(dataShards), int(parityShards))
+	return lib.ComputerHash(reader, int64(segSize), int(dataBlocks), int(parityBlocks))
 }
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
@@ -128,7 +143,7 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return GnfdResponse{"", errors.New("fail to compute hash of payload, reader is nil"), "CreateObject"}
 	}
 	// compute hash root of payload
-	pieceHashRoots, size, err := c.ComputeHash(reader)
+	pieceHashRoots, size, err := c.ComputeHash(reader, ComputeHashOptions{})
 	if err != nil {
 		log.Error().Msg("get hash roots fail" + err.Error())
 		return GnfdResponse{"", err, "CreateObject"}
