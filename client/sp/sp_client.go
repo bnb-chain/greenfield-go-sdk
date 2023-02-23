@@ -56,18 +56,34 @@ type RetryOptions struct {
 	StatusCode []int
 }
 
-// NewSpClient returns a new greenfield client
-func NewSpClient(endpoint string, opt *Option) (*SPClient, error) {
-	url, err := utils.GetEndpointURL(endpoint, opt.secure)
-	if err != nil {
-		return nil, toInvalidArgumentResp(err.Error())
-	}
+type SpClientOption interface {
+	Apply(*SPClient)
+}
 
+type SpClientOptionFunc func(*SPClient)
+
+func (f SpClientOptionFunc) Apply(client *SPClient) {
+	f(client)
+}
+
+func WithKeyManager(km keys.KeyManager) SpClientOption {
+	return SpClientOptionFunc(func(client *SPClient) {
+		client.SetKeyManager(km)
+	})
+}
+
+func WithSecure(secure bool) SpClientOption {
+	return SpClientOptionFunc(func(client *SPClient) {
+		client.conf.Secure = secure
+	})
+}
+
+// NewSpClient returns a new greenfield client
+func NewSpClient(endpoint string, opts ...SpClientOption) (*SPClient, error) {
 	httpClient := &http.Client{}
 	c := &SPClient{
 		client:    httpClient,
 		userAgent: UserAgent,
-		endpoint:  url,
 		conf: &SPClientConfig{
 			RetryOpt: RetryOptions{
 				Count:    3,
@@ -76,29 +92,18 @@ func NewSpClient(endpoint string, opt *Option) (*SPClient, error) {
 		},
 	}
 
-	return c, nil
-}
+	for _, opt := range opts {
+		opt.Apply(c)
+	}
 
-// NewSpClientWithKeyManager returns a new greenfield client with keyManager in it
-func NewSpClientWithKeyManager(endpoint string, opt *Option, keyManager keys.KeyManager) (*SPClient, error) {
-	spClient, err := NewSpClient(endpoint, opt)
+	url, err := utils.GetEndpointURL(endpoint, c.conf.Secure)
 	if err != nil {
-		return nil, err
+		return nil, toInvalidArgumentResp(err.Error())
 	}
 
-	if keyManager == nil {
-		return nil, errors.New("keyManager can not be nil")
-	}
+	c.SetUrl(url)
 
-	spClient.keyManager = keyManager
-	if keyManager.GetPrivKey() == nil {
-		return nil, errors.New("private key must be set")
-	}
-
-	signer := signer.NewMsgSigner(keyManager)
-	spClient.signer = signer
-
-	return spClient, nil
+	return c, nil
 }
 
 // SetKeyManager set the keyManager and signer of client
@@ -175,6 +180,10 @@ func (c *SPClient) SetHost(hostName string) {
 // GetHost get host name of request
 func (c *SPClient) GetHost() string {
 	return c.host
+}
+
+func (c *SPClient) SetUrl(url *url.URL) {
+	c.endpoint = url
 }
 
 // SetAccount set client sender address

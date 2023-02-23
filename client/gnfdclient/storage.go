@@ -25,7 +25,6 @@ var (
 
 type CreateBucketOptions struct {
 	IsPublic       bool
-	Creator        sdk.AccAddress
 	TxOpts         types.TxOption
 	PaymentAddress sdk.AccAddress
 }
@@ -52,25 +51,15 @@ type GnfdResponse struct {
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *IntegratedClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddress sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
-	_, err := c.ChainClient.GetKeyManager()
+func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddress sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
+	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
 	}
-
-	var creator sdk.AccAddress
-	if opts.Creator != nil {
-		creator = opts.Creator
-	} else if c.sender != nil {
-		creator = c.sender
-	} else {
-		return GnfdResponse{"", errors.New("creator address fetch failed"), "CreateBucket"}
-	}
-
 	approveMeta := sp.ApproveBucketMeta{
 		BucketName:       bucketName,
 		IsPublic:         opts.IsPublic,
-		Creator:          creator,
+		Creator:          km.GetAddr(),
 		PrimarySPAddress: primarySPAddress,
 	}
 
@@ -108,7 +97,7 @@ func (c *IntegratedClient) CreateBucket(ctx context.Context, bucketName string, 
 }
 
 // DelBucket send DeleteBucket txn to chain
-func (c *IntegratedClient) DelBucket(operator sdk.AccAddress, bucketName string, txOpts types.TxOption) GnfdResponse {
+func (c *GnfdClient) DelBucket(operator sdk.AccAddress, bucketName string, txOpts types.TxOption) GnfdResponse {
 	_, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteBucket"}
@@ -126,7 +115,7 @@ func (c *IntegratedClient) DelBucket(operator sdk.AccAddress, bucketName string,
 	return GnfdResponse{resp.TxResponse.TxHash, err, "DeleteBucket"}
 }
 
-func (c *IntegratedClient) ComputeHash(reader io.Reader) ([]string, int64, error) {
+func (c *GnfdClient) ComputeHash(reader io.Reader) ([]string, int64, error) {
 	query := storage_type.QueryParamsRequest{}
 	queryResp, err := c.ChainClient.StorageQueryClient.Params(context.Background(), &query)
 	if err != nil {
@@ -143,8 +132,8 @@ func (c *IntegratedClient) ComputeHash(reader io.Reader) ([]string, int64, error
 }
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
-func (c *IntegratedClient) CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts CreateObjectOptions) GnfdResponse {
-	_, err := c.ChainClient.GetKeyManager()
+func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts CreateObjectOptions) GnfdResponse {
+	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateObject"}
 	}
@@ -167,20 +156,11 @@ func (c *IntegratedClient) CreateObject(ctx context.Context, bucketName, objectN
 		expectCheckSums[index] = hashByte
 	}
 
-	var creator sdk.AccAddress
-	if opts.Creator != nil {
-		creator = opts.Creator
-	} else if c.sender != nil {
-		creator = c.sender
-	} else {
-		return GnfdResponse{"", errors.New("creator address fetch failed"), "CreateObject"}
-	}
-
 	approveMeta := sp.ApproveObjectMeta{
 		BucketName: bucketName,
 		ObjectName: objectName,
 		IsPublic:   opts.IsPublic,
-		Creator:    creator,
+		Creator:    km.GetAddr(),
 	}
 
 	if opts.SecondarySPAccs != nil {
@@ -222,7 +202,7 @@ func (c *IntegratedClient) CreateObject(ctx context.Context, bucketName, objectN
 }
 
 // DelObject send DeleteBucket txn to chain
-func (c *IntegratedClient) DelObject(operator sdk.AccAddress, bucketName, objectName string,
+func (c *GnfdClient) DelObject(operator sdk.AccAddress, bucketName, objectName string,
 	txOpts types.TxOption) GnfdResponse {
 	_, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -246,7 +226,7 @@ func (c *IntegratedClient) DelObject(operator sdk.AccAddress, bucketName, object
 }
 
 // CancelCreateObject send CancelCreateObject txn to chain
-func (c *IntegratedClient) CancelCreateObject(operator sdk.AccAddress, bucketName,
+func (c *GnfdClient) CancelCreateObject(operator sdk.AccAddress, bucketName,
 	objectName string, txOpts types.TxOption) GnfdResponse {
 	_, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -272,18 +252,18 @@ func (c *IntegratedClient) CancelCreateObject(operator sdk.AccAddress, bucketNam
 }
 
 // UploadObject upload payload of object to storage provider
-func (c *IntegratedClient) UploadObject(ctx context.Context, bucketName, objectName, txnHash string,
+func (c *GnfdClient) UploadObject(ctx context.Context, bucketName, objectName, txnHash string,
 	reader io.Reader, meta sp.ObjectMeta) (res sp.UploadResult, err error) {
 	return c.SPClient.PutObject(ctx, bucketName, objectName, txnHash, reader, meta, sp.NewAuthInfo(false, ""))
 }
 
 // DownloadObject download the object from primary storage provider
-func (c *IntegratedClient) DownloadObject(ctx context.Context, bucketName, objectName string) (io.ReadCloser, sp.ObjectInfo, error) {
+func (c *GnfdClient) DownloadObject(ctx context.Context, bucketName, objectName string) (io.ReadCloser, sp.ObjectInfo, error) {
 	return c.SPClient.GetObject(ctx, bucketName, objectName, sp.DownloadOption{}, sp.NewAuthInfo(false, ""))
 }
 
-// BuyQuotaForBucket increase the quota to reach storage service of sender
-func (c *IntegratedClient) BuyQuotaForBucket(operator sdk.AccAddress, bucketName string,
+// BuyQuotaForBucket increase the quota to reach storage service of Sender
+func (c *GnfdClient) BuyQuotaForBucket(operator sdk.AccAddress, bucketName string,
 	quota storage_type.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	_, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -310,7 +290,7 @@ func (c *IntegratedClient) BuyQuotaForBucket(operator sdk.AccAddress, bucketName
 	return GnfdResponse{resp.TxResponse.TxHash, err, "UpdateBucketInfo"}
 }
 
-func (c *IntegratedClient) UpdateBucket(operator sdk.AccAddress, bucketName string,
+func (c *GnfdClient) UpdateBucket(operator sdk.AccAddress, bucketName string,
 	readQuota storage_type.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	if err := utils.IsValidBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "UpdateBucketInfo"}
