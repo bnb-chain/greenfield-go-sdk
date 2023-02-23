@@ -8,14 +8,13 @@ import (
 	"io"
 
 	lib "github.com/bnb-chain/greenfield-common/go"
+	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	storage_type "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
-
-	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
 )
 
 var (
@@ -23,22 +22,16 @@ var (
 	ModuleCdc = codec.NewAminoCodec(Amino)
 )
 
+// CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
 	IsPublic       bool
 	TxOpts         types.TxOption
 	PaymentAddress sdk.AccAddress
 }
 
-// CreateObjectMeta indicates the meta to construct createObject msg of storage module
-type CreateObjectMeta struct {
-	BucketName string
-	ObjectName string
-	Reader     io.Reader
-}
-
+// CreateObjectOptions indicates the meta to construct createObject msg of storage module
 type CreateObjectOptions struct {
 	IsPublic        bool
-	Creator         sdk.AccAddress
 	TxOpts          types.TxOption
 	SecondarySPAccs []sdk.AccAddress
 	ContentType     string
@@ -51,24 +44,16 @@ type GnfdResponse struct {
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddress sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
-	km, err := c.ChainClient.GetKeyManager()
-	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
-	}
-	approveMeta := sp.ApproveBucketMeta{
-		BucketName:       bucketName,
-		IsPublic:         opts.IsPublic,
-		Creator:          km.GetAddr(),
-		PrimarySPAddress: primarySPAddress,
-	}
-
+func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddr sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
+	approveOpts := sp.ApproveBucketOptions{}
 	if opts.PaymentAddress != nil {
-		approveMeta.PaymentAddress = opts.PaymentAddress
+		approveOpts.PaymentAddress = opts.PaymentAddress
 	}
 
+	approveOpts.IsPublic = opts.IsPublic
 	// get approval of creating bucket from sp
-	signedCreateBucketMsg, err := c.SPClient.GetCreateBucketApproval(ctx, approveMeta, sp.NewAuthInfo(false, ""))
+	signedCreateBucketMsg, err := c.SPClient.GetCreateBucketApproval(ctx, bucketName, primarySPAddr,
+		sp.NewAuthInfo(false, ""), approveOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateBucket"}
 	}
@@ -85,6 +70,11 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primar
 	txOpts := types.TxOption{}
 	if opts.TxOpts.Mode != nil {
 		txOpts = opts.TxOpts
+	}
+
+	_, err = c.ChainClient.GetKeyManager()
+	if err != nil {
+		return GnfdResponse{"", errors.New("key manager is nil"), "CreatBucket"}
 	}
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{&signedMsg}, &txOpts)
@@ -132,11 +122,8 @@ func (c *GnfdClient) ComputeHash(reader io.Reader) ([]string, int64, error) {
 }
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
-func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts CreateObjectOptions) GnfdResponse {
-	km, err := c.ChainClient.GetKeyManager()
-	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "CreateObject"}
-	}
+func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName string,
+	reader io.Reader, opts CreateObjectOptions) GnfdResponse {
 	if reader == nil {
 		return GnfdResponse{"", errors.New("fail to compute hash of payload, reader is nil"), "CreateObject"}
 	}
@@ -156,26 +143,23 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		expectCheckSums[index] = hashByte
 	}
 
-	approveMeta := sp.ApproveObjectMeta{
-		BucketName: bucketName,
-		ObjectName: objectName,
-		IsPublic:   opts.IsPublic,
-		Creator:    km.GetAddr(),
-	}
-
-	if opts.SecondarySPAccs != nil {
-		approveMeta.SecondarySPAccs = opts.SecondarySPAccs
-	}
-
+	var contentType string
 	if opts.ContentType != "" {
-		approveMeta.ContentType = opts.ContentType
+		contentType = opts.ContentType
 	} else {
-		approveMeta.ContentType = sp.ContentDefault
+		contentType = sp.ContentDefault
 	}
+
+	approveOpts := sp.ApproveObjectOptions{}
+	if opts.SecondarySPAccs != nil {
+		approveOpts.SecondarySPAccs = opts.SecondarySPAccs
+	}
+
+	approveOpts.IsPublic = opts.IsPublic
 
 	// get approval of creating bucket from sp
-	signedCreateObjectMsg, err := c.SPClient.GetCreateObjectApproval(ctx, approveMeta,
-		uint64(size), expectCheckSums, sp.NewAuthInfo(false, ""))
+	signedCreateObjectMsg, err := c.SPClient.GetCreateObjectApproval(ctx, bucketName, objectName,
+		contentType, uint64(size), expectCheckSums, sp.NewAuthInfo(false, ""), approveOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateObject"}
 	}
@@ -190,6 +174,11 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 	txOpts := types.TxOption{}
 	if opts.TxOpts.Mode != nil {
 		txOpts = opts.TxOpts
+	}
+
+	_, err = c.ChainClient.GetKeyManager()
+	if err != nil {
+		return GnfdResponse{"", errors.New("key manager is nil"), "CreateObject"}
 	}
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{&signedMsg}, &txOpts)
@@ -252,9 +241,10 @@ func (c *GnfdClient) CancelCreateObject(operator sdk.AccAddress, bucketName,
 }
 
 // UploadObject upload payload of object to storage provider
-func (c *GnfdClient) UploadObject(ctx context.Context, bucketName, objectName, txnHash string,
-	reader io.Reader, meta sp.ObjectMeta) (res sp.UploadResult, err error) {
-	return c.SPClient.PutObject(ctx, bucketName, objectName, txnHash, reader, meta, sp.NewAuthInfo(false, ""))
+func (c *GnfdClient) UploadObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
+	reader io.Reader, opt sp.UploadOption) (res sp.UploadResult, err error) {
+	return c.SPClient.PutObject(ctx, bucketName, objectName, txnHash,
+		objectSize, reader, sp.NewAuthInfo(false, ""), opt)
 }
 
 // DownloadObject download the object from primary storage provider

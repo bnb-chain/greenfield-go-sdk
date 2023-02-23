@@ -20,19 +20,23 @@ const ChallengeUrl = "challenge"
 // ApproveBucketMeta indicates the core meta to construct createBucket msg of storage module
 type ApproveBucketMeta struct {
 	BucketName       string
-	IsPublic         bool
-	Creator          sdk.AccAddress
 	PrimarySPAddress sdk.AccAddress
-	PaymentAddress   sdk.AccAddress
+}
+
+type ApproveBucketOptions struct {
+	IsPublic       bool
+	PaymentAddress sdk.AccAddress
 }
 
 // ApproveObjectMeta indicates the meta to construct createObject msgof storage module
 type ApproveObjectMeta struct {
-	BucketName      string
-	ObjectName      string
+	BucketName  string
+	ObjectName  string
+	ContentType string
+}
+
+type ApproveObjectOptions struct {
 	IsPublic        bool
-	ContentType     string
-	Creator         sdk.AccAddress
 	SecondarySPAccs []sdk.AccAddress
 }
 
@@ -85,14 +89,18 @@ func (c *SPClient) GetApproval(ctx context.Context, bucketName, objectName strin
 }
 
 // GetCreateBucketApproval return the signature info for the approval of preCreating resources
-func (c *SPClient) GetCreateBucketApproval(ctx context.Context, bucketMeta ApproveBucketMeta, authInfo AuthInfo) (string, error) {
-	if err := utils.IsValidBucketName(bucketMeta.BucketName); err != nil {
+func (c *SPClient) GetCreateBucketApproval(ctx context.Context, bucketName string, primarySPAddr sdk.AccAddress, authInfo AuthInfo, opts ApproveBucketOptions) (string, error) {
+	if err := utils.IsValidBucketName(bucketName); err != nil {
 		return "", err
 	}
 
+	km, err := c.GetKeyManager()
+	if err != nil {
+		return "", errors.New("key manager is nil")
+	}
 	// construct createBucket msg
-	createBucketMsg := storage_type.NewMsgCreateBucket(bucketMeta.Creator, bucketMeta.BucketName, bucketMeta.IsPublic,
-		bucketMeta.PrimarySPAddress, bucketMeta.PaymentAddress, 0, []byte(""))
+	createBucketMsg := storage_type.NewMsgCreateBucket(km.GetAddr(), bucketName, opts.IsPublic,
+		primarySPAddr, opts.PaymentAddress, 0, []byte(""))
 
 	msgBytes := createBucketMsg.GetApprovalBytes()
 
@@ -101,7 +109,7 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, bucketMeta Appro
 	urlVal["action"] = []string{CreateBucketAction}
 
 	reqMeta := requestMeta{
-		bucketName:    bucketMeta.BucketName,
+		bucketName:    bucketName,
 		urlValues:     urlVal,
 		urlRelPath:    "get-approval",
 		contentSHA256: EmptyStringSHA256,
@@ -128,14 +136,19 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, bucketMeta Appro
 	return signature, nil
 }
 
-func (c *SPClient) GetCreateObjectApproval(ctx context.Context, objectMeta ApproveObjectMeta, payloadSize uint64,
-	expectCheckSums [][]byte, authInfo AuthInfo) (string, error) {
-	if err := utils.IsValidBucketName(objectMeta.BucketName); err != nil {
+func (c *SPClient) GetCreateObjectApproval(ctx context.Context, bucketName, objectName, contentType string, payloadSize uint64,
+	expectCheckSums [][]byte, authInfo AuthInfo, opts ApproveObjectOptions) (string, error) {
+	if err := utils.IsValidBucketName(bucketName); err != nil {
 		return "", err
 	}
 
-	if err := utils.IsValidObjectName(objectMeta.ObjectName); err != nil {
+	if err := utils.IsValidObjectName(objectName); err != nil {
 		return "", err
+	}
+
+	km, err := c.GetKeyManager()
+	if err != nil {
+		return "", errors.New("key manager is nil")
 	}
 
 	// set the action type
@@ -143,15 +156,15 @@ func (c *SPClient) GetCreateObjectApproval(ctx context.Context, objectMeta Appro
 	urlVal["action"] = []string{CreateObjectAction}
 
 	// construct createObject msg
-	createObjectMsg := storage_type.NewMsgCreateObject(objectMeta.Creator, objectMeta.BucketName, objectMeta.ObjectName,
-		payloadSize, objectMeta.IsPublic, expectCheckSums, objectMeta.ContentType,
-		0, []byte(""), objectMeta.SecondarySPAccs)
+	createObjectMsg := storage_type.NewMsgCreateObject(km.GetAddr(), bucketName, objectName,
+		payloadSize, opts.IsPublic, expectCheckSums, contentType,
+		0, []byte(""), opts.SecondarySPAccs)
 
 	msgBytes := createObjectMsg.GetApprovalBytes()
 
 	reqMeta := requestMeta{
-		bucketName:    objectMeta.BucketName,
-		objectName:    objectMeta.ObjectName,
+		bucketName:    bucketName,
+		objectName:    objectName,
 		urlValues:     urlVal,
 		urlRelPath:    "get-approval",
 		contentSHA256: EmptyStringSHA256,

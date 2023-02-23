@@ -15,17 +15,15 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
-// ObjectMeta represents meta which may needed when upload payload
-type ObjectMeta struct {
-	ObjectSize  int64
-	ContentType string
-}
-
 // UploadResult contains information about the object which has been uploaded
 type UploadResult struct {
 	BucketName string
 	ObjectName string
 	ETag       string // Hex encoded unique entity tag of the object.
+}
+
+type UploadOption struct {
+	ContentType string
 }
 
 func (t *UploadResult) String() string {
@@ -34,26 +32,29 @@ func (t *UploadResult) String() string {
 
 // PutObject supports the second stage of uploading the object to bucket.
 // txnHash should be the str which hex.encoding from txn hash bytes
-func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string,
-	reader io.Reader, meta ObjectMeta, authInfo AuthInfo) (res UploadResult, err error) {
+func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
+	reader io.Reader, authInfo AuthInfo, opt UploadOption) (res UploadResult, err error) {
 	if txnHash == "" {
 		return UploadResult{}, errors.New("txn hash empty")
 	}
 
-	if meta.ObjectSize <= 0 {
+	if objectSize <= 0 {
 		return UploadResult{}, errors.New("object size not set")
 	}
 
-	if meta.ContentType == "" {
-		return UploadResult{}, errors.New("content type not set")
+	var contentType string
+	if opt.ContentType != "" {
+		contentType = opt.ContentType
+	} else {
+		contentType = ContentDefault
 	}
 
 	reqMeta := requestMeta{
 		bucketName:    bucketName,
 		objectName:    objectName,
 		contentSHA256: EmptyStringSHA256,
-		contentLength: meta.ObjectSize,
-		contentType:   meta.ContentType,
+		contentLength: objectSize,
+		contentType:   contentType,
 	}
 
 	sendOpt := sendOptions{
@@ -93,17 +94,7 @@ func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
 		return UploadResult{}, err
 	}
 
-	meta := ObjectMeta{
-		ObjectSize: stat.Size(),
-	}
-
-	if contentType == "" {
-		meta.ContentType = "application/octet-stream"
-	} else {
-		meta.ContentType = contentType
-	}
-
-	return c.PutObject(ctx, bucketName, objectName, txnHash, fReader, meta, authInfo)
+	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, UploadOption{ContentType: contentType})
 }
 
 // ObjectInfo contain the meta of downloaded objects
