@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/bnb-chain/greenfield v0.0.0-20230221014623-0ec07586bf95
-	github.com/bnb-chain/greenfield-common/go v0.0.0-20230220095438-937c5b838b69
+	github.com/bnb-chain/greenfield-common/go v0.0.0-20230223065707-93ad9f4b1365
 	github.com/cosmos/cosmos-sdk v0.46.4
 	github.com/ethereum/go-ethereum v1.10.19
 	github.com/evmos/ethermint v0.6.1-0.20220919141022-34226aa7b1fa
@@ -73,7 +73,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.11 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/klauspost/reedsolomon v1.11.7 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect

@@ -13,7 +13,7 @@ const (
 	HTTPHeaderSignedMsg       = "X-Gnfd-Signed-Msg"
 	HTTPHeaderPieceIndex      = "X-Gnfd-Piece-Index"
 	HTTPHeaderRedundancyIndex = "X-Gnfd-Redundancy-Index"
-	HTTPHeaderObjectId        = "X-Gnfd-Object-Id"
+	HTTPHeaderObjectId        = "X-Gnfd-Object-ID"
 	HTTPHeaderIntegrityHash   = "X-Gnfd-Integrity-Hash"
 	HTTPHeaderPieceHash       = "X-Gnfd-Piece-Hash"
 
