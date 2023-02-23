@@ -206,6 +206,7 @@ func (c *SPClient) newRequest(ctx context.Context,
 	method string, meta requestMeta, body interface{}, txnHash string, isAdminAPi bool, authInfo AuthInfo) (req *http.Request, err error) {
 	// construct the target url
 	desURL, err := c.GenerateURL(meta.bucketName, meta.objectName, meta.urlRelPath, meta.urlValues, isAdminAPi)
+	log.Error().Msg("new request Url:" + desURL.String())
 	if err != nil {
 		return nil, err
 	}
