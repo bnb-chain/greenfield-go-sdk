@@ -42,9 +42,9 @@ func EncodePath(pathName string) string {
 	return encodedPathname.String()
 }
 
-// IsValidBucketName judge if the bucketname is invalid
+// VerifyBucketName judge if the bucketName is invalid
 // The rule is based on https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
-func IsValidBucketName(bucketName string) error {
+func VerifyBucketName(bucketName string) error {
 	nameLen := len(bucketName)
 	if nameLen < 3 || nameLen > 63 {
 		return fmt.Errorf("bucket name %s len is between [3-63],now is %d", bucketName, nameLen)
@@ -70,8 +70,8 @@ func IsValidBucketName(bucketName string) error {
 	return nil
 }
 
-// IsValidObjectName judge if the objectname is invalid
-func IsValidObjectName(objectName string) error {
+// VerifyObjectName judge if the objectname is invalid
+func VerifyObjectName(objectName string) error {
 	if len(objectName) == 0 {
 		return fmt.Errorf("object name is empty")
 	}

@@ -68,7 +68,10 @@ func (f SpClientOptionFunc) Apply(client *SPClient) {
 
 func WithKeyManager(km keys.KeyManager) SpClientOption {
 	return SpClientOptionFunc(func(client *SPClient) {
-		client.SetKeyManager(km)
+		err := client.SetKeyManager(km)
+		if err != nil {
+			panic(err)
+		}
 	})
 }
 
@@ -166,7 +169,6 @@ type requestMeta struct {
 type sendOptions struct {
 	method           string      // request method
 	body             interface{} // request body
-	result           interface{} // unmarshal message of the resp.Body
 	disableCloseBody bool        // indicate whether to disable automatic calls to resp.Body.Close()
 	txnHash          string      // the transaction hash info
 	isAdminApi       bool        // indicate if it is an admin api request

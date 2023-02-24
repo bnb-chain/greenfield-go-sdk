@@ -42,12 +42,12 @@ type ApproveObjectOptions struct {
 
 // GetApproval return the signature info for the approval of preCreating resources
 func (c *SPClient) GetApproval(ctx context.Context, bucketName, objectName string, authInfo AuthInfo) (string, error) {
-	if err := utils.IsValidBucketName(bucketName); err != nil {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return "", err
 	}
 
 	if objectName != "" {
-		if err := utils.IsValidObjectName(objectName); err != nil {
+		if err := utils.VerifyObjectName(objectName); err != nil {
 			return "", err
 		}
 	}

@@ -33,7 +33,7 @@ func (c *SPClient) CreateBucket(ctx context.Context, bucketName string, authInfo
 
 // ListObjects return object name list of the specific bucket
 func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix string, maxkeys int, authInfo AuthInfo) (ListObjectsResult, error) {
-	if err := utils.IsValidBucketName(bucketName); err != nil {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return ListObjectsResult{}, err
 	}
 

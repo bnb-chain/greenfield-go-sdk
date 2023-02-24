@@ -93,9 +93,11 @@ func TestGetObject(t *testing.T) {
 		w.WriteHeader(200)
 
 		if r.Header.Get("Range") != "" {
-			w.Write([]byte(bodyContent)[1:10])
+			_, err := w.Write([]byte(bodyContent)[1:10])
+			require.NoError(t, err)
 		} else {
-			w.Write([]byte(bodyContent))
+			_, err := w.Write([]byte(bodyContent))
+			require.NoError(t, err)
 		}
 	})
 
@@ -103,7 +105,8 @@ func TestGetObject(t *testing.T) {
 	require.NoError(t, err)
 
 	buf := new(strings.Builder)
-	io.Copy(buf, body)
+	_, err = io.Copy(buf, body)
+	require.NoError(t, err)
 	// check download content
 	if buf.String() != bodyContent {
 		t.Errorf("download content not same")
@@ -119,12 +122,14 @@ func TestGetObject(t *testing.T) {
 	}
 
 	option := spClient.DownloadOption{}
-	option.SetRange(1, 10)
+	err = option.SetRange(1, 10)
+	require.NoError(t, err)
 	part_data, _, err := client.GetObject(context.Background(), bucketName, ObjectName, option, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	buf = new(strings.Builder)
-	io.Copy(buf, part_data)
+	_, err = io.Copy(buf, part_data)
+	require.NoError(t, err)
 	// check download content
 	if buf.String() != bodyContent[1:10] {
 		t.Errorf("download range fail")

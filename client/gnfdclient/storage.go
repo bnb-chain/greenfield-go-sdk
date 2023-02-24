@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+	"math"
+
 	lib "github.com/bnb-chain/greenfield-common/go"
 	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
@@ -13,8 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
-	"io"
-	"math"
 )
 
 var (
@@ -25,14 +26,14 @@ var (
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
 	IsPublic       bool
-	TxOpts         types.TxOption
+	TxOpts         *types.TxOption
 	PaymentAddress sdk.AccAddress
 }
 
 // CreateObjectOptions indicates the meta to construct createObject msg of storage module
 type CreateObjectOptions struct {
 	IsPublic        bool
-	TxOpts          types.TxOption
+	TxOpts          *types.TxOption
 	SecondarySPAccs []sdk.AccAddress
 	ContentType     string
 }
@@ -60,15 +61,20 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primar
 	createBucketMsg := storage_type.NewMsgCreateBucket(km.GetAddr(), bucketName, opts.IsPublic, primarySPAddress, opts.PaymentAddress, 0, nil)
 
 	err = createBucketMsg.ValidateBasic()
-
+	if err != nil {
+		return GnfdResponse{"", err, "CreateBucket"}
+	}
 	signedMsg, err := c.SPClient.GetCreateBucketApproval(ctx, createBucketMsg, sp.NewAuthInfo(false, ""))
-
-	txOpts := types.TxOption{}
-	if opts.TxOpts.Mode != nil {
+	if err != nil {
+		return GnfdResponse{"", err, "CreateBucket"}
+	}
+	
+	txOpts := &types.TxOption{}
+	if opts.TxOpts != nil {
 		txOpts = opts.TxOpts
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedMsg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedMsg}, txOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateBucket"}
 	}
@@ -83,7 +89,7 @@ func (c *GnfdClient) DelBucket(bucketName string, txOpts types.TxOption) GnfdRes
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteBucket"}
 	}
-	if err := utils.IsValidBucketName(bucketName); err != nil {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "DeleteBucket"}
 	}
 	delBucketMsg := storage_type.NewMsgDeleteBucket(km.GetAddr(), bucketName)
@@ -171,8 +177,8 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return GnfdResponse{"", err, "CreateObject"}
 	}
 
-	txOpts := types.TxOption{}
-	if opts.TxOpts.Mode != nil {
+	txOpts := &types.TxOption{}
+	if opts.TxOpts != nil {
 		txOpts = opts.TxOpts
 	}
 
@@ -192,11 +198,11 @@ func (c *GnfdClient) DelObject(bucketName, objectName string,
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteObject"}
 	}
-	if err := utils.IsValidBucketName(bucketName); err != nil {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "DeleteObject"}
 	}
 
-	if err := utils.IsValidObjectName(objectName); err != nil {
+	if err := utils.VerifyObjectName(objectName); err != nil {
 		return GnfdResponse{"", err, "DeleteObject"}
 	}
 	delObjectMsg := storage_type.NewMsgDeleteObject(km.GetAddr(), bucketName, objectName)
@@ -215,11 +221,11 @@ func (c *GnfdClient) CancelCreateObject(bucketName, objectName string, txOpts ty
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "CancelCreateObject"}
 	}
-	if err := utils.IsValidBucketName(bucketName); err != nil {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "CancelCreateObject"}
 	}
 
-	if err := utils.IsValidObjectName(objectName); err != nil {
+	if err := utils.VerifyObjectName(objectName); err != nil {
 		return GnfdResponse{"", err, "CancelCreateObject"}
 	}
 
@@ -277,7 +283,7 @@ func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
 // UpdateBucket update the bucket read quota on chain
 func (c *GnfdClient) UpdateBucket(bucketName string,
 	readQuota storage_type.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
-	if err := utils.IsValidBucketName(bucketName); err != nil {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "UpdateBucketInfo"}
 	}
 
