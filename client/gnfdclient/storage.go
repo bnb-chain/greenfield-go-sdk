@@ -14,6 +14,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
 	"io"
+	"math"
 )
 
 var (
@@ -124,6 +125,11 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 	if reader == nil {
 		return GnfdResponse{"", errors.New("fail to compute hash of payload, reader is nil"), "CreateObject"}
 	}
+
+	km, err := c.ChainClient.GetKeyManager()
+	if err != nil {
+		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
+	}
 	// compute hash root of payload
 	pieceHashRoots, size, err := c.ComputeHash(reader, ComputeHashOptions{})
 	if err != nil {
@@ -154,31 +160,23 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 
 	approveOpts.IsPublic = opts.IsPublic
 
-	// get approval of creating bucket from sp
-	signedCreateObjectMsg, err := c.SPClient.GetCreateObjectApproval(ctx, bucketName, objectName,
-		contentType, uint64(size), expectCheckSums, sp.NewAuthInfo(false, ""), approveOpts)
+	createObjectMsg := storage_type.NewMsgCreateObject(km.GetAddr(), bucketName, objectName, uint64(size), opts.IsPublic, expectCheckSums, contentType, math.MaxUint, nil, nil)
+	err = createObjectMsg.ValidateBasic()
 	if err != nil {
 		return GnfdResponse{"", err, "CreateObject"}
 	}
 
-	decodedMsg, err := hex.DecodeString(signedCreateObjectMsg)
+	signedCreateObjectMsg, err := c.SPClient.GetCreateObjectApproval(ctx, createObjectMsg, sp.NewAuthInfo(false, ""))
 	if err != nil {
 		return GnfdResponse{"", err, "CreateObject"}
 	}
-	var signedMsg storage_type.MsgCreateObject
-	ModuleCdc.MustUnmarshalJSON(decodedMsg, &signedMsg)
 
 	txOpts := types.TxOption{}
 	if opts.TxOpts.Mode != nil {
 		txOpts = opts.TxOpts
 	}
 
-	_, err = c.ChainClient.GetKeyManager()
-	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "CreateObject"}
-	}
-
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{&signedMsg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, &txOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateObject"}
 	}

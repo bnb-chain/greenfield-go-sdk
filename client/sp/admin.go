@@ -125,6 +125,7 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg 
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msg("signedMsgBytes: " + signedRawMsg)
 
 	var signedMsg storage_type.MsgCreateBucket
 	storage_type.ModuleCdc.MustUnmarshalJSON(signedMsgBytes, &signedMsg)
@@ -132,39 +133,20 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg 
 	return &signedMsg, nil
 }
 
-func (c *SPClient) GetCreateObjectApproval(ctx context.Context, bucketName, objectName, contentType string, payloadSize uint64,
-	expectCheckSums [][]byte, authInfo AuthInfo, opts ApproveObjectOptions) (string, error) {
-	if err := utils.IsValidBucketName(bucketName); err != nil {
-		return "", err
-	}
+// GetCreateObjectApproval return the signature info for the approval of preCreating resources
+func (c *SPClient) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storage_type.MsgCreateObject, authInfo AuthInfo) (*storage_type.MsgCreateObject, error) {
 
-	if err := utils.IsValidObjectName(objectName); err != nil {
-		return "", err
-	}
-
-	km, err := c.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
+	unsignedBytes := createObjectMsg.GetSignBytes()
 
 	// set the action type
 	urlVal := make(url.Values)
 	urlVal["action"] = []string{CreateObjectAction}
 
-	// construct createObject msg
-	createObjectMsg := storage_type.NewMsgCreateObject(km.GetAddr(), bucketName, objectName,
-		payloadSize, opts.IsPublic, expectCheckSums, contentType,
-		0, []byte(""), opts.SecondarySPAccs)
-
-	msgBytes := createObjectMsg.GetApprovalBytes()
-
 	reqMeta := requestMeta{
-		bucketName:    bucketName,
-		objectName:    objectName,
 		urlValues:     urlVal,
 		urlRelPath:    "get-approval",
 		contentSHA256: EmptyStringSHA256,
-		TxnMsg:        hex.EncodeToString(msgBytes),
+		TxnMsg:        hex.EncodeToString(unsignedBytes),
 	}
 
 	sendOpt := sendOptions{
@@ -175,16 +157,25 @@ func (c *SPClient) GetCreateObjectApproval(ctx context.Context, bucketName, obje
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
 		log.Error().Msg("get approval rejected: " + err.Error())
-		return "", err
+		return nil, err
 	}
 
 	// fetch primary signed msg from sp response
-	signature := resp.Header.Get(HTTPHeaderSignedMsg)
-	if signature == "" {
-		return "", errors.New("fail to fetch pre createObject signature")
+	signedRawMsg := resp.Header.Get(HTTPHeaderSignedMsg)
+	if signedRawMsg == "" {
+		return nil, errors.New("fail to fetch pre createObject signature")
 	}
 
-	return signature, nil
+	signedMsgBytes, err := hex.DecodeString(signedRawMsg)
+	if err != nil {
+		return nil, err
+	}
+	log.Info().Msg("signedMsgBytes: " + signedRawMsg)
+
+	var signedMsg storage_type.MsgCreateObject
+	storage_type.ModuleCdc.MustUnmarshalJSON(signedMsgBytes, &signedMsg)
+
+	return &signedMsg, nil
 }
 
 // ChallengeInfo indicates the challenge object info
