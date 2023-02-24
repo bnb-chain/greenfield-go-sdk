@@ -32,7 +32,9 @@ func TestRequestSignV1(t *testing.T) {
 	keyManager, err := keys.NewPrivateKeyManager(hex.EncodeToString(privKey.Bytes()))
 	require.NoError(t, err)
 
-	client, err = spClient.NewSpClientWithKeyManager("gnfd.nodereal.com", &spClient.Option{}, keyManager)
+	client, err := spClient.NewSpClient("gnfd.nodereal.com", spClient.WithKeyManager(keyManager),
+		spClient.WithSecure(false))
+
 	require.NoError(t, err)
 	err = client.SignRequest(req, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)

@@ -43,7 +43,9 @@ func setup() {
 	if err != nil {
 		log.Fatal("new key manager fail", err.Error())
 	}
-	client, err = spClient.NewSpClientWithKeyManager(server.URL[len("http://"):], &spClient.Option{}, keyManager)
+
+	client, err = spClient.NewSpClient(server.URL[len("http://"):], spClient.WithKeyManager(keyManager),
+		spClient.WithSecure(false))
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
@@ -101,19 +103,22 @@ func TestNewClient(t *testing.T) {
 	if err != nil {
 		log.Fatal("new key manager fail")
 	}
-	c, err := spClient.NewSpClientWithKeyManager(server_temp.URL[7:], &spClient.Option{}, keyManager)
+
+	client, err = spClient.NewSpClient(server_temp.URL[len("http://"):], spClient.WithKeyManager(keyManager),
+		spClient.WithSecure(false))
+
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
 
-	if got, want := c.GetAgent(), spClient.UserAgent; got != want {
+	if got, want := client.GetAgent(), spClient.UserAgent; got != want {
 		t.Errorf("NewSpClient UserAgent is %v, want %v", got, want)
 	}
 
 	bucketName := "testBucket"
 	objectName := "testObject"
 	want := "http://" + server_temp.URL[7:] + "/testObject"
-	got, _ := c.GenerateURL(bucketName, objectName, "", nil, false)
+	got, _ := client.GenerateURL(bucketName, objectName, "", nil, false)
 	fmt.Println("url2:", got)
 	if got.String() != want {
 		t.Errorf("URL is %v, want %v", got, want)
@@ -160,4 +165,45 @@ func TestGetApproval(t *testing.T) {
 		t.Errorf("get signature err")
 	}
 
+}
+
+// TestChallenge test challenge sdk request
+func TestChallenge(t *testing.T) {
+	setup()
+	defer shutdown()
+
+	pieceHashes := "hash1,hash2,hash3,hash4,hash5,hash6"
+	interityHash := "hash"
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		startHandle(t, r)
+		testMethod(t, r, "GET")
+		url := getUrl(r)
+		want := "/greenfield/admin/v1/challenge"
+		if url != want {
+			t.Errorf("url error")
+		}
+
+		w.Header().Set(spClient.HTTPHeaderPieceHash, pieceHashes)
+		w.Header().Set(spClient.HTTPHeaderIntegrityHash, interityHash)
+		w.WriteHeader(200)
+	})
+
+	info := spClient.ChallengeInfo{
+		ObjectId:        "xxx",
+		RedundancyIndex: 1,
+		PieceIndex:      1,
+	}
+
+	res, err := client.ChallengeSP(context.Background(), info, spClient.NewAuthInfo(false, ""))
+	require.NoError(t, err)
+
+	if pieceHashes != strings.Join(res.PiecesHash, ",") {
+		t.Errorf("fetch piece hashes error")
+	}
+
+	if interityHash != res.IntegrityHash {
+		t.Errorf("fetch interity hash error")
+	}
+
+	fmt.Println("get hash result", res.PiecesHash)
 }

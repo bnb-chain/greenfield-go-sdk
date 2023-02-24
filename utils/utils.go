@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 var EmptyURL = url.URL{}
@@ -128,7 +130,10 @@ func AddQueryValues(s string, qs url.Values) (string, error) {
 // CloseResponse close the response body
 func CloseResponse(resp *http.Response) {
 	if resp != nil && resp.Body != nil {
-		io.Copy(io.Discard, resp.Body)
+		_, err := io.Copy(io.Discard, resp.Body)
+		if err != nil {
+			log.Error().Msg("close resp copy error" + err.Error())
+		}
 		resp.Body.Close()
 	}
 }

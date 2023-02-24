@@ -5,31 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
-
-// PutObjectMeta  represents meta which is used to construct PutObjectMsg
-type PutObjectMeta struct {
-	PaymentAccount sdk.AccAddress
-	PrimarySp      string
-	IsPublic       bool
-	ObjectSize     int64
-	ContentType    string
-}
-
-// ObjectMeta represents meta which may needed when upload payload
-type ObjectMeta struct {
-	ObjectSize  int64
-	ContentType string
-}
 
 // UploadResult contains information about the object which has been uploaded
 type UploadResult struct {
@@ -38,53 +22,39 @@ type UploadResult struct {
 	ETag       string // Hex encoded unique entity tag of the object.
 }
 
+type UploadOption struct {
+	ContentType string
+}
+
 func (t *UploadResult) String() string {
 	return fmt.Sprintf("upload finish, bucket name  %s, objectname %s, etag %s", t.BucketName, t.ObjectName, t.ETag)
 }
 
-// CreateObject get approval of creating object and send txn to greenfield chain
-func (c *SPClient) CreateObject(ctx context.Context, bucketName, objectName string,
-	meta PutObjectMeta, reader io.Reader, authInfo AuthInfo) (string, error) {
-	// get approval of creating bucket from sp
-	signature, err := c.GetApproval(ctx, bucketName, objectName, authInfo)
-	if err != nil {
-		return "", err
-	}
-	log.Println("get approve from sp finish,signature is: ", signature)
-
-	// get hash and objectSize from reader
-	_, _, _, err = c.GetPieceHashRoots(reader, SegmentSize, EncodeShards)
-	if err != nil {
-		return "", err
-	}
-
-	// TODO(leo) call chain sdk to send a createObject txn to greenfield, return txnHash
-	// return txnHash, err
-
-	return "", err
-}
-
 // PutObject supports the second stage of uploading the object to bucket.
-func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string,
-	reader io.Reader, meta ObjectMeta, authInfo AuthInfo) (res UploadResult, err error) {
+// txnHash should be the str which hex.encoding from txn hash bytes
+func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
+	reader io.Reader, authInfo AuthInfo, opt UploadOption) (res UploadResult, err error) {
 	if txnHash == "" {
 		return UploadResult{}, errors.New("txn hash empty")
 	}
 
-	if meta.ObjectSize <= 0 {
+	if objectSize <= 0 {
 		return UploadResult{}, errors.New("object size not set")
 	}
 
-	if meta.ContentType == "" {
-		return UploadResult{}, errors.New("content type not set")
+	var contentType string
+	if opt.ContentType != "" {
+		contentType = opt.ContentType
+	} else {
+		contentType = ContentDefault
 	}
 
 	reqMeta := requestMeta{
 		bucketName:    bucketName,
 		objectName:    objectName,
 		contentSHA256: EmptyStringSHA256,
-		contentLength: meta.ObjectSize,
-		contentType:   meta.ContentType,
+		contentLength: objectSize,
+		contentType:   contentType,
 	}
 
 	sendOpt := sendOptions{
@@ -124,17 +94,7 @@ func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
 		return UploadResult{}, err
 	}
 
-	meta := ObjectMeta{
-		ObjectSize: stat.Size(),
-	}
-
-	if contentType == "" {
-		meta.ContentType = "application/octet-stream"
-	} else {
-		meta.ContentType = contentType
-	}
-
-	return c.PutObject(ctx, bucketName, objectName, txnHash, fReader, meta, authInfo)
+	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, UploadOption{ContentType: contentType})
 }
 
 // ObjectInfo contain the meta of downloaded objects
@@ -145,18 +105,34 @@ type ObjectInfo struct {
 	Size        int64
 }
 
-// GetObjectOptions contains the options of getObject
-type GetObjectOptions struct {
-	ResponseContentType string `url:"response-content-type,omitempty" header:"-"`
-	Range               string `url:"-" header:"Range,omitempty"`
+// DownloadOption contains the options of getObject
+type DownloadOption struct {
+	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+}
+
+func (o *DownloadOption) SetRange(start, end int64) error {
+	switch {
+	case 0 < start && end == 0:
+		// `bytes=N-`.
+		o.Range = fmt.Sprintf("bytes=%d-", start)
+	case 0 <= start && start <= end:
+		// `bytes=N-M`
+		o.Range = fmt.Sprintf("bytes=%d-%d", start, end)
+	default:
+		return toInvalidArgumentResp(
+			fmt.Sprintf(
+				"Invalid Range : start=%d end=%d",
+				start, end))
+	}
+	return nil
 }
 
 // GetObject download s3 object payload and return the related object info
-func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts GetObjectOptions, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
-	if err := utils.IsValidBucketName(bucketName); err != nil {
+func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts DownloadOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
-	if err := utils.IsValidObjectName(objectName); err != nil {
+	if err := utils.VerifyObjectName(objectName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
 
@@ -164,14 +140,6 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 		bucketName:    bucketName,
 		objectName:    objectName,
 		contentSHA256: EmptyStringSHA256,
-	}
-
-	//  use for override certain response header values
-	//  https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
-	if opts.ResponseContentType != "" {
-		urlVal := make(url.Values)
-		urlVal["response-content-type"] = []string{opts.ResponseContentType}
-		reqMeta.urlValues = urlVal
 	}
 
 	if opts.Range != "" {
@@ -185,23 +153,22 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Printf("get Object %s fail: %s \n", objectName, err.Error())
+		log.Error().Msg("get Object :" + objectName + "fail:" + err.Error())
 		return nil, ObjectInfo{}, err
 	}
 
 	ObjInfo, err := getObjInfo(bucketName, objectName, resp.Header)
 	if err != nil {
-		log.Printf("get ObjectInfo %s fail: %s \n", objectName, err.Error())
+		log.Error().Msg("get ObjectInfo of :" + objectName + "fail:" + err.Error())
 		utils.CloseResponse(resp)
 		return nil, ObjectInfo{}, err
 	}
 
 	return resp.Body, ObjInfo, nil
-
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts GetObjectOptions, authinfo AuthInfo) error {
+func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts DownloadOption, authinfo AuthInfo) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {

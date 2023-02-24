@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
+	"github.com/stretchr/testify/require"
 )
 
 // TestCreateBucket test creating a new bucket
@@ -21,6 +22,6 @@ func TestCreateBucket(t *testing.T) {
 		w.WriteHeader(200)
 	})
 
-	client.CreateBucket(context.Background(), bucketName, spClient.NewAuthInfo(false, ""))
-
+	err := client.CreateBucket(context.Background(), bucketName, spClient.NewAuthInfo(false, ""))
+	require.NoError(t, err)
 }

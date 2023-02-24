@@ -1,6 +1,8 @@
 package chain
 
 import (
+	"testing"
+
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -10,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"testing"
 )
 
 func TestSendTokenSucceedWithSimulatedGas(t *testing.T) {

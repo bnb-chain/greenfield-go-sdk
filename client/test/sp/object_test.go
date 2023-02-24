@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"os"
@@ -12,9 +11,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,12 +39,8 @@ func TestPutObject(t *testing.T) {
 	txnHash := "test hash"
 	newReader := bytes.NewReader([]byte("test content of object"))
 
-	meta := spClient.ObjectMeta{
-		ObjectSize:  length,
-		ContentType: spClient.ContentDefault,
-	}
 	_, err = client.PutObject(context.Background(), bucketName,
-		ObjectName, txnHash, newReader, meta, spClient.NewAuthInfo(false, ""))
+		ObjectName, txnHash, length, newReader, spClient.NewAuthInfo(false, ""), spClient.UploadOption{})
 	require.NoError(t, err)
 }
 
@@ -85,21 +81,32 @@ func TestGetObject(t *testing.T) {
 
 	bodyContent := "test content of object"
 	etag := "test etag"
+	size := int64(len(bodyContent))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
 		testMethod(t, r, "GET")
 
 		w.Header().Set("Etag", etag)
 		w.Header().Set("Content-Type", "text/plain")
+		s := strconv.FormatInt(size, 10) // s == "97" (decimal)
+		w.Header().Set(spClient.HTTPHeaderContentLength, s)
 		w.WriteHeader(200)
-		w.Write([]byte(bodyContent))
+
+		if r.Header.Get("Range") != "" {
+			_, err := w.Write([]byte(bodyContent)[1:10])
+			require.NoError(t, err)
+		} else {
+			_, err := w.Write([]byte(bodyContent))
+			require.NoError(t, err)
+		}
 	})
 
-	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.GetObjectOptions{}, spClient.NewAuthInfo(false, ""))
+	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.DownloadOption{}, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	buf := new(strings.Builder)
-	io.Copy(buf, body)
+	_, err = io.Copy(buf, body)
+	require.NoError(t, err)
 	// check download content
 	if buf.String() != bodyContent {
 		t.Errorf("download content not same")
@@ -109,4 +116,23 @@ func TestGetObject(t *testing.T) {
 		t.Errorf("etag error")
 		fmt.Println("etag", info.Etag)
 	}
+
+	if info.Size != size {
+		t.Errorf("size error")
+	}
+
+	option := spClient.DownloadOption{}
+	err = option.SetRange(1, 10)
+	require.NoError(t, err)
+	part_data, _, err := client.GetObject(context.Background(), bucketName, ObjectName, option, spClient.NewAuthInfo(false, ""))
+	require.NoError(t, err)
+
+	buf = new(strings.Builder)
+	_, err = io.Copy(buf, part_data)
+	require.NoError(t, err)
+	// check download content
+	if buf.String() != bodyContent[1:10] {
+		t.Errorf("download range fail")
+	}
+
 }
