@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
-
 	lib "github.com/bnb-chain/greenfield-common/go"
 	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
@@ -15,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
+	"io"
 )
 
 var (
@@ -51,41 +50,24 @@ type GnfdResponse struct {
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddr sdk.AccAddress,
-	opts CreateBucketOptions) GnfdResponse {
-	approveOpts := sp.ApproveBucketOptions{}
-	if opts.PaymentAddress != nil {
-		approveOpts.PaymentAddress = opts.PaymentAddress
-	}
-
-	approveOpts.IsPublic = opts.IsPublic
-	// get approval of creating bucket from sp
-	signedCreateBucketMsg, err := c.SPClient.GetCreateBucketApproval(ctx, bucketName, primarySPAddr,
-		sp.NewAuthInfo(false, ""), approveOpts)
+func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddress sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
+	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
-		return GnfdResponse{"", err, "CreateBucket"}
+		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
 	}
 
-	decodedMsg, err := hex.DecodeString(signedCreateBucketMsg)
-	if err != nil {
-		return GnfdResponse{"", err, "CreateBucket"}
-	}
+	createBucketMsg := storage_type.NewMsgCreateBucket(km.GetAddr(), bucketName, opts.IsPublic, primarySPAddress, opts.PaymentAddress, 0, nil)
 
-	var signedMsg storage_type.MsgCreateBucket
+	err = createBucketMsg.ValidateBasic()
 
-	ModuleCdc.MustUnmarshalJSON(decodedMsg, &signedMsg)
+	signedMsg, err := c.SPClient.GetCreateBucketApproval(ctx, createBucketMsg, sp.NewAuthInfo(false, ""))
 
 	txOpts := types.TxOption{}
 	if opts.TxOpts.Mode != nil {
 		txOpts = opts.TxOpts
 	}
 
-	_, err = c.ChainClient.GetKeyManager()
-	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "CreatBucket"}
-	}
-
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{&signedMsg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedMsg}, &txOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateBucket"}
 	}

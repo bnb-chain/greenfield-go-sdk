@@ -89,31 +89,19 @@ func (c *SPClient) GetApproval(ctx context.Context, bucketName, objectName strin
 }
 
 // GetCreateBucketApproval return the signature info for the approval of preCreating resources
-func (c *SPClient) GetCreateBucketApproval(ctx context.Context, bucketName string, primarySPAddr sdk.AccAddress, authInfo AuthInfo, opts ApproveBucketOptions) (string, error) {
-	if err := utils.IsValidBucketName(bucketName); err != nil {
-		return "", err
-	}
+func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storage_type.MsgCreateBucket, authInfo AuthInfo) (*storage_type.MsgCreateBucket, error) {
 
-	km, err := c.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-	// construct createBucket msg
-	createBucketMsg := storage_type.NewMsgCreateBucket(km.GetAddr(), bucketName, opts.IsPublic,
-		primarySPAddr, opts.PaymentAddress, 0, []byte(""))
-
-	msgBytes := createBucketMsg.GetApprovalBytes()
+	unsignedBytes := createBucketMsg.GetSignBytes()
 
 	// set the action type
 	urlVal := make(url.Values)
 	urlVal["action"] = []string{CreateBucketAction}
 
 	reqMeta := requestMeta{
-		bucketName:    bucketName,
 		urlValues:     urlVal,
 		urlRelPath:    "get-approval",
 		contentSHA256: EmptyStringSHA256,
-		TxnMsg:        hex.EncodeToString(msgBytes),
+		TxnMsg:        hex.EncodeToString(unsignedBytes),
 	}
 
 	sendOpt := sendOptions{
@@ -124,16 +112,24 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, bucketName strin
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
 		log.Error().Msg("get approval rejected: " + err.Error())
-		return "", err
+		return nil, err
 	}
 
 	// fetch primary signed msg from sp response
-	signature := resp.Header.Get(HTTPHeaderSignedMsg)
-	if signature == "" {
-		return "", errors.New("fail to fetch pre createObject signature")
+	signedRawMsg := resp.Header.Get(HTTPHeaderSignedMsg)
+	if signedRawMsg == "" {
+		return nil, errors.New("fail to fetch pre createObject signature")
 	}
 
-	return signature, nil
+	signedMsgBytes, err := hex.DecodeString(signedRawMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	var signedMsg storage_type.MsgCreateBucket
+	storage_type.ModuleCdc.MustUnmarshalJSON(signedMsgBytes, &signedMsg)
+
+	return &signedMsg, nil
 }
 
 func (c *SPClient) GetCreateObjectApproval(ctx context.Context, bucketName, objectName, contentType string, payloadSize uint64,
