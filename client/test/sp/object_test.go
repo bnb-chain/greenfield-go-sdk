@@ -39,12 +39,8 @@ func TestPutObject(t *testing.T) {
 	txnHash := "test hash"
 	newReader := bytes.NewReader([]byte("test content of object"))
 
-	meta := spClient.ObjectMeta{
-		ObjectSize:  length,
-		ContentType: spClient.ContentDefault,
-	}
 	_, err = client.PutObject(context.Background(), bucketName,
-		ObjectName, txnHash, newReader, meta, spClient.NewAuthInfo(false, ""))
+		ObjectName, txnHash, length, newReader, spClient.NewAuthInfo(false, ""), spClient.UploadOption{})
 	require.NoError(t, err)
 }
 

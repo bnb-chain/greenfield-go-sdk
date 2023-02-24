@@ -43,7 +43,9 @@ func setup() {
 	if err != nil {
 		log.Fatal("new key manager fail", err.Error())
 	}
-	client, err = spClient.NewSpClientWithKeyManager(server.URL[len("http://"):], &spClient.Option{}, keyManager)
+
+	client, err = spClient.NewSpClient(server.URL[len("http://"):], spClient.WithKeyManager(keyManager),
+		spClient.WithSecure(false))
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
@@ -101,20 +103,22 @@ func TestNewClient(t *testing.T) {
 	if err != nil {
 		log.Fatal("new key manager fail")
 	}
-	c, err := spClient.NewSpClientWithKeyManager("gf-sp-b.bk.nodereal.cc", &spClient.Option{}, keyManager)
-	fmt.Println("endpoint:", server_temp.URL[7:])
+
+	client, err = spClient.NewSpClient(server_temp.URL[len("http://"):], spClient.WithKeyManager(keyManager),
+		spClient.WithSecure(false))
+
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
 
-	if got, want := c.GetAgent(), spClient.UserAgent; got != want {
+	if got, want := client.GetAgent(), spClient.UserAgent; got != want {
 		t.Errorf("NewSpClient UserAgent is %v, want %v", got, want)
 	}
 
 	bucketName := "testBucket"
 	objectName := "testObject"
 	want := "http://" + server_temp.URL[7:] + "/testObject"
-	got, _ := c.GenerateURL(bucketName, objectName, "", nil, false)
+	got, _ := client.GenerateURL(bucketName, objectName, "", nil, false)
 	fmt.Println("url2:", got)
 	if got.String() != want {
 		t.Errorf("URL is %v, want %v", got, want)
