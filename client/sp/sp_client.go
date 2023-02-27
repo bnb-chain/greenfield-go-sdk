@@ -123,6 +123,8 @@ func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
 
 	signer := signer.NewMsgSigner(keyManager)
 	c.signer = signer
+
+	c.sender = keyManager.GetAddr()
 	return nil
 }
 
@@ -282,13 +284,6 @@ func (c *SPClient) newRequest(ctx context.Context,
 	}
 
 	if isAdminAPi {
-		if meta.bucketName != "" {
-			if meta.objectName == "" {
-				req.Header.Set(HTTPHeaderResource, meta.bucketName)
-			} else {
-				req.Header.Set(HTTPHeaderResource, meta.bucketName+"/"+meta.objectName)
-			}
-		}
 		// set challenge headers
 		// if challengeInfo.ObjectId is not empty, other field should be set as well
 		if meta.challengeInfo.ObjectId != "" {

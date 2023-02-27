@@ -53,6 +53,10 @@ type GnfdResponse struct {
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
 func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddress sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
+		return GnfdResponse{"", err, "CreateObject"}
+	}
+
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
@@ -68,7 +72,7 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primar
 	if err != nil {
 		return GnfdResponse{"", err, "CreateBucket"}
 	}
-	
+
 	txOpts := &types.TxOption{}
 	if opts.TxOpts != nil {
 		txOpts = opts.TxOpts
@@ -132,6 +136,14 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return GnfdResponse{"", errors.New("fail to compute hash of payload, reader is nil"), "CreateObject"}
 	}
 
+	if err := utils.VerifyBucketName(bucketName); err != nil {
+		return GnfdResponse{"", err, "CreateObject"}
+	}
+
+	if err := utils.VerifyObjectName(objectName); err != nil {
+		return GnfdResponse{"", err, "CreateObject"}
+	}
+
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
@@ -182,7 +194,7 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		txOpts = opts.TxOpts
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, txOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateObject"}
 	}

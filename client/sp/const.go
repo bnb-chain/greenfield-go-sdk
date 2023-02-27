@@ -7,8 +7,6 @@ const (
 	HTTPHeaderContentMD5      = "Content-MD5"
 	HTTPHeaderContentType     = "Content-Type"
 	HTTPHeaderTransactionHash = "X-Gnfd-Txn-Hash"
-	HTTPHeaderResource        = "X-Gnfd-Resource"
-	HTTPHeaderPreSignature    = "X-Gnfd-Pre-Signature"
 	HTTPHeaderUnsignedMsg     = "X-Gnfd-Unsigned-Msg"
 	HTTPHeaderSignedMsg       = "X-Gnfd-Signed-Msg"
 	HTTPHeaderPieceIndex      = "X-Gnfd-Piece-Index"
