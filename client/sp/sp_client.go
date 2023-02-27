@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	lib "github.com/bnb-chain/greenfield-common/go"
+	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
@@ -479,7 +479,7 @@ func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 // GetPieceHashRoots return primary pieces Hash and secondary piece Hash roots list and object size
 // It is used for generate meta of object on the chain
 func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64, dataShards, parityShards int) (string, []string, int64, error) {
-	pieceHashRoots, size, err := lib.ComputerHash(reader, segSize, dataShards, parityShards)
+	pieceHashRoots, size, err := hashlib.ComputerHash(reader, segSize, dataShards, parityShards)
 	if err != nil {
 		log.Error().Msg("get hash roots fail" + err.Error())
 		return "", nil, 0, err
