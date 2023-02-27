@@ -13,7 +13,7 @@ import (
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
-	storage_type "github.com/bnb-chain/greenfield/x/storage/types"
+	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	"github.com/stretchr/testify/require"
 )
@@ -143,7 +143,7 @@ func TestGetApproval(t *testing.T) {
 		w.WriteHeader(200)
 	})
 
-	createObjectMsg := storage_type.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), false, nil, "", 0, nil, nil)
+	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), false, nil, "", 0, nil, nil)
 	err := createObjectMsg.ValidateBasic()
 	require.NoError(t, err)
 	//test preCreateObject

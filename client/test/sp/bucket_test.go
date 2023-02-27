@@ -2,7 +2,6 @@ package sp
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -31,12 +30,10 @@ func TestCreateBucket(t *testing.T) {
 	_, _, testAddr := testdata.KeyEthSecp256k1TestPubAddr()
 	createBucketMsg := storage_type.NewMsgCreateBucket(client.GetAccount(), bucketName, true, testAddr, nil, 0, nil)
 
-	fmt.Println("addr:", client.GetAccount().String())
 	err := createBucketMsg.ValidateBasic()
 	require.NoError(t, err)
 
 	// test preCreateBucket
 	_, err = client.GetCreateBucketApproval(context.Background(), createBucketMsg, spClient.NewAuthInfo(false, ""))
-	fmt.Println("addr:", client.GetAccount().String())
 	require.NoError(t, err)
 }
