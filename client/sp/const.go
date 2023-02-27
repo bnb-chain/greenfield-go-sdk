@@ -7,13 +7,19 @@ const (
 	HTTPHeaderContentMD5      = "Content-MD5"
 	HTTPHeaderContentType     = "Content-Type"
 	HTTPHeaderTransactionHash = "X-Gnfd-Txn-Hash"
-	HTTPHeaderResource        = "X-Gnfd-Resource"
-	HTTPHeaderPreSignature    = "X-Gnfd-Pre-Signature"
-	HTTPHeaderDate            = "X-Gnfd-Date"
-	HTTPHeaderEtag            = "ETag"
-	HTTPHeaderRange           = "Range"
-	HTTPHeaderUserAgent       = "User-Agent"
-	HTTPHeaderContentSHA256   = "X-Gnfd-Content-Sha256"
+	HTTPHeaderUnsignedMsg     = "X-Gnfd-Unsigned-Msg"
+	HTTPHeaderSignedMsg       = "X-Gnfd-Signed-Msg"
+	HTTPHeaderPieceIndex      = "X-Gnfd-Piece-Index"
+	HTTPHeaderRedundancyIndex = "X-Gnfd-Redundancy-Index"
+	HTTPHeaderObjectId        = "X-Gnfd-Object-ID"
+	HTTPHeaderIntegrityHash   = "X-Gnfd-Integrity-Hash"
+	HTTPHeaderPieceHash       = "X-Gnfd-Piece-Hash"
+
+	HTTPHeaderDate          = "X-Gnfd-Date"
+	HTTPHeaderEtag          = "ETag"
+	HTTPHeaderRange         = "Range"
+	HTTPHeaderUserAgent     = "User-Agent"
+	HTTPHeaderContentSHA256 = "X-Gnfd-Content-Sha256"
 
 	// EmptyStringSHA256 is the hex encoded sha256 value of an empty string
 	EmptyStringSHA256       = `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
@@ -25,10 +31,11 @@ const (
 	CreateObjectAction = "CreateObject"
 	CreateBucketAction = "CreateBucket"
 	SegmentSize        = 16 * 1024 * 1024
-	EncodeShards       = 6
+	DataShards         = 4
+	ParityShards       = 2
 
 	libName        = "Greenfield-go-sdk"
-	Version        = "v0.0.1"
+	Version        = "v0.0.4"
 	UserAgent      = "Greenfield (" + runtime.GOOS + "; " + runtime.GOARCH + ") " + libName + "/" + Version
 	contentTypeXML = "application/xml"
 	ContentDefault = "application/octet-stream"

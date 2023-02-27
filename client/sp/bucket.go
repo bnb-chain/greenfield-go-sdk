@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
@@ -16,23 +17,9 @@ type ListObjectsResult struct {
 	prefix     string
 }
 
-// CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *SPClient) CreateBucket(ctx context.Context, bucketName string, authInfo AuthInfo) error {
-	// get approval of creating bucket from sp
-	signature, err := c.GetApproval(ctx, bucketName, "", authInfo)
-	if err != nil {
-		return err
-	}
-
-	log.Println("get approve from sp finish,signature is:", signature)
-	// TODO(leo) call chain sdk to send a createBucket txn to greenfield with signature
-
-	return nil
-}
-
 // ListObjects return object name list of the specific bucket
 func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix string, maxkeys int, authInfo AuthInfo) (ListObjectsResult, error) {
-	if err := utils.IsValidBucketName(bucketName); err != nil {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return ListObjectsResult{}, err
 	}
 
@@ -54,7 +41,7 @@ func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix str
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Printf("listObjects of bucket %s fail: %s \n", bucketName, err.Error())
+		log.Error().Msg("listObjects of bucket:" + bucketName + " failed: " + err.Error())
 		return ListObjectsResult{}, err
 	}
 	defer utils.CloseResponse(resp)

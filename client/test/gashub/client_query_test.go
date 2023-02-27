@@ -2,11 +2,12 @@ package gashub
 
 import (
 	"context"
+	"testing"
+
 	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	gashubtypes "github.com/cosmos/cosmos-sdk/x/gashub/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestGashubParams(t *testing.T) {

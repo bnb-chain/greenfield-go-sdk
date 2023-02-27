@@ -2,11 +2,12 @@ package bank
 
 import (
 	"context"
+	"testing"
+
 	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	crosschaintypes "github.com/cosmos/cosmos-sdk/x/crosschain/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestCrosschainParams(t *testing.T) {

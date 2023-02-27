@@ -13,6 +13,7 @@ import (
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	"github.com/stretchr/testify/require"
 )
@@ -43,7 +44,9 @@ func setup() {
 	if err != nil {
 		log.Fatal("new key manager fail", err.Error())
 	}
-	client, err = spClient.NewSpClientWithKeyManager(server.URL[len("http://"):], &spClient.Option{}, keyManager)
+
+	client, err = spClient.NewSpClient(server.URL[len("http://"):], spClient.WithKeyManager(keyManager),
+		spClient.WithSecure(false))
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
@@ -101,19 +104,22 @@ func TestNewClient(t *testing.T) {
 	if err != nil {
 		log.Fatal("new key manager fail")
 	}
-	c, err := spClient.NewSpClientWithKeyManager(server_temp.URL[7:], &spClient.Option{}, keyManager)
+
+	client, err = spClient.NewSpClient(server_temp.URL[len("http://"):], spClient.WithKeyManager(keyManager),
+		spClient.WithSecure(false))
+
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
 
-	if got, want := c.GetAgent(), spClient.UserAgent; got != want {
+	if got, want := client.GetAgent(), spClient.UserAgent; got != want {
 		t.Errorf("NewSpClient UserAgent is %v, want %v", got, want)
 	}
 
 	bucketName := "testBucket"
 	objectName := "testObject"
 	want := "http://" + server_temp.URL[7:] + "/testObject"
-	got, _ := c.GenerateURL(bucketName, objectName, "", nil, false)
+	got, _ := client.GenerateURL(bucketName, objectName, "", nil, false)
 	fmt.Println("url2:", got)
 	if got.String() != want {
 		t.Errorf("URL is %v, want %v", got, want)
@@ -127,37 +133,62 @@ func TestGetApproval(t *testing.T) {
 	defer shutdown()
 
 	bucketName := "test-bucket"
-	ObjectName := "test-object"
-	signature := "test-signature"
+	objectName := "test-object"
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		startHandle(t, r)
+		testMethod(t, r, "GET")
+
+		msg := r.Header.Get(spClient.HTTPHeaderUnsignedMsg)
+		w.Header().Set(spClient.HTTPHeaderSignedMsg, msg)
+		w.WriteHeader(200)
+	})
+
+	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), false, nil, "", 0, nil, nil)
+	err := createObjectMsg.ValidateBasic()
+	require.NoError(t, err)
+	//test preCreateObject
+	_, err = client.GetCreateObjectApproval(context.Background(), createObjectMsg, spClient.NewAuthInfo(false, ""))
+
+	require.NoError(t, err)
+}
+
+// TestChallenge test challenge sdk request
+func TestChallenge(t *testing.T) {
+	setup()
+	defer shutdown()
+
+	pieceHashes := "hash1,hash2,hash3,hash4,hash5,hash6"
+	interityHash := "hash"
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
 		testMethod(t, r, "GET")
 		url := getUrl(r)
-		if strings.Contains(url, spClient.CreateObjectAction) {
-			testHeader(t, r, spClient.HTTPHeaderResource, bucketName+"/"+ObjectName)
-		} else if strings.Contains(url, spClient.CreateBucketAction) {
-			testHeader(t, r, spClient.HTTPHeaderResource, bucketName)
+		want := "/greenfield/admin/v1/challenge"
+		if url != want {
+			t.Errorf("url error")
 		}
 
-		w.Header().Set(spClient.HTTPHeaderPreSignature, signature)
+		w.Header().Set(spClient.HTTPHeaderPieceHash, pieceHashes)
+		w.Header().Set(spClient.HTTPHeaderIntegrityHash, interityHash)
 		w.WriteHeader(200)
 	})
 
-	// test preCreateBucket
-	gotSign, err := client.GetApproval(context.Background(), bucketName, "", spClient.NewAuthInfo(false, ""))
-	require.NoError(t, err)
-
-	if gotSign != signature {
-		t.Errorf("get signature err")
+	info := spClient.ChallengeInfo{
+		ObjectId:        "xxx",
+		RedundancyIndex: 1,
+		PieceIndex:      1,
 	}
 
-	//test preCreateObject
-	gotSign, err = client.GetApproval(context.Background(), bucketName, ObjectName, spClient.NewAuthInfo(false, ""))
-
+	res, err := client.ChallengeSP(context.Background(), info, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
-	if gotSign != signature {
-		t.Errorf("get signature err")
+	if pieceHashes != strings.Join(res.PiecesHash, ",") {
+		t.Errorf("fetch piece hashes error")
 	}
 
+	if interityHash != res.IntegrityHash {
+		t.Errorf("fetch interity hash error")
+	}
+
+	fmt.Println("get hash result", res.PiecesHash)
 }

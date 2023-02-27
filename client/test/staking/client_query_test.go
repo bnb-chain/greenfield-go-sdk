@@ -2,11 +2,12 @@ package staking
 
 import (
 	"context"
+	"testing"
+
 	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestStakingValidator(t *testing.T) {
