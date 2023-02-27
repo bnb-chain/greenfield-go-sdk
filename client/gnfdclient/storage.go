@@ -8,11 +8,11 @@ import (
 	"io"
 	"math"
 
-	lib "github.com/bnb-chain/greenfield-common/go"
+	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 	"github.com/bnb-chain/greenfield/sdk/types"
-	storage_type "github.com/bnb-chain/greenfield/x/storage/types"
+	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
@@ -53,12 +53,16 @@ type GnfdResponse struct {
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
 func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddress sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
+	if err := utils.VerifyBucketName(bucketName); err != nil {
+		return GnfdResponse{"", err, "CreateObject"}
+	}
+
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
 	}
 
-	createBucketMsg := storage_type.NewMsgCreateBucket(km.GetAddr(), bucketName, opts.IsPublic, primarySPAddress, opts.PaymentAddress, 0, nil)
+	createBucketMsg := storageType.NewMsgCreateBucket(km.GetAddr(), bucketName, opts.IsPublic, primarySPAddress, opts.PaymentAddress, 0, nil)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
@@ -68,13 +72,8 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primar
 	if err != nil {
 		return GnfdResponse{"", err, "CreateBucket"}
 	}
-	
-	txOpts := &types.TxOption{}
-	if opts.TxOpts != nil {
-		txOpts = opts.TxOpts
-	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedMsg}, txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedMsg}, opts.TxOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateBucket"}
 	}
@@ -92,7 +91,7 @@ func (c *GnfdClient) DelBucket(bucketName string, txOpts types.TxOption) GnfdRes
 	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "DeleteBucket"}
 	}
-	delBucketMsg := storage_type.NewMsgDeleteBucket(km.GetAddr(), bucketName)
+	delBucketMsg := storageType.NewMsgDeleteBucket(km.GetAddr(), bucketName)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{delBucketMsg}, &txOpts)
 	if err != nil {
@@ -106,7 +105,7 @@ func (c *GnfdClient) ComputeHash(reader io.Reader, opts ComputeHashOptions) ([]s
 	var dataBlocks, parityBlocks uint32
 	var segSize uint64
 	if opts.DataShards == 0 || opts.ParityShards == 0 || opts.SegmentSize == 0 {
-		query := storage_type.QueryParamsRequest{}
+		query := storageType.QueryParamsRequest{}
 		queryResp, err := c.ChainClient.StorageQueryClient.Params(context.Background(), &query)
 		if err != nil {
 			return nil, 0, err
@@ -122,7 +121,7 @@ func (c *GnfdClient) ComputeHash(reader io.Reader, opts ComputeHashOptions) ([]s
 
 	log.Info().Msg(fmt.Sprintf("get segSize %d, DataShards: %d , ParityShards: %d", segSize, dataBlocks, parityBlocks))
 	// get hash and objectSize from reader
-	return lib.ComputerHash(reader, int64(segSize), int(dataBlocks), int(parityBlocks))
+	return hashlib.ComputerHash(reader, int64(segSize), int(dataBlocks), int(parityBlocks))
 }
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
@@ -130,6 +129,14 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 	reader io.Reader, opts CreateObjectOptions) GnfdResponse {
 	if reader == nil {
 		return GnfdResponse{"", errors.New("fail to compute hash of payload, reader is nil"), "CreateObject"}
+	}
+
+	if err := utils.VerifyBucketName(bucketName); err != nil {
+		return GnfdResponse{"", err, "CreateObject"}
+	}
+
+	if err := utils.VerifyObjectName(objectName); err != nil {
+		return GnfdResponse{"", err, "CreateObject"}
 	}
 
 	km, err := c.ChainClient.GetKeyManager()
@@ -166,7 +173,7 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 
 	approveOpts.IsPublic = opts.IsPublic
 
-	createObjectMsg := storage_type.NewMsgCreateObject(km.GetAddr(), bucketName, objectName, uint64(size), opts.IsPublic, expectCheckSums, contentType, math.MaxUint, nil, nil)
+	createObjectMsg := storageType.NewMsgCreateObject(km.GetAddr(), bucketName, objectName, uint64(size), opts.IsPublic, expectCheckSums, contentType, math.MaxUint, nil, nil)
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
 		return GnfdResponse{"", err, "CreateObject"}
@@ -177,12 +184,7 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return GnfdResponse{"", err, "CreateObject"}
 	}
 
-	txOpts := &types.TxOption{}
-	if opts.TxOpts != nil {
-		txOpts = opts.TxOpts
-	}
-
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateObject"}
 	}
@@ -205,7 +207,7 @@ func (c *GnfdClient) DelObject(bucketName, objectName string,
 	if err := utils.VerifyObjectName(objectName); err != nil {
 		return GnfdResponse{"", err, "DeleteObject"}
 	}
-	delObjectMsg := storage_type.NewMsgDeleteObject(km.GetAddr(), bucketName, objectName)
+	delObjectMsg := storageType.NewMsgDeleteObject(km.GetAddr(), bucketName, objectName)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{delObjectMsg}, &txOpts)
 	if err != nil {
@@ -229,7 +231,7 @@ func (c *GnfdClient) CancelCreateObject(bucketName, objectName string, txOpts ty
 		return GnfdResponse{"", err, "CancelCreateObject"}
 	}
 
-	cancelCreateMsg := storage_type.NewMsgCancelCreateObject(km.GetAddr(), bucketName, objectName)
+	cancelCreateMsg := storageType.NewMsgCancelCreateObject(km.GetAddr(), bucketName, objectName)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{cancelCreateMsg}, &txOpts)
 	if err != nil {
@@ -254,14 +256,14 @@ func (c *GnfdClient) DownloadObject(ctx context.Context, bucketName, objectName 
 
 // BuyQuotaForBucket increase the quota to reach storage service of Sender
 func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
-	quota storage_type.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+	quota storageType.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "UpdateBucketInfo"}
 	}
 	// HeadBucket
 	ctx := context.Background()
-	queryHeadBucketRequest := storage_type.QueryHeadBucketRequest{
+	queryHeadBucketRequest := storageType.QueryHeadBucketRequest{
 		BucketName: bucketName,
 	}
 	queryHeadBucketResponse, err := c.ChainClient.HeadBucket(ctx, &queryHeadBucketRequest)
@@ -270,7 +272,7 @@ func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
 	}
 
 	newQuota := queryHeadBucketResponse.BucketInfo.GetReadQuota() + quota
-	updateBucketMsg := storage_type.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, newQuota, paymentAcc)
+	updateBucketMsg := storageType.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, newQuota, paymentAcc)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, &txOpts)
 	if err != nil {
@@ -282,7 +284,7 @@ func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
 
 // UpdateBucket update the bucket read quota on chain
 func (c *GnfdClient) UpdateBucket(bucketName string,
-	readQuota storage_type.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+	readQuota storageType.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "UpdateBucketInfo"}
 	}
@@ -292,7 +294,7 @@ func (c *GnfdClient) UpdateBucket(bucketName string,
 		return GnfdResponse{"", errors.New("key manager is nil"), "UpdateBucketInfo"}
 	}
 
-	updateBucketMsg := storage_type.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, readQuota, paymentAcc)
+	updateBucketMsg := storageType.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, readQuota, paymentAcc)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, &txOpts)
 	if err != nil {
@@ -313,7 +315,7 @@ type BucketInfo struct {
 // if bucket exist, return true and the bucketId
 func (c *GnfdClient) HeadBucket(bucketName string) (BucketInfo, error) {
 	ctx := context.Background()
-	queryHeadBucketRequest := storage_type.QueryHeadBucketRequest{
+	queryHeadBucketRequest := storageType.QueryHeadBucketRequest{
 		BucketName: bucketName,
 	}
 	queryHeadBucketResponse, err := c.ChainClient.HeadBucket(ctx, &queryHeadBucketRequest)
@@ -339,7 +341,7 @@ type ObjectInfo struct {
 // if object exist, return true and the objectId
 func (c *GnfdClient) HeadObject(bucketName, objectName string) (ObjectInfo, error) {
 	ctx := context.Background()
-	queryHeadObjectRequest := storage_type.QueryHeadObjectRequest{
+	queryHeadObjectRequest := storageType.QueryHeadObjectRequest{
 		BucketName: bucketName,
 		ObjectName: objectName,
 	}

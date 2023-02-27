@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	lib "github.com/bnb-chain/greenfield-common/go"
+	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
@@ -123,6 +123,8 @@ func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
 
 	signer := signer.NewMsgSigner(keyManager)
 	c.signer = signer
+
+	c.sender = keyManager.GetAddr()
 	return nil
 }
 
@@ -282,13 +284,6 @@ func (c *SPClient) newRequest(ctx context.Context,
 	}
 
 	if isAdminAPi {
-		if meta.bucketName != "" {
-			if meta.objectName == "" {
-				req.Header.Set(HTTPHeaderResource, meta.bucketName)
-			} else {
-				req.Header.Set(HTTPHeaderResource, meta.bucketName+"/"+meta.objectName)
-			}
-		}
 		// set challenge headers
 		// if challengeInfo.ObjectId is not empty, other field should be set as well
 		if meta.challengeInfo.ObjectId != "" {
@@ -484,7 +479,7 @@ func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 // GetPieceHashRoots return primary pieces Hash and secondary piece Hash roots list and object size
 // It is used for generate meta of object on the chain
 func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64, dataShards, parityShards int) (string, []string, int64, error) {
-	pieceHashRoots, size, err := lib.ComputerHash(reader, segSize, dataShards, parityShards)
+	pieceHashRoots, size, err := hashlib.ComputerHash(reader, segSize, dataShards, parityShards)
 	if err != nil {
 		log.Error().Msg("get hash roots fail" + err.Error())
 		return "", nil, 0, err

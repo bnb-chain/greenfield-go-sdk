@@ -17,20 +17,6 @@ type ListObjectsResult struct {
 	prefix     string
 }
 
-// CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *SPClient) CreateBucket(ctx context.Context, bucketName string, authInfo AuthInfo) error {
-	// get approval of creating bucket from sp
-	signature, err := c.GetApproval(ctx, bucketName, "", authInfo)
-	if err != nil {
-		return err
-	}
-
-	log.Info().Msg("get approve from sp finish,signature is:" + signature)
-	// TODO(leo) call chain sdk to send a createBucket txn to greenfield with signature
-
-	return nil
-}
-
 // ListObjects return object name list of the specific bucket
 func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix string, maxkeys int, authInfo AuthInfo) (ListObjectsResult, error) {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
