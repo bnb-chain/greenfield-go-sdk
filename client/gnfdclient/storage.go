@@ -12,6 +12,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 	"github.com/bnb-chain/greenfield/sdk/types"
+	spType "github.com/bnb-chain/greenfield/x/sp/types"
 	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -101,22 +102,24 @@ func (c *GnfdClient) DelBucket(bucketName string, txOpts types.TxOption) GnfdRes
 	return GnfdResponse{resp.TxResponse.TxHash, err, "DeleteBucket"}
 }
 
-func (c *GnfdClient) ComputeHash(reader io.Reader, opts ComputeHashOptions) ([]string, int64, error) {
-	var dataBlocks, parityBlocks uint32
-	var segSize uint64
-	if opts.DataShards == 0 || opts.ParityShards == 0 || opts.SegmentSize == 0 {
-		query := storageType.QueryParamsRequest{}
-		queryResp, err := c.ChainClient.StorageQueryClient.Params(context.Background(), &query)
-		if err != nil {
-			return nil, 0, err
-		}
-		dataBlocks = queryResp.Params.GetRedundantDataChunkNum()
-		parityBlocks = queryResp.Params.GetRedundantParityChunkNum()
-		segSize = queryResp.Params.GetMaxSegmentSize()
-	} else {
-		dataBlocks = opts.DataShards
-		parityBlocks = opts.ParityShards
-		segSize = opts.SegmentSize
+// GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
+// configuration on chain
+func (c *GnfdClient) GetRedundancyParams() (uint32, uint32, uint64, error) {
+	query := storageType.QueryParamsRequest{}
+	queryResp, err := c.ChainClient.StorageQueryClient.Params(context.Background(), &query)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	params := queryResp.Params
+	return params.GetRedundantDataChunkNum(), params.GetRedundantParityChunkNum(), params.GetMaxSegmentSize(), nil
+}
+
+// ComputeHashRoots return the hash roots list and content size
+func (c *GnfdClient) ComputeHashRoots(reader io.Reader) ([]string, int64, error) {
+	dataBlocks, parityBlocks, segSize, err := c.GetRedundancyParams()
+	if err != nil {
+		return nil, 0, err
 	}
 
 	log.Info().Msg(fmt.Sprintf("get segSize %d, DataShards: %d , ParityShards: %d", segSize, dataBlocks, parityBlocks))
@@ -144,7 +147,7 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
 	}
 	// compute hash root of payload
-	pieceHashRoots, size, err := c.ComputeHash(reader, ComputeHashOptions{})
+	pieceHashRoots, size, err := c.ComputeHashRoots(reader)
 	if err != nil {
 		log.Error().Msg("get hash roots fail" + err.Error())
 		return GnfdResponse{"", err, "CreateObject"}
@@ -356,4 +359,37 @@ func (c *GnfdClient) HeadObject(bucketName, objectName string) (ObjectInfo, erro
 		Status:   info.GetObjectStatus().String(),
 		Size:     info.GetPayloadSize(),
 	}, nil
+}
+
+type SPInfo struct {
+	Endpoint        string
+	OperatorAddress string
+	ApprovalAddress string
+	FundAddress     string
+	SealAddress     string
+	Status          string
+}
+
+// ListSP return the storage provider info on chain
+func (c *GnfdClient) ListSP(ctx context.Context) ([]SPInfo, error) {
+	request := &spType.QueryStorageProvidersRequest{}
+	gnfdRep, err := c.ChainClient.StorageProviders(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	spList := gnfdRep.GetSps()
+	spInfoList := make([]SPInfo, len(spList))
+	for idx, info := range spList {
+		spInfoList[idx] = SPInfo{
+			Endpoint:        info.GetEndpoint(),
+			OperatorAddress: info.GetOperatorAddress(),
+			ApprovalAddress: info.GetApprovalAddress(),
+			FundAddress:     info.GetFundingAddress(),
+			SealAddress:     info.GetSealAddress(),
+			Status:          info.Status.String(),
+		}
+	}
+
+	return spInfoList, nil
 }
