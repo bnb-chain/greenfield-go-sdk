@@ -40,57 +40,8 @@ type ApproveObjectOptions struct {
 	SecondarySPAccs []sdk.AccAddress
 }
 
-// GetApproval return the signature info for the approval of preCreating resources
-func (c *SPClient) GetApproval(ctx context.Context, bucketName, objectName string, authInfo AuthInfo) (string, error) {
-	if err := utils.VerifyBucketName(bucketName); err != nil {
-		return "", err
-	}
-
-	if objectName != "" {
-		if err := utils.VerifyObjectName(objectName); err != nil {
-			return "", err
-		}
-	}
-
-	// set the action type
-	urlVal := make(url.Values)
-	if objectName != "" {
-		urlVal["action"] = []string{CreateObjectAction}
-	} else {
-		urlVal["action"] = []string{CreateBucketAction}
-	}
-
-	reqMeta := requestMeta{
-		bucketName:    bucketName,
-		objectName:    objectName,
-		urlValues:     urlVal,
-		urlRelPath:    "get-approval",
-		contentSHA256: EmptyStringSHA256,
-	}
-
-	sendOpt := sendOptions{
-		method:     http.MethodGet,
-		isAdminApi: true,
-	}
-
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
-	if err != nil {
-		log.Error().Msg("get approval rejected: " + err.Error())
-		return "", err
-	}
-
-	// fetch primary sp signature from sp response
-	signature := resp.Header.Get(HTTPHeaderPreSignature)
-	if signature == "" {
-		return "", errors.New("fail to fetch pre createObject signature")
-	}
-
-	return signature, nil
-}
-
 // GetCreateBucketApproval return the signature info for the approval of preCreating resources
 func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storage_type.MsgCreateBucket, authInfo AuthInfo) (*storage_type.MsgCreateBucket, error) {
-
 	unsignedBytes := createBucketMsg.GetSignBytes()
 
 	// set the action type
@@ -135,7 +86,6 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg 
 
 // GetCreateObjectApproval return the signature info for the approval of preCreating resources
 func (c *SPClient) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storage_type.MsgCreateObject, authInfo AuthInfo) (*storage_type.MsgCreateObject, error) {
-
 	unsignedBytes := createObjectMsg.GetSignBytes()
 
 	// set the action type

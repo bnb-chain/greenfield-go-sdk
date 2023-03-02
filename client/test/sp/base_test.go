@@ -13,6 +13,7 @@ import (
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
+	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	"github.com/stretchr/testify/require"
 )
@@ -132,39 +133,23 @@ func TestGetApproval(t *testing.T) {
 	defer shutdown()
 
 	bucketName := "test-bucket"
-	ObjectName := "test-object"
-	signature := "test-signature"
+	objectName := "test-object"
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
 		testMethod(t, r, "GET")
-		url := getUrl(r)
-		if strings.Contains(url, spClient.CreateObjectAction) {
-			testHeader(t, r, spClient.HTTPHeaderResource, bucketName+"/"+ObjectName)
-		} else if strings.Contains(url, spClient.CreateBucketAction) {
-			testHeader(t, r, spClient.HTTPHeaderResource, bucketName)
-		}
 
-		w.Header().Set(spClient.HTTPHeaderPreSignature, signature)
+		msg := r.Header.Get(spClient.HTTPHeaderUnsignedMsg)
+		w.Header().Set(spClient.HTTPHeaderSignedMsg, msg)
 		w.WriteHeader(200)
 	})
 
-	// test preCreateBucket
-	gotSign, err := client.GetApproval(context.Background(), bucketName, "", spClient.NewAuthInfo(false, ""))
+	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), false, nil, "", 0, nil, nil)
+	err := createObjectMsg.ValidateBasic()
 	require.NoError(t, err)
-
-	if gotSign != signature {
-		t.Errorf("get signature err")
-	}
-
 	//test preCreateObject
-	gotSign, err = client.GetApproval(context.Background(), bucketName, ObjectName, spClient.NewAuthInfo(false, ""))
+	_, err = client.GetCreateObjectApproval(context.Background(), createObjectMsg, spClient.NewAuthInfo(false, ""))
 
 	require.NoError(t, err)
-
-	if gotSign != signature {
-		t.Errorf("get signature err")
-	}
-
 }
 
 // TestChallenge test challenge sdk request
