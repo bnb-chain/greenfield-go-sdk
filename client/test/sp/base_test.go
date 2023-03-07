@@ -1,6 +1,7 @@
 package sp
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bnb-chain/greenfield-common/go/redundancy"
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	storageType "github.com/bnb-chain/greenfield/x/storage/types"
@@ -28,6 +30,8 @@ var (
 	// server is a test HTTP server used to provide mock API responses.
 	server *httptest.Server
 )
+
+const segmentSize = 16 * 1024 * 1024
 
 // setup sets up a test HTTP server along with  SPClient that is
 // configured to talk to that test server.
@@ -143,8 +147,25 @@ func TestGetApproval(t *testing.T) {
 		w.WriteHeader(200)
 	})
 
-	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), false, nil, "", 0, nil, nil)
-	err := createObjectMsg.ValidateBasic()
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890`
+	var buffer bytes.Buffer
+	// generate  buffer
+	for i := 0; i < 1024*1024; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	primaryHsh, hashList, _, err := client.GetPieceHashRoots(bytes.NewReader(buffer.Bytes()), int64(segmentSize), redundancy.DataBlocks, redundancy.ParityBlocks)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	expectHash := make([][]byte, redundancy.DataBlocks+redundancy.ParityBlocks+1)
+	expectHash[0] = primaryHsh
+	for id, hash := range hashList {
+		expectHash[id+1] = hash
+	}
+	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), false, expectHash, "", storageType.REDUNDANCY_EC_TYPE, 0, nil, nil)
+	err = createObjectMsg.ValidateBasic()
 	require.NoError(t, err)
 	//test preCreateObject
 	_, err = client.GetCreateObjectApproval(context.Background(), createObjectMsg, spClient.NewAuthInfo(false, ""))
