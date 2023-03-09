@@ -23,9 +23,10 @@ var (
 
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
-	IsPublic       bool
-	TxOpts         *types.TxOption
-	PaymentAddress sdk.AccAddress
+	IsPublic         bool
+	TxOpts           *types.TxOption
+	PaymentAddress   sdk.AccAddress
+	primarySPAddress sdk.AccAddress
 }
 
 // CreateObjectOptions indicates the meta to construct createObject msg of storage module
@@ -51,7 +52,7 @@ type GnfdResponse struct {
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddress sdk.AccAddress, opts CreateBucketOptions) GnfdResponse {
+func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts CreateBucketOptions) GnfdResponse {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "CreateObject"}
 	}
@@ -60,8 +61,18 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primar
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
 	}
+	var primaryAddr sdk.AccAddress
+	if opts.primarySPAddress != nil {
+		primaryAddr = opts.primarySPAddress
+	} else {
+		// if user has not set primarySP chain address, fetch it from chain
+		primaryAddr, err = c.GetSpAddrFromEndpoint(ctx)
+		if err != nil {
+			return GnfdResponse{"", err, "CreateBucket"}
+		}
+	}
 
-	createBucketMsg := storageType.NewMsgCreateBucket(km.GetAddr(), bucketName, opts.IsPublic, primarySPAddress, opts.PaymentAddress, 0, nil)
+	createBucketMsg := storageType.NewMsgCreateBucket(km.GetAddr(), bucketName, opts.IsPublic, primaryAddr, opts.PaymentAddress, 0, nil)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
@@ -340,7 +351,8 @@ func (c *GnfdClient) HeadObjectByID(ctx context.Context, objID string) (*storage
 }
 
 // ListSP return the storage provider info on chain
-func (c *GnfdClient) ListSP(ctx context.Context, needInService bool) ([]spType.StorageProvider, error) {
+// isInService indicates if only display the sp with STATUS_IN_SERVICE status
+func (c *GnfdClient) ListSP(ctx context.Context, isInService bool) ([]spType.StorageProvider, error) {
 	request := &spType.QueryStorageProvidersRequest{}
 	gnfdRep, err := c.ChainClient.StorageProviders(ctx, request)
 	if err != nil {
@@ -350,11 +362,43 @@ func (c *GnfdClient) ListSP(ctx context.Context, needInService bool) ([]spType.S
 	spList := gnfdRep.GetSps()
 	spInfoList := make([]spType.StorageProvider, 0)
 	for _, info := range spList {
-		if needInService && info.Status != spType.STATUS_IN_SERVICE {
+		if isInService && info.Status != spType.STATUS_IN_SERVICE {
 			continue
 		}
 		spInfoList = append(spInfoList, info)
 	}
 
 	return spInfoList, nil
+}
+
+// GetSPInfo return the sp info according to the sp chain address
+func (c *GnfdClient) GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spType.StorageProvider, error) {
+	request := &spType.QueryStorageProviderRequest{
+		SpAddress: SPAddr.String(),
+	}
+
+	gnfdRep, err := c.ChainClient.StorageProvider(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return gnfdRep.StorageProvider, nil
+}
+
+// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
+func (c *GnfdClient) GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error) {
+	spList, err := c.ListSP(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+	for _, spInfo := range spList {
+		if spInfo.GetEndpoint() == c.SPClient.GetURL().Host {
+			addr := spInfo.GetOperatorAddress()
+			if addr == "" {
+				return nil, errors.New("fail to get addr")
+			}
+			return sdk.MustAccAddressFromHex(spInfo.GetOperatorAddress()), nil
+		}
+	}
+	return nil, errors.New("fail to get addr")
 }
