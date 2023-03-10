@@ -35,7 +35,7 @@ type CreateObjectOptions struct {
 	TxOpts          *types.TxOption
 	SecondarySPAccs []sdk.AccAddress
 	ContentType     string
-	RedundancyType  *storageType.RedundancyType
+	IsReplicaType   bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
 }
 
 // ComputeHashOptions  indicates the meta of redundancy strategy
@@ -166,11 +166,9 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		contentType = sp.ContentDefault
 	}
 
-	var redundancyType storageType.RedundancyType
-	if opts.RedundancyType == nil {
-		redundancyType = storageType.REDUNDANCY_EC_TYPE
-	} else {
-		redundancyType = *opts.RedundancyType
+	redundancyType := storageType.REDUNDANCY_EC_TYPE
+	if opts.IsReplicaType {
+		redundancyType = storageType.REDUNDANCY_REPLICA_TYPE
 	}
 
 	createObjectMsg := storageType.NewMsgCreateObject(km.GetAddr(), bucketName, objectName,
