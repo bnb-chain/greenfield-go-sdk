@@ -105,6 +105,7 @@ type TxOption struct {
     Memo      string
     FeeAmount sdk.Coins
     FeePayer  sdk.AccAddress
+    Nonce     uint64
 }
 ```
 Example:
@@ -136,6 +137,13 @@ SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.
 
 ```go
 SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
+```
+
+### Get Nonce
+
+Get the nonce of account
+```go
+GetNonce() (uint64, error)
 ```
 
 #### Support transaction type
