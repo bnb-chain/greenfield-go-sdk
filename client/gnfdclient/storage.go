@@ -26,7 +26,7 @@ type CreateBucketOptions struct {
 	IsPublic         bool
 	TxOpts           *types.TxOption
 	PaymentAddress   sdk.AccAddress
-	primarySPAddress sdk.AccAddress
+	PrimarySPAddress sdk.AccAddress
 }
 
 // CreateObjectOptions indicates the meta to construct createObject msg of storage module
@@ -62,8 +62,8 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}
 	}
 	var primaryAddr sdk.AccAddress
-	if opts.primarySPAddress != nil {
-		primaryAddr = opts.primarySPAddress
+	if opts.PrimarySPAddress != nil {
+		primaryAddr = opts.PrimarySPAddress
 	} else {
 		// if user has not set primarySP chain address, fetch it from chain
 		primaryAddr, err = c.GetSpAddrFromEndpoint(ctx)
@@ -371,7 +371,7 @@ func (c *GnfdClient) ListSP(ctx context.Context, isInService bool) ([]spType.Sto
 	return spInfoList, nil
 }
 
-// GetSPInfo return the sp info according to the sp chain address
+// GetSPInfo return the sp info  the sp chain address
 func (c *GnfdClient) GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spType.StorageProvider, error) {
 	request := &spType.QueryStorageProviderRequest{
 		SpAddress: SPAddr.String(),
