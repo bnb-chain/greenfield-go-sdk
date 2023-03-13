@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/bnb-chain/greenfield v0.0.7
-	github.com/bnb-chain/greenfield-common/go v0.0.0-20230227091017-b60c7936a1c6
+	github.com/bnb-chain/greenfield-common/go v0.0.0-20230310033112-2d379fdc2987
 	github.com/cosmos/cosmos-sdk v0.46.4
 	github.com/ethereum/go-ethereum v1.10.19
 	github.com/evmos/ethermint v0.6.1-0.20220919141022-34226aa7b1fa
