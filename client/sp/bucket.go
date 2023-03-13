@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
@@ -41,7 +39,6 @@ func (c *SPClient) ListObjects(ctx context.Context, bucketName, objectPrefix str
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Error().Msg("listObjects of bucket:" + bucketName + " failed: " + err.Error())
 		return ListObjectsResult{}, err
 	}
 	defer utils.CloseResponse(resp)

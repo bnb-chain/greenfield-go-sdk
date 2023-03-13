@@ -87,7 +87,7 @@ func constructErrResponse(r *http.Response, bucketName, objectName string) error
 	if readErr == nil && data != nil {
 		decodeErr = xml.Unmarshal(data, &errorResp)
 		if decodeErr != nil {
-			log.Error().Err(decodeErr).Msg("unmarshal xml body fail ")
+			log.Debug().Err(decodeErr).Msg("unmarshal xml body fail ")
 		}
 	}
 
