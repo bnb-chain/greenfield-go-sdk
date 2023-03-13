@@ -2,7 +2,6 @@ package chain
 
 import (
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
-	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"testing"
@@ -14,7 +13,6 @@ func TestGnfdCompositeClient(t *testing.T) {
 		[]string{test.TEST_RPC_ADDR, test.TEST_RPC_ADDR2, test.TEST_RPC_ADDR3},
 		test.TEST_CHAIN_ID,
 		WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
-	client, err := gnfdClients.GetClient()
-	assert.NoError(t, err)
+	client := gnfdClients.GetClient()
 	t.Log(client.Height)
 }

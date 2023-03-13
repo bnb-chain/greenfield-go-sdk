@@ -68,7 +68,7 @@ func NewGnfdCompositClients(grpcAddrs, rpcAddrs []string, chainId string, opts .
 	}
 }
 
-func (gc *GnfdCompositeClients) GetClient() (*GnfdCompositeClient, error) {
+func (gc *GnfdCompositeClients) GetClient() *GnfdCompositeClient {
 	wg := new(sync.WaitGroup)
 	wg.Add(len(gc.clients))
 	clientCh := make(chan *GnfdCompositeClient)
@@ -90,7 +90,7 @@ func (gc *GnfdCompositeClients) GetClient() (*GnfdCompositeClient, error) {
 				maxHeightClient = c
 			}
 		case <-waitCh:
-			return maxHeightClient, nil
+			return maxHeightClient
 		}
 	}
 }
@@ -101,7 +101,6 @@ func getClientBlockHeight(clientChan chan *GnfdCompositeClient, wg *sync.WaitGro
 	if err != nil {
 		return
 	}
-	latestHeight := status.SyncInfo.LatestBlockHeight
-	client.Height = latestHeight
+	client.Height = status.SyncInfo.LatestBlockHeight
 	clientChan <- client
 }

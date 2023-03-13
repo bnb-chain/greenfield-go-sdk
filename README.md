@@ -19,6 +19,15 @@ import (
     "github.com/bnb-chain/greenfield-go-sdk" latest
 )
 ```
+### Replace dependencies
+```go
+replace (
+    cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
+    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.9
+    github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+    github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.2
+)
+```
 
 ### Key Manager
 
@@ -96,6 +105,7 @@ type TxOption struct {
     Memo      string
     FeeAmount sdk.Coins
     FeePayer  sdk.AccAddress
+    Nonce     uint64
 }
 ```
 Example:
@@ -127,6 +137,13 @@ SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.
 
 ```go
 SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
+```
+
+### Get Nonce
+
+Get the nonce of account
+```go
+GetNonce() (uint64, error)
 ```
 
 #### Support transaction type

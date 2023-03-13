@@ -370,13 +370,13 @@ func (c *SPClient) doAPI(ctx context.Context, req *http.Request, meta requestMet
 func (c *SPClient) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo AuthInfo) (res *http.Response, err error) {
 	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, authInfo)
 	if err != nil {
-		log.Error().Msg("new request error stop send request" + err.Error())
+		log.Debug().Msg("new request error stop send request" + err.Error())
 		return nil, err
 	}
 
 	resp, err := c.doAPI(ctx, req, metadata, !opt.disableCloseBody)
 	if err != nil {
-		log.Error().Msg("do api request fail: " + err.Error())
+		log.Debug().Msg("do api request fail: " + err.Error())
 		return nil, err
 	}
 	return resp, nil
@@ -476,13 +476,12 @@ func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 	return nil
 }
 
-// GetPieceHashRoots return primary pieces Hash and secondary piece Hash roots list and object size
+// GetPieceHashRoots return primary pieces, secondary piece Hash roots list and the object size
 // It is used for generate meta of object on the chain
-func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64, dataShards, parityShards int) (string, []string, int64, error) {
-	pieceHashRoots, size, err := hashlib.ComputerHash(reader, segSize, dataShards, parityShards)
+func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64, dataShards, parityShards int) ([]byte, [][]byte, int64, error) {
+	pieceHashRoots, size, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards)
 	if err != nil {
-		log.Error().Msg("get hash roots fail" + err.Error())
-		return "", nil, 0, err
+		return nil, nil, 0, err
 	}
 
 	return pieceHashRoots[0], pieceHashRoots[1:], size, nil

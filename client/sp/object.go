@@ -153,13 +153,11 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Error().Msg("get Object :" + objectName + "fail:" + err.Error())
 		return nil, ObjectInfo{}, err
 	}
 
 	ObjInfo, err := getObjInfo(bucketName, objectName, resp.Header)
 	if err != nil {
-		log.Error().Msg("get ObjectInfo of :" + objectName + "fail:" + err.Error())
 		utils.CloseResponse(resp)
 		return nil, ObjectInfo{}, err
 	}
