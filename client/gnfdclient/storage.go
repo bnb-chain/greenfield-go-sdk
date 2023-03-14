@@ -253,7 +253,7 @@ func (c *GnfdClient) GetObject(ctx context.Context, bucketName, objectName strin
 // BuyQuotaForBucket buy the target quota of the specific bucket
 // targetQuota indicates the target quota to set for the bucket
 func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
-	targetQuota storageType.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+	targetQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "UpdateBucketInfo"}
@@ -270,7 +270,7 @@ func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
 
 // UpdateBucket update the bucket read quota on chain
 func (c *GnfdClient) UpdateBucket(bucketName string,
-	readQuota storageType.ReadQuota, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+	readQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "UpdateBucketInfo"}
 	}
