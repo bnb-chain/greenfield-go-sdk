@@ -21,6 +21,8 @@ const (
 	HTTPHeaderUserAgent     = "User-Agent"
 	HTTPHeaderContentSHA256 = "X-Gnfd-Content-Sha256"
 
+	HTTPHeaderUserAddress = "X-Gnfd-User-Address"
+
 	// EmptyStringSHA256 is the hex encoded sha256 value of an empty string
 	EmptyStringSHA256       = `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
 	iso8601DateFormatSecond = "2006-01-02T15:04:05Z"
