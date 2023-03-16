@@ -3,14 +3,16 @@ package sp
 import (
 	"context"
 	"encoding/json"
-	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 	"net/http"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/rs/zerolog/log"
+
 	"github.com/stretchr/testify/require"
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
+	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 )
 
 func TestListObjectsByBucketName(t *testing.T) {
@@ -19,13 +21,15 @@ func TestListObjectsByBucketName(t *testing.T) {
 
 	bucketName := "test-bucket"
 
-	var expectedRes spClient.ListObjectsByBucketNameResult
-	var objects []storageType.ObjectInfo
-	object1 := storageType.ObjectInfo{
-		Owner: "test-owner-object",
+	var expectedRes spClient.ListObjectsByBucketNameResponse
+	var objects []*spClient.Object
+	object1 := spClient.Object{
+		ObjectInfo: &storageType.ObjectInfo{
+			Owner: "test-owner-object",
+		},
 	}
-	objects = append(objects, object1)
-	expectedRes = spClient.ListObjectsByBucketNameResult{Objects: objects}
+	objects = append(objects, &object1)
+	expectedRes = spClient.ListObjectsByBucketNameResponse{Objects: objects}
 
 	out, err := json.Marshal(expectedRes)
 
@@ -42,25 +46,28 @@ func TestListObjectsByBucketName(t *testing.T) {
 
 	body, err := client.ListObjectsByBucketName(context.Background(), bucketName, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
+	log.Print(body)
 
 	// check ListObjectsByBucketName content
-	if body.Objects[0].Owner != expectedRes.Objects[0].Owner {
-		t.Errorf("TestGetUserBuckets content not same")
+	if body.Objects[0].ObjectInfo.Owner != expectedRes.Objects[0].ObjectInfo.Owner {
+		t.Errorf("TestListObjectsByBucketName content not same")
 	}
 
 }
 
-func TestGetUserBuckets(t *testing.T) {
+func TestListBucketsByUser(t *testing.T) {
 	setup()
 	defer shutdown()
 
-	var buckets []storageType.BucketInfo
-	bucket1 := storageType.BucketInfo{
-		Owner: "test-owner-bucket",
-		Id:    sdkmath.NewUint(1),
+	var buckets []*spClient.Bucket
+	bucket1 := spClient.Bucket{
+		BucketInfo: &storageType.BucketInfo{
+			Owner: "test-owner-bucket",
+			Id:    sdkmath.NewUint(1),
+		},
 	}
-	buckets = append(buckets, bucket1)
-	expectedRes := spClient.GetUserBucketsResult{Buckets: buckets}
+	buckets = append(buckets, &bucket1)
+	expectedRes := spClient.ListBucketsByUserResponse{Buckets: buckets}
 
 	out, err := json.Marshal(expectedRes)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -74,10 +81,10 @@ func TestGetUserBuckets(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	body, err := client.GetUserBuckets(context.Background(), spClient.MetadataInfo{Address: "test-address"}, spClient.NewAuthInfo(false, ""))
+	body, err := client.ListBucketsByUser(context.Background(), spClient.UserInfo{Address: "test-address"}, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
-	if body.Buckets[0].Owner != expectedRes.Buckets[0].Owner {
+	if body.Buckets[0].BucketInfo.Owner != expectedRes.Buckets[0].BucketInfo.Owner {
 		t.Errorf("TestGetUserBuckets content not same")
 	}
 

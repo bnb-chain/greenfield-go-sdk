@@ -14,34 +14,42 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
-type MetadataInfo struct {
+type UserInfo struct {
 	Address string
 }
 
+// Object is the structure for user object
 type Object struct {
 	// object_info defines the information of the object.
 	ObjectInfo *storageType.ObjectInfo `protobuf:"bytes,1,opt,name=object_info,json=objectInfo,proto3" json:"object_info,omitempty"`
 	// locked_balance defines locked balance of object
 	LockedBalance string `protobuf:"bytes,2,opt,name=locked_balance,json=lockedBalance,proto3" json:"locked_balance,omitempty"`
+	// removed defines the object is deleted or not
+	Removed bool `protobuf:"varint,3,opt,name=removed,proto3" json:"removed,omitempty"`
 }
 
+// Bucket is the structure for user bucket
 type Bucket struct {
 	// bucket_info defines the information of the bucket.
 	BucketInfo *storageType.BucketInfo `protobuf:"bytes,1,opt,name=bucket_info,json=bucketInfo,proto3" json:"bucket_info,omitempty"`
+	// removed defines the bucket is deleted or not
+	Removed bool `protobuf:"varint,2,opt,name=removed,proto3" json:"removed,omitempty"`
 }
 
-type ListObjectsByBucketNameResult struct {
-	Objects []storageType.ObjectInfo
+type ListObjectsByBucketNameResponse struct {
+	// objects defines the list of object
+	Objects []*Object `protobuf:"bytes,1,rep,name=objects,proto3" json:"objects,omitempty"`
 }
 
-type GetUserBucketsResult struct {
-	Buckets []storageType.BucketInfo
+type ListBucketsByUserResponse struct {
+	// buckets defines the list of bucket
+	Buckets []*Bucket `protobuf:"bytes,1,rep,name=buckets,proto3" json:"buckets"`
 }
 
 // ListObjectsByBucketName return object list of the specific bucket
-func (c *SPClient) ListObjectsByBucketName(ctx context.Context, bucketName string, authInfo AuthInfo) (ListObjectsByBucketNameResult, error) {
+func (c *SPClient) ListObjectsByBucketName(ctx context.Context, bucketName string, authInfo AuthInfo) (ListObjectsByBucketNameResponse, error) {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
-		return ListObjectsByBucketNameResult{}, err
+		return ListObjectsByBucketNameResponse{}, err
 	}
 
 	reqMeta := requestMeta{
@@ -56,34 +64,40 @@ func (c *SPClient) ListObjectsByBucketName(ctx context.Context, bucketName strin
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Error().Msg("the list of user's bucket:" + bucketName + " failed: " + err.Error())
-		return ListObjectsByBucketNameResult{}, err
+		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
+		return ListObjectsByBucketNameResponse{}, err
 	}
 	defer utils.CloseResponse(resp)
 
-	listObjectsByBucketNameResult := ListObjectsByBucketNameResult{}
+	listObjectsByBucketNameResult := ListObjectsByBucketNameResponse{}
 	// unmarshal the json content from response body
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
-
-	err = json.Unmarshal([]byte(buf.String()), &listObjectsByBucketNameResult)
 	if err != nil {
-		return ListObjectsByBucketNameResult{}, err
+		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
+		return ListObjectsByBucketNameResponse{}, err
+	}
+
+	bufStr := buf.String()
+	err = json.Unmarshal([]byte(bufStr), &listObjectsByBucketNameResult)
+	if err != nil {
+		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
+		return ListObjectsByBucketNameResponse{}, err
 	}
 
 	return listObjectsByBucketNameResult, nil
 }
 
-// GetUserBuckets get buckets for a specific user
-func (c *SPClient) GetUserBuckets(ctx context.Context, metadataInfo MetadataInfo, authInfo AuthInfo) (GetUserBucketsResult, error) {
-	if metadataInfo.Address == "" {
-		return GetUserBucketsResult{}, errors.New("fail to get user address")
+// ListBucketsByUser list buckets for a specific user
+func (c *SPClient) ListBucketsByUser(ctx context.Context, userInfo UserInfo, authInfo AuthInfo) (ListBucketsByUserResponse, error) {
+	if userInfo.Address == "" {
+		return ListBucketsByUserResponse{}, errors.New("fail to get user address")
 	}
 
 	reqMeta := requestMeta{
 		contentSHA256: EmptyStringSHA256,
-		metadataInfo: MetadataInfo{
-			Address: metadataInfo.Address,
+		userInfo: UserInfo{
+			Address: userInfo.Address,
 		},
 	}
 
@@ -95,18 +109,24 @@ func (c *SPClient) GetUserBuckets(ctx context.Context, metadataInfo MetadataInfo
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
 		log.Error().Msg("the list of user's buckets failed: " + err.Error())
-		return GetUserBucketsResult{}, err
+		return ListBucketsByUserResponse{}, err
 	}
 	defer utils.CloseResponse(resp)
 
-	getUserBucketsResult := GetUserBucketsResult{}
+	getUserBucketsResult := ListBucketsByUserResponse{}
 	//unmarshal the json content from response body
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
-
-	err = json.Unmarshal([]byte(buf.String()), &getUserBucketsResult)
 	if err != nil {
-		return GetUserBucketsResult{}, err
+		log.Error().Msg("the list of user's buckets failed: " + err.Error())
+		return ListBucketsByUserResponse{}, err
+	}
+
+	bufStr := buf.String()
+	err = json.Unmarshal([]byte(bufStr), &getUserBucketsResult)
+
+	if err != nil && getUserBucketsResult.Buckets == nil {
+		return ListBucketsByUserResponse{}, err
 	}
 
 	return getUserBucketsResult, nil

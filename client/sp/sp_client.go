@@ -161,7 +161,7 @@ type requestMeta struct {
 	contentMD5Base64 string // base64 encoded md5sum
 	contentSHA256    string // hex encoded sha256sum
 	challengeInfo    ChallengeInfo
-	metadataInfo     MetadataInfo
+	userInfo         UserInfo
 }
 
 // sendOptions -  options to use to send the http message
@@ -304,8 +304,8 @@ func (c *SPClient) newRequest(ctx context.Context,
 		}
 	}
 
-	if meta.metadataInfo.Address != "" {
-		info := meta.metadataInfo
+	if meta.userInfo.Address != "" {
+		info := meta.userInfo
 		req.Header.Set(HTTPHeaderUserAddress, info.Address)
 	}
 
