@@ -54,14 +54,13 @@ var SupportActionMap = map[Action]aclType.ActionType{
 
 // GnfdPolicy - bucket policy.
 type GnfdPolicy struct {
-	ID         string      `json:"ID,omitempty"`
 	Statements []Statement `json:"Statement"`
 }
 
-// IsValid - checks if GnfdPolicy is valid or not.
-func (g GnfdPolicy) IsValid() error {
+// Validate - checks if GnfdPolicy is valid or not.
+func (g GnfdPolicy) Validate() error {
 	for _, statement := range g.Statements {
-		if err := statement.IsValid(); err != nil {
+		if err := statement.Validate(); err != nil {
 			return err
 		}
 	}
@@ -69,7 +68,7 @@ func (g GnfdPolicy) IsValid() error {
 }
 
 func (g GnfdPolicy) MarshalJSON() ([]byte, error) {
-	if err := g.IsValid(); err != nil {
+	if err := g.Validate(); err != nil {
 		return nil, err
 	}
 	type newPolicy GnfdPolicy
@@ -90,28 +89,26 @@ func (g *GnfdPolicy) UnMarshal(content []byte) error {
 
 // Statement - policy statement.
 type Statement struct {
-	Effect    Effect   `json:"Effect"`
-	Actions   []Action `json:"Action"`
-	Resources string   `json:"Resource"`
+	Effect  Effect   `json:"Effect"`
+	Actions []Action `json:"Action"`
 }
 
 // NewStatement - creates new statement.
-func NewStatement(effect Effect, actionSet []Action, resourceSet string) Statement {
+func NewStatement(effect Effect, actionSet []Action) Statement {
 	return Statement{
-		Effect:    effect,
-		Actions:   actionSet,
-		Resources: resourceSet,
+		Effect:  effect,
+		Actions: actionSet,
 	}
 }
 
-// IsValid - checks if Statement is valid or not.
-func (s Statement) IsValid() error {
+// Validate - checks if Statement is valid or not.
+func (s Statement) Validate() error {
 	if !s.Effect.IsValid() {
 		return errors.New("invalid Effect" + string(s.Effect))
 	}
 
 	for _, action := range s.Actions {
-		if action.IsValid() {
+		if !action.IsValid() {
 			return errors.New("invalid action:" + string(action))
 		}
 	}
@@ -120,7 +117,7 @@ func (s Statement) IsValid() error {
 }
 
 func (s Statement) MarshalJSON() ([]byte, error) {
-	if err := s.IsValid(); err != nil {
+	if err := s.Validate(); err != nil {
 		return nil, err
 	}
 	type newStatement Statement
@@ -134,7 +131,7 @@ func (s *Statement) UnmarshalJSON(content []byte) error {
 		return err
 	}
 
-	if err := decodeVal.IsValid(); err != nil {
+	if err := decodeVal.Validate(); err != nil {
 		return err
 	}
 

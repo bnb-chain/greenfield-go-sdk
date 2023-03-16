@@ -284,6 +284,19 @@ func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
 	return GnfdResponse{resp.TxResponse.TxHash, err, "UpdateBucketInfo"}
 }
 
+// GetQuota return the read quota of the bucket
+func (c *GnfdClient) GetQuota(ctx context.Context, bucketName string) (uint64, error) {
+	queryHeadBucketRequest := storageTypes.QueryHeadBucketRequest{
+		BucketName: bucketName,
+	}
+	queryHeadBucketResponse, err := c.ChainClient.HeadBucket(ctx, &queryHeadBucketRequest)
+	if err != nil {
+		return 0, err
+	}
+
+	return queryHeadBucketResponse.BucketInfo.GetReadQuota(), nil
+}
+
 // UpdateBucket update the bucket read quota on chain
 func (c *GnfdClient) UpdateBucket(bucketName string,
 	readQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
@@ -665,14 +678,14 @@ type EffectInfo struct {
 	Err        error  // query error info
 }
 
-// IsBucketPermissionAllowed check if the permission of bucket is allowed to the member
-func (c *GnfdClient) IsBucketPermissionAllowed(member sdk.AccAddress, bucketName string, action utils.Action) EffectInfo {
-	if action.IsValid() {
+// IsBucketPermissionAllowed check if the permission of bucket is allowed to the user
+func (c *GnfdClient) IsBucketPermissionAllowed(user sdk.AccAddress, bucketName string, action utils.Action) EffectInfo {
+	if !action.IsValid() {
 		return EffectInfo{"", errors.New("invalid action")}
 	}
 
 	verifyReq := storageTypes.QueryVerifyPermissionRequest{
-		Operator:   member.String(),
+		Operator:   user.String(),
 		BucketName: bucketName,
 		ActionType: utils.GetChainAction(action),
 	}
@@ -686,14 +699,14 @@ func (c *GnfdClient) IsBucketPermissionAllowed(member sdk.AccAddress, bucketName
 	return EffectInfo{verifyResp.Effect.String(), nil}
 }
 
-// IsObjectPermissionAllowed check if the permission of the object is allowed to the member
-func (c *GnfdClient) IsObjectPermissionAllowed(member sdk.AccAddress, bucketName, objectName string, action utils.Action) EffectInfo {
-	if action.IsValid() {
+// IsObjectPermissionAllowed check if the permission of the object is allowed to the user
+func (c *GnfdClient) IsObjectPermissionAllowed(user sdk.AccAddress, bucketName, objectName string, action utils.Action) EffectInfo {
+	if !action.IsValid() {
 		return EffectInfo{"", errors.New("invalid action")}
 	}
 
 	verifyReq := storageTypes.QueryVerifyPermissionRequest{
-		Operator:   member.String(),
+		Operator:   user.String(),
 		BucketName: bucketName,
 		ObjectName: objectName,
 		ActionType: utils.GetChainAction(action),
