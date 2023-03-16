@@ -37,3 +37,4 @@ func TestCreateBucket(t *testing.T) {
 	_, err = client.GetCreateBucketApproval(context.Background(), createBucketMsg, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 }
+
