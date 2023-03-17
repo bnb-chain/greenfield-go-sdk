@@ -3,8 +3,10 @@ package gnfdclient
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math"
+	"strings"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield/sdk/types"
@@ -430,8 +432,15 @@ func (c *GnfdClient) GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress,
 	if err != nil {
 		return nil, err
 	}
+	spClientEndpoint := c.SPClient.GetURL().Host
 	for _, spInfo := range spList {
-		if spInfo.GetEndpoint() == c.SPClient.GetURL().Host {
+		endpoint := spInfo.GetEndpoint()
+		if strings.Contains(endpoint, "http") {
+			s := strings.Split(endpoint, "//")
+			endpoint = s[1]
+		}
+		fmt.Println("endpoint :=", endpoint)
+		if endpoint == spClientEndpoint {
 			addr := spInfo.GetOperatorAddress()
 			if addr == "" {
 				return nil, errors.New("fail to get addr")
