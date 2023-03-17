@@ -54,7 +54,15 @@ var SupportActionMap = map[Action]aclType.ActionType{
 
 // GnfdPolicy - bucket policy.
 type GnfdPolicy struct {
-	Statements []Statement `json:"Statement"`
+	Statements []GnfdStatement `json:"GnfdStatement"`
+}
+
+type ActionSet map[Action]struct{}
+
+// GnfdStatement - policy statement.
+type GnfdStatement struct {
+	Effect  Effect   `json:"Effect"`
+	Actions []Action `json:"Action"`
 }
 
 // Validate - checks if GnfdPolicy is valid or not.
@@ -77,32 +85,31 @@ func (g GnfdPolicy) MarshalJSON() ([]byte, error) {
 
 func (g *GnfdPolicy) UnMarshal(content []byte) error {
 	type newPolicy GnfdPolicy
-	var policyData newPolicy
+	var policy newPolicy
 
-	if err := json.Unmarshal(content, &policyData); err != nil {
+	if err := json.Unmarshal(content, &policy); err != nil {
 		return err
 	}
 
-	*g = GnfdPolicy(policyData)
+	gnfdPolicy := GnfdPolicy(policy)
+	if err := gnfdPolicy.Validate(); err != nil {
+		return err
+	}
+
+	*g = gnfdPolicy
 	return nil
 }
 
-// Statement - policy statement.
-type Statement struct {
-	Effect  Effect   `json:"Effect"`
-	Actions []Action `json:"Action"`
-}
-
 // NewStatement - creates new statement.
-func NewStatement(effect Effect, actionSet []Action) Statement {
-	return Statement{
+func NewStatement(effect Effect, actionSet []Action) GnfdStatement {
+	return GnfdStatement{
 		Effect:  effect,
 		Actions: actionSet,
 	}
 }
 
-// Validate - checks if Statement is valid or not.
-func (s Statement) Validate() error {
+// Validate - checks if GnfdStatement is valid or not.
+func (s GnfdStatement) Validate() error {
 	if !s.Effect.IsValid() {
 		return errors.New("invalid Effect" + string(s.Effect))
 	}
@@ -116,26 +123,29 @@ func (s Statement) Validate() error {
 	return nil
 }
 
-func (s Statement) MarshalJSON() ([]byte, error) {
+func (s GnfdStatement) MarshalJSON() ([]byte, error) {
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
-	type newStatement Statement
+	type newStatement GnfdStatement
 	return json.Marshal(newStatement(s))
 
 }
 
-func (s *Statement) UnmarshalJSON(content []byte) error {
-	var decodeVal Statement
-	if err := json.Unmarshal(content, &decodeVal); err != nil {
+func (s *GnfdStatement) UnmarshalJSON(content []byte) error {
+	type newStatement GnfdStatement
+	var decodeStatement newStatement
+
+	if err := json.Unmarshal(content, &decodeStatement); err != nil {
 		return err
 	}
 
-	if err := decodeVal.Validate(); err != nil {
+	gnfdStatement := GnfdStatement(decodeStatement)
+	if err := gnfdStatement.Validate(); err != nil {
 		return err
 	}
 
-	*s = decodeVal
+	*s = gnfdStatement
 	return nil
 }
 
@@ -194,4 +204,13 @@ func GetChainEffect(effect Effect) aclType.Effect {
 	} else {
 		return aclType.EFFECT_DENY
 	}
+}
+
+// ToSlice - returns slice of action set
+func (a ActionSet) ToSlice() []Action {
+	actions := []Action{}
+	for action := range a {
+		actions = append(actions, action)
+	}
+	return actions
 }

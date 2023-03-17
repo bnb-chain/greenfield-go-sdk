@@ -582,7 +582,9 @@ func (c *GnfdClient) PutGroupPolicy(groupName, policy string, grantUser sdk.AccA
 
 func DecodeStatements(policy string) ([]*aclTypes.Statement, error) {
 	statements := make([]*aclTypes.Statement, 0)
-	var gnfdPolicy *utils.GnfdPolicy
+
+	gnfdPolicy := &utils.GnfdPolicy{}
+
 	err := gnfdPolicy.UnMarshal([]byte(policy))
 	if err != nil {
 		return nil, err
