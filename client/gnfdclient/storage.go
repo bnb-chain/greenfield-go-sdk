@@ -3,7 +3,6 @@ package gnfdclient
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"math"
 	"strings"
@@ -449,7 +448,6 @@ func (c *GnfdClient) GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress,
 			s := strings.Split(endpoint, "//")
 			endpoint = s[1]
 		}
-		fmt.Println("endpoint :=", endpoint)
 		if endpoint == spClientEndpoint {
 			addr := spInfo.GetOperatorAddress()
 			if addr == "" {
@@ -540,8 +538,6 @@ func (c *GnfdClient) UpdateGroupMember(info GroupUpdateInfo, txOpts types.TxOpti
 // HeadGroup query the groupInfo on chain, return the group info if exists
 // return err info if group not exist
 func (c *GnfdClient) HeadGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress) (*storageTypes.GroupInfo, error) {
-	fmt.Println("head group :", groupName)
-	fmt.Println("head group owner", groupOwner.String())
 	headGroupRequest := storageTypes.QueryHeadGroupRequest{
 		GroupOwner: groupOwner.String(),
 		GroupName:  groupName,
@@ -563,7 +559,7 @@ func (c *GnfdClient) HeadGroupMember(ctx context.Context, groupName string, grou
 		Member:     headMember.String(),
 	}
 
-	_, err := c.ChainClient.HeadGroupMember(ctx, &headGroupRequest, nil)
+	_, err := c.ChainClient.HeadGroupMember(ctx, &headGroupRequest)
 	if err != nil {
 		return false
 	}
@@ -799,11 +795,11 @@ func (c *GnfdClient) GetObjectPolicy(bucketName, objectName string, principalAdd
 	return queryPolicyResp.Policy, nil
 }
 
-// GetGroupPolicy get the policy info of the  resource
-func (c *GnfdClient) GetGroupPolicy(bucketName string, principalGroupId string) (string, error) {
-	resource := gnfdTypes.NewBucketGRN(bucketName).String()
+// GetGroupPolicy get the policy info of the group
+func (c *GnfdClient) GetGroupPolicy(groupName string, groupOwner sdk.AccAddress, principalGroupId string) (string, error) {
+	resource := gnfdTypes.NewGroupGRN(groupOwner, groupName)
 
-	queryPolicy := storageTypes.QueryPolicyForGroupRequest{Resource: resource,
+	queryPolicy := storageTypes.QueryPolicyForGroupRequest{Resource: resource.String(),
 		PrincipalGroupId: principalGroupId}
 
 	ctx := context.Background()
