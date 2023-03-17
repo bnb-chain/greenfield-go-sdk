@@ -51,9 +51,9 @@ type CreateGroupOption struct {
 
 // GroupUpdateInfo indicates the info to update group member
 type GroupUpdateInfo struct {
-	Group    string           // group name
-	Members  []sdk.AccAddress // update chain address list
-	IsRemove bool             // indicate whether to remove or add member
+	GroupName string           // group name
+	Members   []sdk.AccAddress // update chain address list
+	IsRemove  bool             // indicate whether to remove or add member
 }
 
 // ComputeHashOptions  indicates the meta of redundancy strategy
@@ -311,6 +311,16 @@ func (c *GnfdClient) GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress
 	return resp.SpStoragePrice.ReadPrice.BigInt().Uint64(), nil
 }
 
+// GetBucketReadQuota return quota info of bucket of current month, include chain quota, free quota and consumed quota
+func (c *GnfdClient) GetBucketReadQuota(ctx context.Context, bucketName string) (sp.QuotaInfo, error) {
+	return c.SPClient.GetBucketReadQuota(ctx, bucketName, sp.NewAuthInfo(false, ""))
+}
+
+// ListBucketReadRecord return read quota record info of current month
+func (c *GnfdClient) ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt sp.ListReadRecordOption) (sp.QuotaRecordInfo, error) {
+	return c.SPClient.ListBucketReadRecord(ctx, bucketName, maxRecords, opt, sp.NewAuthInfo(false, ""))
+}
+
 // UpdateBucket update the bucket read quota on chain
 func (c *GnfdClient) UpdateBucket(bucketName string,
 	readQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
@@ -497,14 +507,22 @@ func (c *GnfdClient) DeleteGroup(groupName string, txOpts types.TxOption) GnfdRe
 func (c *GnfdClient) UpdateGroupMember(info GroupUpdateInfo, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteGroup"}
+		return GnfdResponse{"", errors.New("key manager is nil"), "UpdateGroup"}
+	}
+
+	if info.GroupName == "" {
+		return GnfdResponse{"", errors.New("group name is empty"), "UpdateGroup"}
+	}
+
+	if len(info.Members) == 0 {
+		return GnfdResponse{"", errors.New("no update member"), "UpdateGroup"}
 	}
 
 	var updateGroupMsg *storageTypes.MsgUpdateGroupMember
 	if info.IsRemove {
-		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), info.Group, nil, info.Members)
+		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), info.GroupName, nil, info.Members)
 	} else {
-		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), info.Group, info.Members, nil)
+		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), info.GroupName, info.Members, nil)
 	}
 
 	if err = updateGroupMsg.ValidateBasic(); err != nil {
@@ -521,13 +539,15 @@ func (c *GnfdClient) UpdateGroupMember(info GroupUpdateInfo, txOpts types.TxOpti
 
 // HeadGroup query the groupInfo on chain, return the group info if exists
 // return err info if group not exist
-func (c *GnfdClient) HeadGroup(ctx context.Context, groupName, groupOwner sdk.AccAddress) (*storageTypes.GroupInfo, error) {
+func (c *GnfdClient) HeadGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress) (*storageTypes.GroupInfo, error) {
+	fmt.Println("head group :", groupName)
+	fmt.Println("head group owner", groupOwner.String())
 	headGroupRequest := storageTypes.QueryHeadGroupRequest{
 		GroupOwner: groupOwner.String(),
-		GroupName:  groupName.String(),
+		GroupName:  groupName,
 	}
 
-	headGroupResponse, err := c.ChainClient.HeadGroup(ctx, &headGroupRequest, nil)
+	headGroupResponse, err := c.ChainClient.HeadGroup(ctx, &headGroupRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +571,8 @@ func (c *GnfdClient) HeadGroupMember(ctx context.Context, groupName string, grou
 	return true
 }
 
-// PutBucketPolicy apply policy to greenfield bucket
+// PutBucketPolicy apply bucket policy to grantUser
+// policy indicates a json string which indicates the policy info, for example: {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:ListObject"]}]}
 func (c *GnfdClient) PutBucketPolicy(bucketName, policy string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -568,7 +589,8 @@ func (c *GnfdClient) PutBucketPolicy(bucketName, policy string, grantUser sdk.Ac
 	return c.sendPutPolicyTxn(resource, km.GetAddr(), grantUser, statements, txOpts)
 }
 
-// PutObjectPolicy apply policy to greenfield object
+// PutObjectPolicy apply object policy to grantUser
+// policy indicates a json string which indicates the policy info, for example: {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:DelteObject"]}]}
 func (c *GnfdClient) PutObjectPolicy(bucketName, objectName, policy string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -584,7 +606,8 @@ func (c *GnfdClient) PutObjectPolicy(bucketName, objectName, policy string, gran
 	return c.sendPutPolicyTxn(resource, km.GetAddr(), grantUser, statements, txOpts)
 }
 
-// PutGroupPolicy apply policy to greenfield group, the sender need to be the owner of the group
+// PutGroupPolicy apply group policy to grantUser, the sender need to be the owner of the group
+// policy indicates a json string which indicates the policy info, for example:  {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:UpdateGroupMember"]}]}
 func (c *GnfdClient) PutGroupPolicy(groupName, policy string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -653,7 +676,7 @@ func (c *GnfdClient) DeleteBucketPolicy(bucketName string, grantUser sdk.AccAddr
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 	principal := aclTypes.NewPrincipalWithAccount(grantUser)
 
-	return c.sendDelPolicyTxn(km.GetAddr().String(), resource, principal, txOpts)
+	return c.sendDelPolicyTxn(km.GetAddr(), resource, principal, txOpts)
 }
 
 func (c *GnfdClient) DeleteObjectPolicy(bucketName, objectName string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
@@ -665,7 +688,7 @@ func (c *GnfdClient) DeleteObjectPolicy(bucketName, objectName string, grantUser
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName).String()
 	principal := aclTypes.NewPrincipalWithAccount(grantUser)
 
-	return c.sendDelPolicyTxn(km.GetAddr().String(), resource, principal, txOpts)
+	return c.sendDelPolicyTxn(km.GetAddr(), resource, principal, txOpts)
 }
 
 // DeleteGroupPolicy  delete group policy of the grantUser, the sender need to be the owner of the group
@@ -678,10 +701,10 @@ func (c *GnfdClient) DeleteGroupPolicy(groupName string, grantUser sdk.AccAddres
 	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
 	principal := aclTypes.NewPrincipalWithAccount(grantUser)
 
-	return c.sendDelPolicyTxn(sender.String(), resource, principal, txOpts)
+	return c.sendDelPolicyTxn(sender, resource, principal, txOpts)
 }
 
-func (c *GnfdClient) sendDelPolicyTxn(operator string, resource string, principal *aclTypes.Principal, txOpts types.TxOption) GnfdResponse {
+func (c *GnfdClient) sendDelPolicyTxn(operator sdk.AccAddress, resource string, principal *aclTypes.Principal, txOpts types.TxOption) GnfdResponse {
 	delPolicyMsg := storageTypes.NewMsgDeletePolicy(operator, resource, principal)
 
 	if err := delPolicyMsg.ValidateBasic(); err != nil {
