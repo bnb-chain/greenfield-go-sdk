@@ -42,8 +42,8 @@ type CreateObjectOptions struct {
 	IsReplicaType   bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
 }
 
-// CreateGroupOption  indicates the meta to construct createGroup msg
-type CreateGroupOption struct {
+// CreateGroupOptions  indicates the meta to construct createGroup msg
+type CreateGroupOptions struct {
 	InitGroupMember []sdk.AccAddress
 	TxOpts          *types.TxOption
 }
@@ -55,11 +55,16 @@ type GroupUpdateInfo struct {
 	IsRemove  bool             // indicate whether to remove or add member
 }
 
-// ComputeHashOptions  indicates the meta of redundancy strategy
+// ComputeHashOptions indicates the meta of redundancy strategy
 type ComputeHashOptions struct {
 	SegmentSize  uint64
 	DataShards   uint32
 	ParityShards uint32
+}
+
+// ListReadRecordOption indicates the start timestamp of the return read quota record
+type ListReadRecordOption struct {
+	StartTimeStamp int64
 }
 
 type GnfdResponse struct {
@@ -316,8 +321,8 @@ func (c *GnfdClient) GetBucketReadQuota(ctx context.Context, bucketName string) 
 }
 
 // ListBucketReadRecord return read quota record info of current month
-func (c *GnfdClient) ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt sp.ListReadRecordOption) (sp.QuotaRecordInfo, error) {
-	return c.SPClient.ListBucketReadRecord(ctx, bucketName, maxRecords, opt, sp.NewAuthInfo(false, ""))
+func (c *GnfdClient) ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt ListReadRecordOption) (sp.QuotaRecordInfo, error) {
+	return c.SPClient.ListBucketReadRecord(ctx, bucketName, maxRecords, sp.ListReadRecordOption{StartTimeStamp: opt.StartTimeStamp}, sp.NewAuthInfo(false, ""))
 }
 
 // UpdateBucket update the bucket read quota on chain
@@ -461,7 +466,7 @@ func (c *GnfdClient) GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress,
 
 // CreateGroup create a new group on greenfield chain
 // the group members can be inited or not
-func (c *GnfdClient) CreateGroup(groupName string, opt CreateGroupOption) GnfdResponse {
+func (c *GnfdClient) CreateGroup(groupName string, opt CreateGroupOptions) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "CreateBucket"}

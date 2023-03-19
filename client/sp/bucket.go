@@ -97,10 +97,12 @@ func (c *SPClient) ListBucketReadRecord(ctx context.Context, bucketName string, 
 	}
 	var startTimeStamp int64
 	if opt.StartTimeStamp == 0 {
+		// the timestamp of the first day of this month
 		startTimeStamp = timeToday.AddDate(0, 0, -timeToday.Day()+1).UnixMicro()
 	} else {
 		startTimeStamp = opt.StartTimeStamp
 	}
+	// the timestamp of the last day of this month
 	timeMonthEnd := timeToday.AddDate(0, 1, -timeToday.Day()+1).UnixMicro()
 
 	if timeMonthEnd < startTimeStamp {
