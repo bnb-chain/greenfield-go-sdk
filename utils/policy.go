@@ -26,19 +26,6 @@ const (
 	DeleteGroupAction      = "gnfd:DeleteGroup"
 )
 
-var SupportActionList = map[Action]struct{}{
-	UpdateBucketInfoAction: {},
-	DeleteBucketAction:     {},
-	CreateObjectAction:     {},
-	DeleteObjectAction:     {},
-	CopyObjectAction:       {},
-	GetObjectAction:        {},
-	ExecuteObjectAction:    {},
-	ListObjectAction:       {},
-	UpdateGroupAction:      {},
-	DeleteGroupAction:      {},
-}
-
 var SupportActionMap = map[Action]aclType.ActionType{
 	UpdateBucketInfoAction: aclType.ACTION_UPDATE_BUCKET_INFO,
 	DeleteBucketAction:     aclType.ACTION_DELETE_BUCKET,
@@ -166,7 +153,7 @@ func (effect Effect) IsValid() bool {
 
 // IsValid - checks if action is valid
 func (action Action) IsValid() bool {
-	_, ok := SupportActionList[action]
+	_, ok := SupportActionMap[action]
 	return ok
 }
 
@@ -204,13 +191,4 @@ func GetChainEffect(effect Effect) aclType.Effect {
 	} else {
 		return aclType.EFFECT_DENY
 	}
-}
-
-// ToSlice - returns slice of action set
-func (a ActionSet) ToSlice() []Action {
-	actions := []Action{}
-	for action := range a {
-		actions = append(actions, action)
-	}
-	return actions
 }
