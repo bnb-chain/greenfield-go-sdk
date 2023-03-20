@@ -506,7 +506,7 @@ func (c *GnfdClient) DeleteGroup(groupName string, txOpts types.TxOption) GnfdRe
 }
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
-func (c *GnfdClient) UpdateGroupMember(members []sdk.AccAddress, groupName string, opts updateGroupMemberOptions) GnfdResponse {
+func (c *GnfdClient) UpdateGroupMember(groupName string, updateMembers []sdk.AccAddress, opts updateGroupMemberOptions) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "UpdateGroup"}
@@ -516,15 +516,15 @@ func (c *GnfdClient) UpdateGroupMember(members []sdk.AccAddress, groupName strin
 		return GnfdResponse{"", errors.New("group name is empty"), "UpdateGroup"}
 	}
 
-	if len(members) == 0 {
+	if len(updateMembers) == 0 {
 		return GnfdResponse{"", errors.New("no update member"), "UpdateGroup"}
 	}
 
 	var updateGroupMsg *storageTypes.MsgUpdateGroupMember
 	if opts.IsRemove {
-		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), groupName, nil, members)
+		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), groupName, nil, updateMembers)
 	} else {
-		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), groupName, members, nil)
+		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), groupName, updateMembers, nil)
 	}
 
 	if err = updateGroupMsg.ValidateBasic(); err != nil {
