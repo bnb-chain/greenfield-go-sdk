@@ -755,6 +755,7 @@ func (c *GnfdClient) IsObjectPermissionAllowed(user sdk.AccAddress, bucketName, 
 		Operator:   user.String(),
 		BucketName: bucketName,
 		ObjectName: objectName,
+		ActionType: utils.GetChainAction(action),
 	}
 	ctx := context.Background()
 
