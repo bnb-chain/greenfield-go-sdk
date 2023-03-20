@@ -537,7 +537,7 @@ func (c *GnfdClient) UpdateGroupMember(info GroupUpdateInfo, txOpts types.TxOpti
 		return GnfdResponse{"", err, "CreateGroup"}
 	}
 
-	return GnfdResponse{resp.TxResponse.TxHash, err, "DeleteGroup"}
+	return GnfdResponse{resp.TxResponse.TxHash, nil, "CreateGroup"}
 }
 
 // HeadGroup query the groupInfo on chain, return the group info if exists
