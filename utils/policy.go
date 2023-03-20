@@ -40,6 +40,7 @@ var SupportActionMap = map[Action]permTypes.ActionType{
 }
 
 // GnfdPolicy - bucket policy.
+// (TODO)leo make policy define consitent with chain defination
 type GnfdPolicy struct {
 	Statements []GnfdStatement `json:"GnfdStatement"`
 }

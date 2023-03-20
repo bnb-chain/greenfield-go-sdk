@@ -481,11 +481,12 @@ func (c *GnfdClient) CreateGroup(groupName string, opt CreateGroupOptions) GnfdR
 	if err != nil {
 		return GnfdResponse{"", err, "CreateGroup"}
 	}
-
+	// TODO(leo) define the txnType as constant
 	return GnfdResponse{resp.TxResponse.TxHash, err, "CreateGroup"}
 }
 
 // DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
+// TODO(leo) support context
 func (c *GnfdClient) DeleteGroup(groupName string, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -766,6 +767,7 @@ func (c *GnfdClient) IsObjectPermissionAllowed(user sdk.AccAddress, bucketName, 
 }
 
 // GetBucketPolicy get the policy info of the bucket resource
+// TODO(leo) turn permTypes.Policy to json string
 func (c *GnfdClient) GetBucketPolicy(bucketName string, principalAddress sdk.AccAddress) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 
