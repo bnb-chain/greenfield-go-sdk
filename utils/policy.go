@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	aclType "github.com/bnb-chain/greenfield/x/permission/types"
+	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 )
 
 // Effect - policy statement effect Allow or Deny.
@@ -26,17 +26,17 @@ const (
 	DeleteGroupAction      = "gnfd:DeleteGroup"
 )
 
-var SupportActionMap = map[Action]aclType.ActionType{
-	UpdateBucketInfoAction: aclType.ACTION_UPDATE_BUCKET_INFO,
-	DeleteBucketAction:     aclType.ACTION_DELETE_BUCKET,
-	CreateObjectAction:     aclType.ACTION_CREATE_OBJECT,
-	DeleteObjectAction:     aclType.ACTION_DELETE_OBJECT,
-	CopyObjectAction:       aclType.ACTION_COPY_OBJECT,
-	GetObjectAction:        aclType.ACTION_GET_OBJECT,
-	ExecuteObjectAction:    aclType.ACTION_EXECUTE_OBJECT,
-	ListObjectAction:       aclType.ACTION_LIST_OBJECT,
-	UpdateGroupAction:      aclType.ACTION_UPDATE_GROUP_MEMBER,
-	DeleteGroupAction:      aclType.ACTION_DELETE_GROUP,
+var SupportActionMap = map[Action]permTypes.ActionType{
+	UpdateBucketInfoAction: permTypes.ACTION_UPDATE_BUCKET_INFO,
+	DeleteBucketAction:     permTypes.ACTION_DELETE_BUCKET,
+	CreateObjectAction:     permTypes.ACTION_CREATE_OBJECT,
+	DeleteObjectAction:     permTypes.ACTION_DELETE_OBJECT,
+	CopyObjectAction:       permTypes.ACTION_COPY_OBJECT,
+	GetObjectAction:        permTypes.ACTION_GET_OBJECT,
+	ExecuteObjectAction:    permTypes.ACTION_EXECUTE_OBJECT,
+	ListObjectAction:       permTypes.ACTION_LIST_OBJECT,
+	UpdateGroupAction:      permTypes.ACTION_UPDATE_GROUP_MEMBER,
+	DeleteGroupAction:      permTypes.ACTION_DELETE_GROUP,
 }
 
 // GnfdPolicy - bucket policy.
@@ -190,14 +190,14 @@ func (action *Action) UnmarshalJSON(content []byte) error {
 	return nil
 }
 
-func GetChainAction(action Action) aclType.ActionType {
+func GetChainAction(action Action) permTypes.ActionType {
 	return SupportActionMap[action]
 }
 
-func GetChainEffect(effect Effect) aclType.Effect {
+func GetChainEffect(effect Effect) permTypes.Effect {
 	if effect.IsAllowed() {
-		return aclType.EFFECT_ALLOW
+		return permTypes.EFFECT_ALLOW
 	} else {
-		return aclType.EFFECT_DENY
+		return permTypes.EFFECT_DENY
 	}
 }
