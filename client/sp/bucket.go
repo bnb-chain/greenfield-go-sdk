@@ -91,7 +91,7 @@ func (c *SPClient) GetBucketReadQuota(ctx context.Context, bucketName string, au
 // ListReadRecordOption indicates the start timestamp of return read records
 func (c *SPClient) ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt ListReadRecordOption, authInfo AuthInfo) (QuotaRecordInfo, error) {
 	timeNow := time.Now()
-	timeToday := time.Date(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0, 0, 0, timeNow.Location()) // 获取当天0点时间 time类型
+	timeToday := time.Date(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0, 0, 0, timeNow.Location())
 	if opt.StartTimeStamp < 0 {
 		return QuotaRecordInfo{}, errors.New("start timestamp  less than 0")
 	}
