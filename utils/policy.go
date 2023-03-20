@@ -52,6 +52,15 @@ type GnfdStatement struct {
 	Actions []Action `json:"Action"`
 }
 
+// NewPolicy return the policy json str
+func NewPolicy(statements []GnfdStatement) (string, error) {
+	policy := GnfdPolicy{
+		Statements: statements,
+	}
+	policyByte, err := policy.MarshalJSON()
+	return string(policyByte), err
+}
+
 // Validate - checks if GnfdPolicy is valid or not.
 func (g GnfdPolicy) Validate() error {
 	for _, statement := range g.Statements {
