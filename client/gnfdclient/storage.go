@@ -603,7 +603,7 @@ func (c *GnfdClient) PutObjectPolicy(bucketName, objectName, policy string, gran
 		return GnfdResponse{"", err, "PutPolicy"}
 	}
 
-	resource := gnfdTypes.NewObjectGRN(bucketName, objectName).String()
+	resource := newObjectGRNStr(bucketName, objectName)
 	return c.sendPutPolicyTxn(resource, km.GetAddr(), grantUser, statements, txOpts)
 }
 
@@ -686,10 +686,9 @@ func (c *GnfdClient) DeleteObjectPolicy(bucketName, objectName string, grantUser
 		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteBucketPolicy"}
 	}
 
-	resource := gnfdTypes.NewObjectGRN(bucketName, objectName).String()
 	principal := aclTypes.NewPrincipalWithAccount(grantUser)
 
-	return c.sendDelPolicyTxn(km.GetAddr(), resource, principal, txOpts)
+	return c.sendDelPolicyTxn(km.GetAddr(), newObjectGRNStr(bucketName, objectName), principal, txOpts)
 }
 
 // DeleteGroupPolicy  delete group policy of the grantUser, the sender need to be the owner of the group
@@ -786,9 +785,7 @@ func (c *GnfdClient) GetBucketPolicy(bucketName string, principalAddress sdk.Acc
 
 // GetObjectPolicy get the policy info of the object resource
 func (c *GnfdClient) GetObjectPolicy(bucketName, objectName string, principalAddress sdk.AccAddress) (*aclTypes.Policy, error) {
-	resource := gnfdTypes.NewObjectGRN(bucketName, objectName).String()
-
-	queryPolicy := storageTypes.QueryPolicyForAccountRequest{Resource: resource,
+	queryPolicy := storageTypes.QueryPolicyForAccountRequest{Resource: newObjectGRNStr(bucketName, objectName),
 		PrincipalAddress: principalAddress.String()}
 
 	ctx := context.Background()
@@ -800,18 +797,8 @@ func (c *GnfdClient) GetObjectPolicy(bucketName, objectName string, principalAdd
 	return queryPolicyResp.Policy, nil
 }
 
-// GetGroupPolicy get the policy info of the group
-func (c *GnfdClient) GetGroupPolicy(groupName string, groupOwner sdk.AccAddress, principalGroupId string) (string, error) {
-	resource := gnfdTypes.NewGroupGRN(groupOwner, groupName)
-
-	queryPolicy := storageTypes.QueryPolicyForGroupRequest{Resource: resource.String(),
-		PrincipalGroupId: principalGroupId}
-
-	ctx := context.Background()
-	queryPolicyResp, err := c.ChainClient.QueryPolicyForGroup(ctx, &queryPolicy)
-	if err != nil {
-		return "", err
-	}
-
-	return queryPolicyResp.Policy.String(), nil
+// newObjectGRNStr is a temp fix function to get the right resource string
+func newObjectGRNStr(bucketName, objectName string) string {
+	name := strings.Join([]string{bucketName, objectName}, "/")
+	return "grn:o::" + name
 }
