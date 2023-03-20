@@ -48,8 +48,8 @@ type CreateGroupOptions struct {
 	TxOpts          *types.TxOption
 }
 
-// updateGroupMemberOptions indicates the info to update group member
-type updateGroupMemberOptions struct {
+// UpdateGroupMemberOptions indicates the info to update group member
+type UpdateGroupMemberOptions struct {
 	IsRemove bool // indicate whether to remove or add member
 	TxOpts   *types.TxOption
 }
@@ -506,7 +506,7 @@ func (c *GnfdClient) DeleteGroup(groupName string, txOpts types.TxOption) GnfdRe
 }
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
-func (c *GnfdClient) UpdateGroupMember(groupName string, updateMembers []sdk.AccAddress, opts updateGroupMemberOptions) GnfdResponse {
+func (c *GnfdClient) UpdateGroupMember(groupName string, updateMembers []sdk.AccAddress, opts UpdateGroupMemberOptions) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "UpdateGroup"}
@@ -571,7 +571,7 @@ func (c *GnfdClient) HeadGroupMember(ctx context.Context, groupName string, grou
 	return true
 }
 
-// PutBucketPolicy apply bucket policy to principalAddr
+// PutBucketPolicy apply bucket policy to principal
 // policy indicates a json string which indicates the policy info, for example: {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:ListObject"]}]}
 func (c *GnfdClient) PutBucketPolicy(bucketName, policy string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
@@ -589,7 +589,7 @@ func (c *GnfdClient) PutBucketPolicy(bucketName, policy string, principalAddr sd
 	return c.sendPutPolicyTxn(resource, km.GetAddr(), principalAddr, statements, txOpts)
 }
 
-// PutObjectPolicy apply object policy to principalAddr
+// PutObjectPolicy apply object policy to principal
 // policy indicates a json string which indicates the policy info, for example: {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:DelteObject"]}]}
 func (c *GnfdClient) PutObjectPolicy(bucketName, objectName, policy string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
@@ -606,7 +606,7 @@ func (c *GnfdClient) PutObjectPolicy(bucketName, objectName, policy string, prin
 	return c.sendPutPolicyTxn(resource, km.GetAddr(), principalAddr, statements, txOpts)
 }
 
-// PutGroupPolicy apply group policy to principalAddr, the sender need to be the owner of the group
+// PutGroupPolicy apply group policy to principal, the sender need to be the owner of the group
 // policy indicates a json string which indicates the policy info, for example:  {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:UpdateGroupMember"]}]}
 func (c *GnfdClient) PutGroupPolicy(groupName, policy string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
@@ -666,7 +666,7 @@ func (c *GnfdClient) sendPutPolicyTxn(resource string, operator, principalAddr s
 
 }
 
-// DeleteBucketPolicy delete the bucket policy of the principalAddr
+// DeleteBucketPolicy delete the bucket policy of the principal
 func (c *GnfdClient) DeleteBucketPolicy(bucketName string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -690,7 +690,7 @@ func (c *GnfdClient) DeleteObjectPolicy(bucketName, objectName string, principal
 	return c.sendDelPolicyTxn(km.GetAddr(), newObjectGRNStr(bucketName, objectName), principal, txOpts)
 }
 
-// DeleteGroupPolicy  delete group policy of the principalAddr, the sender need to be the owner of the group
+// DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
 func (c *GnfdClient) DeleteGroupPolicy(groupName string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -754,7 +754,6 @@ func (c *GnfdClient) IsObjectPermissionAllowed(user sdk.AccAddress, bucketName, 
 		Operator:   user.String(),
 		BucketName: bucketName,
 		ObjectName: objectName,
-		ActionType: utils.GetChainAction(action),
 	}
 	ctx := context.Background()
 
