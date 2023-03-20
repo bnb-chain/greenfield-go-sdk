@@ -10,7 +10,7 @@ import (
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
-	aclTypes "github.com/bnb-chain/greenfield/x/permission/types"
+	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -48,11 +48,10 @@ type CreateGroupOptions struct {
 	TxOpts          *types.TxOption
 }
 
-// GroupUpdateInfo indicates the info to update group member
-type GroupUpdateInfo struct {
-	GroupName string           // group name
-	Members   []sdk.AccAddress // update chain address list
-	IsRemove  bool             // indicate whether to remove or add member
+// updateGroupMemberOptions indicates the info to update group member
+type updateGroupMemberOptions struct {
+	IsRemove bool // indicate whether to remove or add member
+	TxOpts   *types.TxOption
 }
 
 // ComputeHashOptions indicates the meta of redundancy strategy
@@ -507,32 +506,32 @@ func (c *GnfdClient) DeleteGroup(groupName string, txOpts types.TxOption) GnfdRe
 }
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
-func (c *GnfdClient) UpdateGroupMember(info GroupUpdateInfo, txOpts types.TxOption) GnfdResponse {
+func (c *GnfdClient) UpdateGroupMember(members []sdk.AccAddress, groupName string, opts updateGroupMemberOptions) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "UpdateGroup"}
 	}
 
-	if info.GroupName == "" {
+	if groupName == "" {
 		return GnfdResponse{"", errors.New("group name is empty"), "UpdateGroup"}
 	}
 
-	if len(info.Members) == 0 {
+	if len(members) == 0 {
 		return GnfdResponse{"", errors.New("no update member"), "UpdateGroup"}
 	}
 
 	var updateGroupMsg *storageTypes.MsgUpdateGroupMember
-	if info.IsRemove {
-		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), info.GroupName, nil, info.Members)
+	if opts.IsRemove {
+		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), groupName, nil, members)
 	} else {
-		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), info.GroupName, info.Members, nil)
+		updateGroupMsg = storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), groupName, members, nil)
 	}
 
 	if err = updateGroupMsg.ValidateBasic(); err != nil {
 		return GnfdResponse{"", err, "updateGroup"}
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateGroupMsg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateGroupMsg}, opts.TxOpts)
 	if err != nil {
 		return GnfdResponse{"", err, "CreateGroup"}
 	}
@@ -572,61 +571,61 @@ func (c *GnfdClient) HeadGroupMember(ctx context.Context, groupName string, grou
 	return true
 }
 
-// PutBucketPolicy apply bucket policy to grantUser
+// PutBucketPolicy apply bucket policy to principalAddr
 // policy indicates a json string which indicates the policy info, for example: {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:ListObject"]}]}
-func (c *GnfdClient) PutBucketPolicy(bucketName, policy string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+func (c *GnfdClient) PutBucketPolicy(bucketName, policy string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteGroup"}
+		return GnfdResponse{"", errors.New("key manager is nil"), "PutBucketPolicy"}
 	}
 
 	statements, err := DecodeStatements(policy)
 	if err != nil {
-		return GnfdResponse{"", err, "PutPolicy"}
+		return GnfdResponse{"", err, "PutBucketPolicy"}
 	}
 
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 
-	return c.sendPutPolicyTxn(resource, km.GetAddr(), grantUser, statements, txOpts)
+	return c.sendPutPolicyTxn(resource, km.GetAddr(), principalAddr, statements, txOpts)
 }
 
-// PutObjectPolicy apply object policy to grantUser
+// PutObjectPolicy apply object policy to principalAddr
 // policy indicates a json string which indicates the policy info, for example: {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:DelteObject"]}]}
-func (c *GnfdClient) PutObjectPolicy(bucketName, objectName, policy string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+func (c *GnfdClient) PutObjectPolicy(bucketName, objectName, policy string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteGroup"}
+		return GnfdResponse{"", errors.New("key manager is nil"), "PutObjectPolicy"}
 	}
 
 	statements, err := DecodeStatements(policy)
 	if err != nil {
-		return GnfdResponse{"", err, "PutPolicy"}
+		return GnfdResponse{"", err, "PutObjectPolicy"}
 	}
 
 	resource := newObjectGRNStr(bucketName, objectName)
-	return c.sendPutPolicyTxn(resource, km.GetAddr(), grantUser, statements, txOpts)
+	return c.sendPutPolicyTxn(resource, km.GetAddr(), principalAddr, statements, txOpts)
 }
 
-// PutGroupPolicy apply group policy to grantUser, the sender need to be the owner of the group
+// PutGroupPolicy apply group policy to principalAddr, the sender need to be the owner of the group
 // policy indicates a json string which indicates the policy info, for example:  {"GnfdStatement":[{"Effect":"Allow","Action":["gnfd:UpdateGroupMember"]}]}
-func (c *GnfdClient) PutGroupPolicy(groupName, policy string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+func (c *GnfdClient) PutGroupPolicy(groupName, policy string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteGroup"}
+		return GnfdResponse{"", errors.New("key manager is nil"), "PutGroupPolicy"}
 	}
 	sender := km.GetAddr()
 
 	statements, err := DecodeStatements(policy)
 	if err != nil {
-		return GnfdResponse{"", err, "PutPolicy"}
+		return GnfdResponse{"", err, "PutGroupPolicy"}
 	}
 
 	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
-	return c.sendPutPolicyTxn(resource, km.GetAddr(), grantUser, statements, txOpts)
+	return c.sendPutPolicyTxn(resource, km.GetAddr(), principalAddr, statements, txOpts)
 }
 
-func DecodeStatements(policy string) ([]*aclTypes.Statement, error) {
-	statements := make([]*aclTypes.Statement, 0)
+func DecodeStatements(policy string) ([]*permTypes.Statement, error) {
+	statements := make([]*permTypes.Statement, 0)
 
 	gnfdPolicy := &utils.GnfdPolicy{}
 
@@ -636,13 +635,13 @@ func DecodeStatements(policy string) ([]*aclTypes.Statement, error) {
 	}
 
 	for _, s := range gnfdPolicy.Statements {
-		chainActions := make([]aclTypes.ActionType, 0)
+		chainActions := make([]permTypes.ActionType, 0)
 
 		for _, action := range s.Actions {
 			chainActions = append(chainActions, utils.GetChainAction(action))
 		}
 
-		chainStatement := &aclTypes.Statement{
+		chainStatement := &permTypes.Statement{
 			Actions: chainActions,
 			Effect:  utils.GetChainEffect(s.Effect),
 		}
@@ -652,8 +651,8 @@ func DecodeStatements(policy string) ([]*aclTypes.Statement, error) {
 	return statements, nil
 }
 
-func (c *GnfdClient) sendPutPolicyTxn(resource string, operator, grantUser sdk.AccAddress, statements []*aclTypes.Statement, txOpts types.TxOption) GnfdResponse {
-	putPolicyMsg := storageTypes.NewMsgPutPolicy(operator, resource, aclTypes.NewPrincipalWithAccount(grantUser), statements)
+func (c *GnfdClient) sendPutPolicyTxn(resource string, operator, principalAddr sdk.AccAddress, statements []*permTypes.Statement, txOpts types.TxOption) GnfdResponse {
+	putPolicyMsg := storageTypes.NewMsgPutPolicy(operator, resource, permTypes.NewPrincipalWithAccount(principalAddr), statements)
 	if err := putPolicyMsg.ValidateBasic(); err != nil {
 		return GnfdResponse{"", err, "PutPolicy"}
 	}
@@ -667,44 +666,44 @@ func (c *GnfdClient) sendPutPolicyTxn(resource string, operator, grantUser sdk.A
 
 }
 
-// DeleteBucketPolicy delete the bucket policy of the grantUser
-func (c *GnfdClient) DeleteBucketPolicy(bucketName string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+// DeleteBucketPolicy delete the bucket policy of the principalAddr
+func (c *GnfdClient) DeleteBucketPolicy(bucketName string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteBucketPolicy"}
 	}
 
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
-	principal := aclTypes.NewPrincipalWithAccount(grantUser)
+	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 
 	return c.sendDelPolicyTxn(km.GetAddr(), resource, principal, txOpts)
 }
 
-func (c *GnfdClient) DeleteObjectPolicy(bucketName, objectName string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+func (c *GnfdClient) DeleteObjectPolicy(bucketName, objectName string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteBucketPolicy"}
+		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteObjectPolicy"}
 	}
 
-	principal := aclTypes.NewPrincipalWithAccount(grantUser)
+	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 
 	return c.sendDelPolicyTxn(km.GetAddr(), newObjectGRNStr(bucketName, objectName), principal, txOpts)
 }
 
-// DeleteGroupPolicy  delete group policy of the grantUser, the sender need to be the owner of the group
-func (c *GnfdClient) DeleteGroupPolicy(groupName string, grantUser sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+// DeleteGroupPolicy  delete group policy of the principalAddr, the sender need to be the owner of the group
+func (c *GnfdClient) DeleteGroupPolicy(groupName string, principalAddr sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
-		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteBucketPolicy"}
+		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteGroupPolicy"}
 	}
 	sender := km.GetAddr()
 	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
-	principal := aclTypes.NewPrincipalWithAccount(grantUser)
+	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 
 	return c.sendDelPolicyTxn(sender, resource, principal, txOpts)
 }
 
-func (c *GnfdClient) sendDelPolicyTxn(operator sdk.AccAddress, resource string, principal *aclTypes.Principal, txOpts types.TxOption) GnfdResponse {
+func (c *GnfdClient) sendDelPolicyTxn(operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts types.TxOption) GnfdResponse {
 	delPolicyMsg := storageTypes.NewMsgDeletePolicy(operator, resource, principal)
 
 	if err := delPolicyMsg.ValidateBasic(); err != nil {
@@ -768,7 +767,7 @@ func (c *GnfdClient) IsObjectPermissionAllowed(user sdk.AccAddress, bucketName, 
 }
 
 // GetBucketPolicy get the policy info of the bucket resource
-func (c *GnfdClient) GetBucketPolicy(bucketName string, principalAddress sdk.AccAddress) (*aclTypes.Policy, error) {
+func (c *GnfdClient) GetBucketPolicy(bucketName string, principalAddress sdk.AccAddress) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 
 	queryPolicy := storageTypes.QueryPolicyForAccountRequest{Resource: resource,
@@ -784,7 +783,7 @@ func (c *GnfdClient) GetBucketPolicy(bucketName string, principalAddress sdk.Acc
 }
 
 // GetObjectPolicy get the policy info of the object resource
-func (c *GnfdClient) GetObjectPolicy(bucketName, objectName string, principalAddress sdk.AccAddress) (*aclTypes.Policy, error) {
+func (c *GnfdClient) GetObjectPolicy(bucketName, objectName string, principalAddress sdk.AccAddress) (*permTypes.Policy, error) {
 	queryPolicy := storageTypes.QueryPolicyForAccountRequest{Resource: newObjectGRNStr(bucketName, objectName),
 		PrincipalAddress: principalAddress.String()}
 
