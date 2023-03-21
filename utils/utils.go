@@ -22,7 +22,7 @@ func IsIPValid(ip string) bool {
 	return net.ParseIP(ip) != nil
 }
 
-// IsDomainNameValid CheckdDomainName validates if input string is a valid domain name.
+// IsDomainNameValid validates if input string is a valid domain name.
 func IsDomainNameValid(hostName string) bool {
 	// See RFC 1035, RFC 3696.
 	hostName = strings.TrimSpace(hostName)
@@ -45,7 +45,7 @@ func IsDomainNameValid(hostName string) bool {
 	return true
 }
 
-// GetEndpointURL - construct a new endpoint.
+// GetEndpointURL - constructs a new endpoint.
 func GetEndpointURL(endpoint string, secure bool) (*url.URL, error) {
 	// If secure is false, use 'http' scheme.
 	scheme := "https"
@@ -66,7 +66,7 @@ func GetEndpointURL(endpoint string, secure bool) (*url.URL, error) {
 	return endpointURL, nil
 }
 
-// checkEndpointUrl verify if endpoint url is valid, and return error
+// checkEndpointUrl verifies if endpoint url is valid, and return error
 func checkEndpointUrl(endpointURL url.URL) error {
 	if endpointURL == EmptyURL {
 		return errors.New("Endpoint url is empty.")
@@ -85,14 +85,14 @@ func checkEndpointUrl(endpointURL url.URL) error {
 	return nil
 }
 
-// CalcSHA256Hex compute checksum of sha256 hash and encode it to hex
+// CalcSHA256Hex computes checksum of sha256 hash and encode it to hex
 func CalcSHA256Hex(buf []byte) (hexStr string) {
 	sum := CalcSHA256(buf)
 	hexStr = hex.EncodeToString(sum)
 	return
 }
 
-// CalcSHA256 compute checksum of sha256 from byte array
+// CalcSHA256 computes checksum of sha256 from byte array
 func CalcSHA256(buf []byte) []byte {
 	h := sha256.New()
 	h.Write(buf)
@@ -127,7 +127,7 @@ func AddQueryValues(s string, qs url.Values) (string, error) {
 	return u.String(), nil
 }
 
-// CloseResponse close the response body
+// CloseResponse closes the response body
 func CloseResponse(resp *http.Response) {
 	if resp != nil && resp.Body != nil {
 		_, err := io.Copy(io.Discard, resp.Body)
@@ -138,7 +138,7 @@ func CloseResponse(resp *http.Response) {
 	}
 }
 
-// GetContentLength return the size of reader
+// GetContentLength returns the size of reader
 func GetContentLength(reader io.Reader) (int64, error) {
 	var contentLength int64
 	var err error

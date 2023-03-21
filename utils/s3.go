@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-// EncodePath encode the strings from UTF-8 byte representations to HTML hex escape sequences
+// EncodePath encodes the strings from UTF-8 byte representations to HTML hex escape sequences
 func EncodePath(pathName string) string {
 	reservedNames := regexp.MustCompile("^[a-zA-Z0-9-_.~/]+$")
 	// no need to encode
@@ -70,7 +70,7 @@ func VerifyBucketName(bucketName string) error {
 	return nil
 }
 
-// VerifyObjectName judge if the objectname is invalid
+// VerifyObjectName judges if the objectname is invalid
 func VerifyObjectName(objectName string) error {
 	if len(objectName) == 0 {
 		return fmt.Errorf("object name is empty")

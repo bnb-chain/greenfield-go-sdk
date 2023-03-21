@@ -24,9 +24,9 @@ type AuthInfo struct {
 	WalletSignStr string
 }
 
-// NewAuthInfo return the AuthInfo which need to pass to api
-// useWalletSign indicate whether you need use wallet to sign
-// signStr indicate the wallet signature or jwt token
+// NewAuthInfo returns the AuthInfo which need to pass to api
+// useWalletSign indicates whether you need use wallet to sign
+// signStr indicates the wallet signature or jwt token
 func NewAuthInfo(useWalletSign bool, signStr string) AuthInfo {
 	if !useWalletSign {
 		return AuthInfo{
@@ -41,7 +41,7 @@ func NewAuthInfo(useWalletSign bool, signStr string) AuthInfo {
 	}
 }
 
-// getCanonicalHeaders generate a list of request headers with their values
+// getCanonicalHeaders generates a list of request headers with their values
 func getCanonicalHeaders(req *http.Request) string {
 	var content bytes.Buffer
 	var containHostHeader bool
@@ -79,7 +79,7 @@ func getCanonicalHeaders(req *http.Request) string {
 	return content.String()
 }
 
-// getSignedHeaders return the sorted header array
+// getSignedHeaders returns the sorted header array
 func getSortedHeaders(req *http.Request) []string {
 	var signHeaders []string
 	for k := range req.Header {
@@ -93,12 +93,12 @@ func getSortedHeaders(req *http.Request) []string {
 	return signHeaders
 }
 
-// getSignedHeaders return the alphabetically sorted, semicolon-separated list of lowercase request header names.
+// getSignedHeaders returns the alphabetically sorted, semicolon-separated list of lowercase request header names.
 func getSignedHeaders(req *http.Request) string {
 	return strings.Join(getSortedHeaders(req), ";")
 }
 
-// getCanonicalRequest generate the canonicalRequest base on aws s3 sign without payload hash.
+// GetCanonicalRequest generates the canonicalRequest base on aws s3 sign without payload hash.
 // https://docs.aws.amazon.com/general/latest/gr/create-signed-request.html#create-canonical-request
 func GetCanonicalRequest(req *http.Request) string {
 	req.URL.RawQuery = strings.ReplaceAll(req.URL.Query().Encode(), "+", "%20")
@@ -113,7 +113,7 @@ func GetCanonicalRequest(req *http.Request) string {
 	return canonicalRequest
 }
 
-// GetMsgToSign generate the msg bytes from canonicalRequest to sign
+// GetMsgToSign generates the msg bytes from canonicalRequest to sign
 func GetMsgToSign(req *http.Request) []byte {
 	signBytes := calcSHA256([]byte(GetCanonicalRequest(req)))
 	return crypto.Keccak256(signBytes)

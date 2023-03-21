@@ -79,7 +79,7 @@ func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHas
 	}, nil
 }
 
-// FPutObject support upload object from local file
+// FPutObject supports uploading object from local file
 func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
 	filePath, txnHash, contentType string, authInfo AuthInfo,
 ) (res UploadResult, err error) {
@@ -99,7 +99,7 @@ func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
 	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, UploadOption{ContentType: contentType})
 }
 
-// ObjectInfo contain the meta of downloaded objects
+// ObjectInfo contains the metadata of downloaded objects
 type ObjectInfo struct {
 	ObjectName  string
 	Etag        string
@@ -129,7 +129,7 @@ func (o *DownloadOption) SetRange(start, end int64) error {
 	return nil
 }
 
-// GetObject download s3 object payload and return the related object info
+// GetObject downloads s3 object payload and returns the related object info
 func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts DownloadOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
@@ -167,7 +167,7 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 	return resp.Body, ObjInfo, nil
 }
 
-// FGetObject download s3 object payload adn write the object content into local file specified by filePath
+// FGetObject downloads s3 object payload adn write the object content into local file specified by filePath
 func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts DownloadOption, authinfo AuthInfo) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
@@ -200,7 +200,7 @@ func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, fileP
 	return nil
 }
 
-// getObjInfo generate objectInfo base on the response http header content
+// getObjInfo generates objectInfo base on the response http header content
 func getObjInfo(bucketName string, objectName string, h http.Header) (ObjectInfo, error) {
 	var etagVal string
 	etag := h.Get("Etag")

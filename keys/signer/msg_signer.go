@@ -11,9 +11,8 @@ import (
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 )
 
-// MsgSigner defines a type that for signing msg in the way that is same with MsgEthereumTx
+// MsgSigner It defines a type to sign a message in the same way as MsgEthereumTx
 type MsgSigner struct {
-	// privKey cryptotypes.PrivKey
 	keyManager keys.KeyManager
 }
 
@@ -40,7 +39,7 @@ func (m MsgSigner) Sign(msg []byte) ([]byte, cryptotypes.PubKey, error) {
 	return sig, privKey.PubKey(), nil
 }
 
-// RecoverAddr recover the sender address from msg and signature
+// RecoverAddr recovers the sender address from msg and signature
 func RecoverAddr(msg []byte, sig []byte) (sdk.AccAddress, ethsecp256k1.PubKey, error) {
 	pubKeyByte, err := secp256k1.RecoverPubkey(msg, sig)
 	if err != nil {

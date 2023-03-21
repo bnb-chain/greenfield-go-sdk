@@ -45,7 +45,7 @@ type ListReadRecordOption struct {
 	StartTimeStamp int64
 }
 
-// GetBucketReadQuota return the bucket quota info of this month
+// GetBucketReadQuota returns the bucket quota info of this month
 func (c *SPClient) GetBucketReadQuota(ctx context.Context, bucketName string, authInfo AuthInfo) (QuotaInfo, error) {
 	year, month, _ := time.Now().Date()
 
@@ -87,7 +87,7 @@ func (c *SPClient) GetBucketReadQuota(ctx context.Context, bucketName string, au
 	return QuotaResult, nil
 }
 
-// ListBucketReadRecord return the read record of this month, the return items should be no more than maxRecords
+// ListBucketReadRecord returns the read record of this month, the return items should be no more than maxRecords
 // ListReadRecordOption indicates the start timestamp of return read records
 func (c *SPClient) ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt ListReadRecordOption, authInfo AuthInfo) (QuotaRecordInfo, error) {
 	timeNow := time.Now()

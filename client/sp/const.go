@@ -35,7 +35,7 @@ const (
 	ParityShards       = 2
 
 	libName        = "Greenfield-go-sdk"
-	Version        = "v0.0.4"
+	Version        = "v0.0.7"
 	UserAgent      = "Greenfield (" + runtime.GOOS + "; " + runtime.GOARCH + ") " + libName + "/" + Version
 	contentTypeXML = "application/xml"
 	ContentDefault = "application/octet-stream"

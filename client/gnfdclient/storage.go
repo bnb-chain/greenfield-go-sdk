@@ -25,7 +25,7 @@ var (
 	ModuleCdc = codec.NewAminoCodec(Amino)
 )
 
-// CreateBucketOptions indicates the meta to construct createBucket msg of storage module
+// CreateBucketOptions indicates the metadata to construct the `createBucket` message of storage module
 type CreateBucketOptions struct {
 	IsPublic         bool
 	TxOpts           *types.TxOption
@@ -33,7 +33,7 @@ type CreateBucketOptions struct {
 	PrimarySPAddress sdk.AccAddress
 }
 
-// CreateObjectOptions indicates the meta to construct createObject msg of storage module
+// CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
 type CreateObjectOptions struct {
 	IsPublic        bool
 	TxOpts          *types.TxOption
@@ -42,7 +42,7 @@ type CreateObjectOptions struct {
 	IsReplicaType   bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
 }
 
-// CreateGroupOptions  indicates the meta to construct createGroup msg
+// CreateGroupOptions  indicates the metadata to construct `createGroup` msg
 type CreateGroupOptions struct {
 	InitGroupMember []sdk.AccAddress
 	TxOpts          *types.TxOption
@@ -54,7 +54,7 @@ type UpdateGroupMemberOptions struct {
 	TxOpts   *types.TxOption
 }
 
-// ComputeHashOptions indicates the meta of redundancy strategy
+// ComputeHashOptions indicates the metadata of redundancy strategy
 type ComputeHashOptions struct {
 	SegmentSize  uint64
 	DataShards   uint32
