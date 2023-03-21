@@ -8,8 +8,10 @@ import (
 )
 
 // Effect - policy statement effect Allow or Deny.
-type Effect string
-type Action string
+type (
+	Effect string
+	Action string
+)
 
 const (
 	AllowEffect            = "Allow"
@@ -126,7 +128,6 @@ func (s GnfdStatement) MarshalJSON() ([]byte, error) {
 	}
 	type newStatement GnfdStatement
 	return json.Marshal(newStatement(s))
-
 }
 
 func (s *GnfdStatement) UnmarshalJSON(content []byte) error {

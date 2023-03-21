@@ -2,10 +2,11 @@ package chain
 
 import (
 	"context"
+	"sync"
+
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/bnb-chain/greenfield/sdk/client"
 	jsonrpcclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
-	"sync"
 )
 
 type (
@@ -14,9 +15,11 @@ type (
 	GreenfieldClientOption = client.GreenfieldClientOption
 )
 
-var WithKeyManager = client.WithKeyManager
-var WithGrpcDialOption = client.WithGrpcDialOption
-var NewGreenfieldClient = client.NewGreenfieldClient
+var (
+	WithKeyManager      = client.WithKeyManager
+	WithGrpcDialOption  = client.WithGrpcDialOption
+	NewGreenfieldClient = client.NewGreenfieldClient
+)
 
 type TendermintClient struct {
 	RpcClient     *TmClient

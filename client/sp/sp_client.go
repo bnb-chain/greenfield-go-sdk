@@ -207,7 +207,8 @@ func (c *SPClient) GetAgent() string {
 
 // newRequest construct the http request, set url, body and headers
 func (c *SPClient) newRequest(ctx context.Context,
-	method string, meta requestMeta, body interface{}, txnHash string, isAdminAPi bool, authInfo AuthInfo) (req *http.Request, err error) {
+	method string, meta requestMeta, body interface{}, txnHash string, isAdminAPi bool, authInfo AuthInfo,
+) (req *http.Request, err error) {
 	// construct the target url
 	desURL, err := c.GenerateURL(meta.bucketName, meta.objectName, meta.urlRelPath, meta.urlValues, isAdminAPi)
 	log.Debug().Msg("new request Url:" + desURL.String())
@@ -384,7 +385,8 @@ func (c *SPClient) sendReq(ctx context.Context, metadata requestMeta, opt *sendO
 
 // GenerateURL construct the target request url based on the parameters
 func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePath string,
-	queryValues url.Values, isAdminApi bool) (*url.URL, error) {
+	queryValues url.Values, isAdminApi bool,
+) (*url.URL, error) {
 	host := c.endpoint.Host
 	scheme := c.endpoint.Scheme
 

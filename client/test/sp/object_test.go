@@ -132,5 +132,4 @@ func TestGetObject(t *testing.T) {
 	if buf.String() != bodyContent[1:10] {
 		t.Errorf("download range fail")
 	}
-
 }

@@ -157,7 +157,8 @@ func (c *GnfdClient) ComputeHashRoots(reader io.Reader) ([][]byte, int64, error)
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
 func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName string,
-	reader io.Reader, opts CreateObjectOptions) GnfdResponse {
+	reader io.Reader, opts CreateObjectOptions,
+) GnfdResponse {
 	if reader == nil {
 		return GnfdResponse{"", errors.New("fail to compute hash of payload, reader is nil"), "CreateObject"}
 	}
@@ -213,7 +214,8 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 
 // DelObject send DeleteBucket txn to greenfield chain and return txn hash
 func (c *GnfdClient) DelObject(bucketName, objectName string,
-	txOpts types.TxOption) GnfdResponse {
+	txOpts types.TxOption,
+) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "DeleteObject"}
@@ -261,7 +263,8 @@ func (c *GnfdClient) CancelCreateObject(bucketName, objectName string, txOpts ty
 
 // PutObject upload payload of object to storage provider
 func (c *GnfdClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-	reader io.Reader, opt sp.UploadOption) (res sp.UploadResult, err error) {
+	reader io.Reader, opt sp.UploadOption,
+) (res sp.UploadResult, err error) {
 	return c.SPClient.PutObject(ctx, bucketName, objectName, txnHash,
 		objectSize, reader, sp.NewAuthInfo(false, ""), opt)
 }
@@ -274,7 +277,8 @@ func (c *GnfdClient) GetObject(ctx context.Context, bucketName, objectName strin
 // BuyQuotaForBucket buy the target quota of the specific bucket
 // targetQuota indicates the target quota to set for the bucket
 func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
-	targetQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+	targetQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption,
+) GnfdResponse {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return GnfdResponse{"", errors.New("key manager is nil"), "UpdateBucketInfo"}
@@ -326,7 +330,8 @@ func (c *GnfdClient) ListBucketReadRecord(ctx context.Context, bucketName string
 
 // UpdateBucket update the bucket read quota on chain
 func (c *GnfdClient) UpdateBucket(bucketName string,
-	readQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption) GnfdResponse {
+	readQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption,
+) GnfdResponse {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return GnfdResponse{"", err, "UpdateBucketInfo"}
 	}
@@ -565,11 +570,7 @@ func (c *GnfdClient) HeadGroupMember(ctx context.Context, groupName string, grou
 	}
 
 	_, err := c.ChainClient.HeadGroupMember(ctx, &headGroupRequest)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 // PutBucketPolicy apply bucket policy to principal
@@ -664,7 +665,6 @@ func (c *GnfdClient) sendPutPolicyTxn(resource string, operator, principalAddr s
 	}
 
 	return GnfdResponse{resp.TxResponse.TxHash, err, "PutPolicy"}
-
 }
 
 // DeleteBucketPolicy delete the bucket policy of the principal
@@ -772,8 +772,10 @@ func (c *GnfdClient) IsObjectPermissionAllowed(user sdk.AccAddress, bucketName, 
 func (c *GnfdClient) GetBucketPolicy(bucketName string, principalAddress sdk.AccAddress) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 
-	queryPolicy := storageTypes.QueryPolicyForAccountRequest{Resource: resource,
-		PrincipalAddress: principalAddress.String()}
+	queryPolicy := storageTypes.QueryPolicyForAccountRequest{
+		Resource:         resource,
+		PrincipalAddress: principalAddress.String(),
+	}
 
 	ctx := context.Background()
 	queryPolicyResp, err := c.ChainClient.QueryPolicyForAccount(ctx, &queryPolicy)
@@ -786,8 +788,10 @@ func (c *GnfdClient) GetBucketPolicy(bucketName string, principalAddress sdk.Acc
 
 // GetObjectPolicy get the policy info of the object resource
 func (c *GnfdClient) GetObjectPolicy(bucketName, objectName string, principalAddress sdk.AccAddress) (*permTypes.Policy, error) {
-	queryPolicy := storageTypes.QueryPolicyForAccountRequest{Resource: newObjectGRNStr(bucketName, objectName),
-		PrincipalAddress: principalAddress.String()}
+	queryPolicy := storageTypes.QueryPolicyForAccountRequest{
+		Resource:         newObjectGRNStr(bucketName, objectName),
+		PrincipalAddress: principalAddress.String(),
+	}
 
 	ctx := context.Background()
 	queryPolicyResp, err := c.ChainClient.QueryPolicyForAccount(ctx, &queryPolicy)

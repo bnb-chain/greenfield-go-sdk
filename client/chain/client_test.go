@@ -1,10 +1,11 @@
 package chain
 
 import (
+	"testing"
+
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"testing"
 )
 
 func TestGnfdCompositeClient(t *testing.T) {

@@ -33,7 +33,8 @@ func (t *UploadResult) String() string {
 // PutObject supports the second stage of uploading the object to bucket.
 // txnHash should be the str which hex.encoding from txn hash bytes
 func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-	reader io.Reader, authInfo AuthInfo, opt UploadOption) (res UploadResult, err error) {
+	reader io.Reader, authInfo AuthInfo, opt UploadOption,
+) (res UploadResult, err error) {
 	if txnHash == "" {
 		return UploadResult{}, errors.New("txn hash empty")
 	}
@@ -80,7 +81,8 @@ func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHas
 
 // FPutObject support upload object from local file
 func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
-	filePath, txnHash, contentType string, authInfo AuthInfo) (res UploadResult, err error) {
+	filePath, txnHash, contentType string, authInfo AuthInfo,
+) (res UploadResult, err error) {
 	fReader, err := os.Open(filePath)
 	// If any error fail quickly here.
 	if err != nil {
@@ -177,7 +179,7 @@ func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, fileP
 	}
 
 	// If file exist, open it in append mode
-	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0660)
+	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o660)
 	if err != nil {
 		return err
 	}
@@ -235,5 +237,4 @@ func getObjInfo(bucketName string, objectName string, h http.Header) (ObjectInfo
 		ContentType: contentType,
 		Size:        size,
 	}, nil
-
 }

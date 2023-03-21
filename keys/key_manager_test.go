@@ -2,8 +2,9 @@ package keys
 
 import (
 	"encoding/hex"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateKeyManagerFromPrivateKeyHex(t *testing.T) {
@@ -25,5 +26,4 @@ func TestCreateKeyManagerFromMnemonic(t *testing.T) {
 	assert.Equal(t, "0x535E34B319B3575108Deaf2f4FEeeC73AEbE3eF9", address)
 	key := keyManager.GetPrivKey()
 	assert.Equal(t, "ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf", hex.EncodeToString(key.Bytes()))
-
 }
