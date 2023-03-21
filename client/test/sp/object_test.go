@@ -88,8 +88,6 @@ func TestGetObject(t *testing.T) {
 
 		w.Header().Set("Etag", etag)
 		w.Header().Set("Content-Type", "text/plain")
-		s := strconv.FormatInt(size, 10) // s == "97" (decimal)
-		w.Header().Set(spClient.HTTPHeaderContentLength, s)
 		w.WriteHeader(200)
 
 		if r.Header.Get("Range") != "" {

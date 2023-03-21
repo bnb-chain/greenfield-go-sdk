@@ -12,7 +12,6 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 	storage_type "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/rs/zerolog/log"
 )
 
 const ChallengeUrl = "challenge"
@@ -62,7 +61,6 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg 
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Error().Msg("get approval rejected: " + err.Error())
 		return nil, err
 	}
 
@@ -76,7 +74,6 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg 
 	if err != nil {
 		return nil, err
 	}
-	log.Info().Msg("signedMsgBytes: " + signedRawMsg)
 
 	var signedMsg storage_type.MsgCreateBucket
 	storage_type.ModuleCdc.MustUnmarshalJSON(signedMsgBytes, &signedMsg)
@@ -106,7 +103,6 @@ func (c *SPClient) GetCreateObjectApproval(ctx context.Context, createObjectMsg 
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Error().Msg("get approval rejected: " + err.Error())
 		return nil, err
 	}
 
@@ -120,7 +116,6 @@ func (c *SPClient) GetCreateObjectApproval(ctx context.Context, createObjectMsg 
 	if err != nil {
 		return nil, err
 	}
-	log.Info().Msg("signedMsgBytes: " + signedRawMsg)
 
 	var signedMsg storage_type.MsgCreateObject
 	storage_type.ModuleCdc.MustUnmarshalJSON(signedMsgBytes, &signedMsg)
@@ -172,7 +167,6 @@ func (c *SPClient) ChallengeSP(ctx context.Context, info ChallengeInfo, authInfo
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
-		log.Error().Msg("get challenge result fail: " + err.Error())
 		return ChallengeResult{}, err
 	}
 
