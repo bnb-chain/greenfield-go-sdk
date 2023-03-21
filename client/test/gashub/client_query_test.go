@@ -11,7 +11,9 @@ import (
 )
 
 func TestGashubParams(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := gashubtypes.QueryParamsRequest{}
 	res, err := client.GashubQueryClient.Params(context.Background(), &query)

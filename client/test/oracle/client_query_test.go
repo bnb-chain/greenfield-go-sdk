@@ -11,7 +11,9 @@ import (
 )
 
 func TestOracleParams(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := oracletypes.QueryParamsRequest{}
 	res, err := client.OracleQueryClient.Params(context.Background(), &query)
