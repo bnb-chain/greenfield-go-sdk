@@ -23,7 +23,7 @@ import (
 ```go
 replace (
     cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.9
+    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.11
     github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
     github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.2
 )

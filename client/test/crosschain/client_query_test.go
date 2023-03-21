@@ -2,6 +2,8 @@ package bank
 
 import (
 	"context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"testing"
 
 	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
