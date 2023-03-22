@@ -407,7 +407,7 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 		prefix := AdminURLPrefix + AdminURLVersion
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
-		// generate s3 virtual hosted style url, consider case where getUserBuckets not having a bucket name
+		// generate s3 virtual hosted style url, consider case where ListBuckets not having a bucket name
 		if utils.IsDomainNameValid(host) && bucketName != "" {
 			urlStr = scheme + "://" + bucketName + "." + host + "/"
 		} else {

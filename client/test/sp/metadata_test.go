@@ -6,13 +6,11 @@ import (
 	"net/http"
 	"testing"
 
-	sdkmath "cosmossdk.io/math"
 	"github.com/rs/zerolog/log"
 
 	"github.com/stretchr/testify/require"
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
-	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 )
 
 func TestListObjectsByBucketName(t *testing.T) {
@@ -24,7 +22,7 @@ func TestListObjectsByBucketName(t *testing.T) {
 	var expectedRes spClient.ListObjectsByBucketNameResponse
 	var objects []*spClient.Object
 	object1 := spClient.Object{
-		ObjectInfo: &storageType.ObjectInfo{
+		ObjectInfo: &spClient.ObjectInfoSDK{
 			Owner: "test-owner-object",
 		},
 	}
@@ -55,19 +53,18 @@ func TestListObjectsByBucketName(t *testing.T) {
 
 }
 
-func TestListBucketsByUser(t *testing.T) {
+func TestListBuckets(t *testing.T) {
 	setup()
 	defer shutdown()
 
 	var buckets []*spClient.Bucket
 	bucket1 := spClient.Bucket{
-		BucketInfo: &storageType.BucketInfo{
+		BucketInfo: &spClient.BucketInfoSDK{
 			Owner: "test-owner-bucket",
-			Id:    sdkmath.NewUint(1),
 		},
 	}
 	buckets = append(buckets, &bucket1)
-	expectedRes := spClient.ListBucketsByUserResponse{Buckets: buckets}
+	expectedRes := spClient.ListBucketsResponse{Buckets: buckets}
 
 	out, err := json.Marshal(expectedRes)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -81,11 +78,12 @@ func TestListBucketsByUser(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	body, err := client.ListBucketsByUser(context.Background(), spClient.UserInfo{Address: "test-address"}, spClient.NewAuthInfo(false, ""))
+	body, err := client.ListBuckets(context.Background(), spClient.UserInfo{Address: "test-address"}, spClient.NewAuthInfo(false, ""))
+	log.Print(body)
 	require.NoError(t, err)
 
 	if body.Buckets[0].BucketInfo.Owner != expectedRes.Buckets[0].BucketInfo.Owner {
-		t.Errorf("TestGetUserBuckets content not same")
+		t.Errorf("TestListBuckets content not same")
 	}
 
 }
