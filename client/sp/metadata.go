@@ -29,7 +29,7 @@ type Object struct {
 
 // ObjectInfoSDK differ from ObjectInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
 type ObjectInfoSDK struct {
-	Owner string `protobuf:"json:"owner,omitempty"`
+	Owner string `json:"owner,omitempty"`
 	// bucket_name is the name of the bucket
 	BucketName string `json:"bucket_name,omitempty"`
 	// object_name is the name of object
@@ -89,7 +89,7 @@ type BucketInfoSDK struct {
 	BillingInfo storageType.BillingInfo `json:"billing_info"`
 }
 
-type ListObjectsByBucketNameResponse struct {
+type ListObjectsResponse struct {
 	// objects defines the list of object
 	Objects []*Object `json:"objects,omitempty"`
 }
@@ -99,10 +99,10 @@ type ListBucketsResponse struct {
 	Buckets []*Bucket `json:"buckets"`
 }
 
-// ListObjectsByBucketName return object list of the specific bucket
-func (c *SPClient) ListObjectsByBucketName(ctx context.Context, bucketName string, authInfo AuthInfo) (ListObjectsByBucketNameResponse, error) {
+// ListObjects return object list of the specific bucket
+func (c *SPClient) ListObjects(ctx context.Context, bucketName string, authInfo AuthInfo) (ListObjectsResponse, error) {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
-		return ListObjectsByBucketNameResponse{}, err
+		return ListObjectsResponse{}, err
 	}
 
 	reqMeta := requestMeta{
@@ -118,28 +118,28 @@ func (c *SPClient) ListObjectsByBucketName(ctx context.Context, bucketName strin
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
 		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
-		return ListObjectsByBucketNameResponse{}, err
+		return ListObjectsResponse{}, err
 	}
 	defer utils.CloseResponse(resp)
 
-	listObjectsByBucketNameResult := ListObjectsByBucketNameResponse{}
+	ListObjectsResult := ListObjectsResponse{}
 	// unmarshal the json content from response body
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
 		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
-		return ListObjectsByBucketNameResponse{}, err
+		return ListObjectsResponse{}, err
 	}
 
 	bufStr := buf.String()
-	err = json.Unmarshal([]byte(bufStr), &listObjectsByBucketNameResult)
+	err = json.Unmarshal([]byte(bufStr), &ListObjectsResult)
 	//TODO(annie) remove tolerance for unmarshal err after structs got stabilized
-	if err != nil && listObjectsByBucketNameResult.Objects == nil {
+	if err != nil && ListObjectsResult.Objects == nil {
 		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
-		return ListObjectsByBucketNameResponse{}, err
+		return ListObjectsResponse{}, err
 	}
 
-	return listObjectsByBucketNameResult, nil
+	return ListObjectsResult, nil
 }
 
 // ListBuckets list buckets for the owner

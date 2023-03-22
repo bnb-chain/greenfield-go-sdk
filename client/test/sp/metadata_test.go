@@ -13,13 +13,13 @@ import (
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 )
 
-func TestListObjectsByBucketName(t *testing.T) {
+func TestListObjects(t *testing.T) {
 	setup()
 	defer shutdown()
 
 	bucketName := "test-bucket"
 
-	var expectedRes spClient.ListObjectsByBucketNameResponse
+	var expectedRes spClient.ListObjectsResponse
 	var objects []*spClient.Object
 	object1 := spClient.Object{
 		ObjectInfo: &spClient.ObjectInfoSDK{
@@ -27,9 +27,13 @@ func TestListObjectsByBucketName(t *testing.T) {
 		},
 	}
 	objects = append(objects, &object1)
-	expectedRes = spClient.ListObjectsByBucketNameResponse{Objects: objects}
+	expectedRes = spClient.ListObjectsResponse{Objects: objects}
 
 	out, err := json.Marshal(expectedRes)
+
+	if err != nil {
+		log.Error().Msg("the marshal of expectedRes failed: " + err.Error())
+	}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
@@ -42,13 +46,13 @@ func TestListObjectsByBucketName(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	body, err := client.ListObjectsByBucketName(context.Background(), bucketName, spClient.NewAuthInfo(false, ""))
+	body, err := client.ListObjects(context.Background(), bucketName, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 	log.Print(body)
 
-	// check ListObjectsByBucketName content
+	// check ListObjects content
 	if body.Objects[0].ObjectInfo.Owner != expectedRes.Objects[0].ObjectInfo.Owner {
-		t.Errorf("TestListObjectsByBucketName content not same")
+		t.Errorf("TestListObjects content not same")
 	}
 
 }
@@ -67,6 +71,10 @@ func TestListBuckets(t *testing.T) {
 	expectedRes := spClient.ListBucketsResponse{Buckets: buckets}
 
 	out, err := json.Marshal(expectedRes)
+	if err != nil {
+		log.Error().Msg("the marshal of expectedRes failed: " + err.Error())
+	}
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		startHandle(t, r)
 		testMethod(t, r, "GET")
