@@ -3,6 +3,7 @@ package sp
 import (
 	"context"
 	"encoding/json"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"net/http"
 	"testing"
 
@@ -19,9 +20,9 @@ func TestListObjects(t *testing.T) {
 	bucketName := "test-bucket"
 
 	var expectedRes spClient.ListObjectsResponse
-	var objects []*spClient.Object
-	object1 := spClient.Object{
-		ObjectInfo: &spClient.ObjectInfoSDK{
+	var objects []*types.Object
+	object1 := types.Object{
+		ObjectInfo: &types.ObjectInfo{
 			Owner: "test-owner-object",
 		},
 	}
@@ -59,9 +60,9 @@ func TestListBuckets(t *testing.T) {
 	setup()
 	defer shutdown()
 
-	var buckets []*spClient.Bucket
-	bucket1 := spClient.Bucket{
-		BucketInfo: &spClient.BucketInfoSDK{
+	var buckets []*types.Bucket
+	bucket1 := types.Bucket{
+		BucketInfo: &types.BucketInfo{
 			Owner: "test-owner-bucket",
 		},
 	}
