@@ -47,7 +47,6 @@ func TestListObjects(t *testing.T) {
 
 	body, err := client.ListObjects(context.Background(), bucketName, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
-	log.Print(body)
 
 	// check ListObjects content
 	if body.Objects[0].ObjectInfo.Owner != expectedRes.Objects[0].ObjectInfo.Owner {
@@ -86,7 +85,6 @@ func TestListBuckets(t *testing.T) {
 	})
 
 	body, err := client.ListBuckets(context.Background(), spClient.UserInfo{Address: "test-address"}, spClient.NewAuthInfo(false, ""))
-	log.Print(body)
 	require.NoError(t, err)
 
 	if body.Buckets[0].BucketInfo.Owner != expectedRes.Buckets[0].BucketInfo.Owner {
