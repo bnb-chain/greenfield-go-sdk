@@ -3,7 +3,7 @@ module github.com/bnb-chain/greenfield-go-sdk
 go 1.19
 
 require (
-	github.com/bnb-chain/greenfield v0.0.9
+	github.com/bnb-chain/greenfield v0.0.0-20230323015450-cc32130bccd6
 	github.com/bnb-chain/greenfield-common/go v0.0.0-20230310033112-2d379fdc2987
 	github.com/cosmos/cosmos-sdk v0.46.4
 	github.com/ethereum/go-ethereum v1.10.19
@@ -139,7 +139,6 @@ require (
 
 replace (
 	cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-	github.com/bnb-chain/greenfield => github.com/bnb-chain/greenfield v0.0.9
 	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.2-0.20230320055343-ede3d1df3a12
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3

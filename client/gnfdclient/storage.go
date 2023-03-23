@@ -303,19 +303,6 @@ func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
 	return resp.TxResponse.TxHash, err
 }
 
-// GetQuota return the read quota of the bucket
-func (c *GnfdClient) GetQuota(ctx context.Context, bucketName string) (uint64, error) {
-	queryHeadBucketRequest := storageTypes.QueryHeadBucketRequest{
-		BucketName: bucketName,
-	}
-	queryHeadBucketResponse, err := c.ChainClient.HeadBucket(ctx, &queryHeadBucketRequest)
-	if err != nil {
-		return 0, err
-	}
-
-	return queryHeadBucketResponse.BucketInfo.GetReadQuota(), nil
-}
-
 // GetQuotaPrice return the quota price of the SP
 func (c *GnfdClient) GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (uint64, error) {
 	resp, err := c.ChainClient.QueryGetSpStoragePriceByTime(ctx, &spTypes.QueryGetSpStoragePriceByTimeRequest{
@@ -336,28 +323,6 @@ func (c *GnfdClient) GetBucketReadQuota(ctx context.Context, bucketName string) 
 // ListBucketReadRecord return read quota record info of current month
 func (c *GnfdClient) ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt ListReadRecordOption) (sp.QuotaRecordInfo, error) {
 	return c.SPClient.ListBucketReadRecord(ctx, bucketName, maxRecords, sp.ListReadRecordOption{StartTimeStamp: opt.StartTimeStamp}, sp.NewAuthInfo(false, ""))
-}
-
-// UpdateBucket update the bucket read quota on chain
-func (c *GnfdClient) UpdateBucket(bucketName string,
-	readQuota uint64, paymentAcc sdk.AccAddress, txOpts types.TxOption) (string, error) {
-	if err := utils.VerifyBucketName(bucketName); err != nil {
-		return "", err
-	}
-
-	km, err := c.ChainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, readQuota, paymentAcc)
-
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, &txOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, err
 }
 
 // HeadBucket query the bucketInfo on chain, return the bucket info if exists
@@ -607,7 +572,7 @@ func NewStatement(actions []permTypes.ActionType, effect permTypes.Effect,
 	return statement
 }
 
-// PutBucketPolicy apply bucket policy to the user specified by principalAddr， return the txn hash
+// PutBucketPolicy apply bucket policy to the user specified by principalAddr, return the txn hash
 func (c *GnfdClient) PutBucketPolicy(bucketName string, principalAddr sdk.AccAddress,
 	statements []*permTypes.Statement, opt PutPolicyOption) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
