@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -11,7 +14,9 @@ import (
 )
 
 func TestBankBalance(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QueryBalanceRequest{
 		Address: test.TEST_ADDR,
@@ -24,7 +29,9 @@ func TestBankBalance(t *testing.T) {
 }
 
 func TestBankAllBalances(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QueryAllBalancesRequest{
 		Address: test.TEST_ADDR,
@@ -36,7 +43,9 @@ func TestBankAllBalances(t *testing.T) {
 }
 
 func TestBankDenomMetadata(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QueryDenomMetadataRequest{}
 	res, err := client.BankQueryClient.DenomMetadata(context.Background(), &query)
@@ -46,7 +55,9 @@ func TestBankDenomMetadata(t *testing.T) {
 }
 
 func TestBankDenomOwners(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QueryDenomOwnersRequest{
 		Denom: test.TEST_DENOM,
@@ -58,7 +69,9 @@ func TestBankDenomOwners(t *testing.T) {
 }
 
 func TestBankDenomsMetadata(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QueryDenomsMetadataRequest{}
 	res, err := client.BankQueryClient.DenomsMetadata(context.Background(), &query)
@@ -68,7 +81,9 @@ func TestBankDenomsMetadata(t *testing.T) {
 }
 
 func TestBankParams(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QueryParamsRequest{}
 	res, err := client.BankQueryClient.Params(context.Background(), &query)
@@ -78,7 +93,9 @@ func TestBankParams(t *testing.T) {
 }
 
 func TestBankSpendableBalance(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QuerySpendableBalancesRequest{
 		Address: test.TEST_ADDR,
@@ -90,7 +107,9 @@ func TestBankSpendableBalance(t *testing.T) {
 }
 
 func TestBankSupplyOf(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QuerySupplyOfRequest{
 		Denom: test.TEST_DENOM,
@@ -102,7 +121,9 @@ func TestBankSupplyOf(t *testing.T) {
 }
 
 func TestBankTotalSupply(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR, test.TEST_CHAIN_ID)
+	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID,
+		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 	query := banktypes.QueryTotalSupplyRequest{}
 	res, err := client.BankQueryClient.TotalSupply(context.Background(), &query)

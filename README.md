@@ -1,10 +1,17 @@
 # Greenfield Go SDK
 
-The `Greenfield-GO-SDK` provides a thin wrapper for interacting with `greenfield` in three ways:
 
-1. Interact using `GreenfieldClient` client, you may perform querying accounts, chain info and broadcasting transaction.
-2. Interact using `TendermintClient` client, you may perform low-level operations like executing ABCI queries, viewing network/consensus state.
-3. Interact using `SPClient` client, you may perform  request for the service of storage provider like putObject, getObject
+## Disclaimer
+**The software and related documentation are under active development, all subject to potential future change without
+notification and not ready for production use. The code and security audit have not been fully completed and not ready
+for any bug bounty. We advise you to be careful and experiment on the network at your own risk. Stay safe out there.**
+
+## Instruction
+The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield in three ways:
+
+Interact using GreenfieldClient client, you can perform queries on accounts, chain info, and broadcasting transactions.
+Interact using TendermintClient client, you can perform low-level operations like executing ABCI queries and viewing network/consensus state.
+Interact using SPClient client, you can request storage provider services like putObject and getObject.
 
 ### Requirement
 
@@ -23,7 +30,7 @@ import (
 ```go
 replace (
     cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.9
+    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.11
     github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
     github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.2
 )
@@ -31,8 +38,8 @@ replace (
 
 ### Key Manager
 
-Key Manager is needed to sign the transaction msg or verify signature. Key Manager is an Identity Manager to define who
-you are in the greenfield. It provides following interface:
+A Key Manager is needed to sign transaction messages or verify signatures. The Key Manager is an Identity Manager used 
+to define who you are in Greenfield. It provides the following interface:
 
 ```go
 type KeyManager interface {
@@ -41,15 +48,16 @@ type KeyManager interface {
 }
 ```
 
-We provide three construct functions to generate the Key Manager:
+We provide three construction functions to generate the Key Manager:
+
 ```go
 NewPrivateKeyManager(priKey string) (KeyManager, error)
 
 NewMnemonicKeyManager(mnemonic string) (KeyManager, error)
 ```
 
-- NewPrivateKeyManager. You should provide a Hex encoded string of your private key.
-- NewMnemonicKeyManager. You should provide your mnemonic, usually is a string of 24 words.
+- NewPrivateKeyManager: You should provide a Hex encoded string of your private key.
+- NewMnemonicKeyManager: You should provide your mnemonic, usually a string of 24 words.
 
 Examples:
 
@@ -67,7 +75,7 @@ keyManager, _ := keys.NewMnemonicKeyManager(mnemonic)
 
 ### Use Greenfield Client
 
-#### Init client without key manager, you should use it for only querying purpose.
+#### Initialize client without a key manager; use it for querying purposes only.
 
 ```go
 client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
@@ -79,7 +87,7 @@ query := banktypes.QueryBalanceRequest{
 res, err := client.BankQueryClient.Balance(context.Background(), &query)  
 ```
 
-#### Init client with key manager, for signing and sending tx
+#### Initialize client with a key manager to sign and send transactions
 
 ```go
 keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
@@ -92,12 +100,13 @@ gnfdClient := NewGreenfieldClient("localhost:9090",
 
 #### Broadcast TX
 
-A generic method `BroadcastTx` is provided to give you the flexibility to broadcast different types of transaction.
+A generic method `BroadcastTx` is provided to give you the flexibility to broadcast different types of transactions.
+
 ```go
 BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
 ```
 
-`txOpt` is provided to customize your transaction. It is optional, and all fields are optional.
+`txOpt` is provided to customize your transaction. All fields are optional.
 ```go
 type TxOption struct {
     Mode      *tx.BroadcastMode   // default to `sync` mode
@@ -133,7 +142,7 @@ SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.
 
 ### Sign Tx
 
-`SignTx` is provided which sign the `msgs` and returns raw bytes 
+`SignTx` function signs the provided messages and returns raw bytes.
 
 ```go
 SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
@@ -141,14 +150,14 @@ SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
 
 ### Get Nonce
 
-Get the nonce of account
+The `GetNonce` function retrieves the nonce of an account.
+
 ```go
 GetNonce() (uint64, error)
 ```
 
-#### Support transaction type
-Please refer to [msgTypes.go](./types/msgTypes.go) to get all types of `sdk.Msg` supported 
-
+#### Support transaction types
+Please refer to [msgTypes.go](./types/msg_types.go) to see all of the supported types of `sdk.Msg`.
 
 ### Use Tendermint RPC Client
 
@@ -157,8 +166,8 @@ client := NewTendermintClient("http://0.0.0.0:26750")
 abci, err := client.TmClient.ABCIInfo(context.Background())
 ```
 
-There is an option which multiple providers are available, and by the time you interact with Blockchain, it will choose the
-provider with the highest block height
+There is an option with multiple providers available. Upon interaction with the blockchain, the provider with the highest 
+block height will be chosen.
 
 ```go
 gnfdClients := NewGnfdCompositClients(
@@ -172,13 +181,13 @@ client, err := gnfdClients.GetClient()
 
 ### Use Storage Provider Client
 
-#### Auth Mechanism
+#### Authentication Mechanism
 
-SPclient support two auto type. The first type is to use the local signer.Sign method, which will call 
-the private key of keyManager to sign the request message. The second type is to use the metamask wallet
-to generate an authentication token
+The SPclient supports two authentication types. The first type uses the local signer.Sign method, which calls the private 
+key of the key manager to sign the request message. The second type employs a metamask wallet trusted to generate an 
+authentication token.
 
-For the first type, you need to specify the SignType of AuthInfo as AuthV1 using the NewAuthInfo function, 
+For the first type, specify the `SignType` of `AuthInfo` as `AuthV1` using the `NewAuthInfo` function,
 and pass it as a parameter to the API.
 
 ```
@@ -186,29 +195,29 @@ authInfo := NewAuthInfo(false, "")
 err = client.GetApproval(context.Background(), bucketName, "", authInfo)
 ```
 
-For the first type, you only need get the metaMask sign Token and specify the SignType of AuthInfo as AuthV2.
-The metaMask sign Token can be designs like JWT token with expiration in it. It needs to be implemented externally
-and pass it as a parameter to the API.
+For the second type, obtain the MetaMask sign token and specify the `SignType` of the `AuthInfo` as `AuthV2`. The MetaMask 
+sign token can be constructed like a JWT token with an expiration time. It needs to be implemented externally and passed as
+a parameter to the API.
 
 ```
 authInfo := NewAuthInfo(true, "this is metamask auto token")
 err = client.GetApproval(context.Background(), bucketName, "", authInfo)
 ```
 
-#### Init client
+#### Initialize the Client
 
-if SPclient use the AuthV1, the client need to init with key manager
+If the `SPclient` uses `AuthV1`, the client should initialize it with a key manager:
 ```
 // if client keep the private key in keyManager locally
 client := NewSpClientWithKeyManager("http://0.0.0.0:26750", &spClient.Option{}, keyManager)
 ```
-if SPclient use the AuthV2, the client can init without key manager
+If the `SPclient` uses `AuthV2`, the client can be initialized without a key manager:
 ```
 // If the client does not manage the private key locally and use local
 client := NewSpClient("http://0.0.0.0:26750", &spClient.Option{})
 ```
 
-#### call API and send request to storage provider
+#### Call APIs and Send Requests to the Storage Provider
 
 ```go
 fileReader, err := os.Open(filePath)

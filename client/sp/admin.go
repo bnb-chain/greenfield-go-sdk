@@ -39,7 +39,7 @@ type ApproveObjectOptions struct {
 	SecondarySPAccs []sdk.AccAddress
 }
 
-// GetCreateBucketApproval return the signature info for the approval of preCreating resources
+// GetCreateBucketApproval returns the signature info for the approval of preCreating resources
 func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storage_type.MsgCreateBucket, authInfo AuthInfo) (*storage_type.MsgCreateBucket, error) {
 	unsignedBytes := createBucketMsg.GetSignBytes()
 
@@ -81,7 +81,7 @@ func (c *SPClient) GetCreateBucketApproval(ctx context.Context, createBucketMsg 
 	return &signedMsg, nil
 }
 
-// GetCreateObjectApproval return the signature info for the approval of preCreating resources
+// GetCreateObjectApproval returns the signature info for the approval of preCreating resources
 func (c *SPClient) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storage_type.MsgCreateObject, authInfo AuthInfo) (*storage_type.MsgCreateObject, error) {
 	unsignedBytes := createObjectMsg.GetSignBytes()
 
@@ -139,7 +139,7 @@ type ChallengeResult struct {
 	PiecesHash    []string
 }
 
-// ChallengeSP send request to challenge and get challenge result info
+// ChallengeSP sends request to challenge and get challenge result info
 func (c *SPClient) ChallengeSP(ctx context.Context, info ChallengeInfo, authInfo AuthInfo) (ChallengeResult, error) {
 	if info.ObjectId == "" {
 		return ChallengeResult{}, errors.New("fail to get objectId")

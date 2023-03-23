@@ -13,13 +13,13 @@ type (
 	GreenfieldClientOption = client.GreenfieldClientOption
 )
 
-// GnfdClient integrate the chainClient and SPClient
+// GnfdClient integrates the chainClient and SPClient
 type GnfdClient struct {
 	ChainClient *chain.GreenfieldClient
 	SPClient    *sp.SPClient
 }
 
-// NewGnfdClient return GnfdClient from chain info and sp info
+// NewGnfdClient returns GnfdClient from chain info and sp info
 // km pass a keyManager for SP client to sign http request
 func NewGnfdClient(grpcAddrs string, chainId string, spEndpoint string, km keys.KeyManager, secure bool, gnfdopts ...GreenfieldClientOption) (*GnfdClient, error) {
 	chainClient := chain.NewGreenfieldClient(grpcAddrs, chainId, gnfdopts...)

@@ -48,7 +48,7 @@ func (r ErrResponse) Error() string {
 		r.StatusCode, r.Code, r.Message)
 }
 
-// constructErrResponse  check the response is an error response
+// constructErrResponse  checks the response is an error response
 func constructErrResponse(r *http.Response, bucketName, objectName string) error {
 	if c := r.StatusCode; 200 <= c && c <= 299 {
 		return nil
@@ -137,7 +137,7 @@ func constructErrResponse(r *http.Response, bucketName, objectName string) error
 	return errorResp
 }
 
-// toInvalidArgumentResp return invalid  argument response.
+// toInvalidArgumentResp returns invalid  argument response.
 func toInvalidArgumentResp(message string) error {
 	return ErrResponse{
 		StatusCode: http.StatusBadRequest,

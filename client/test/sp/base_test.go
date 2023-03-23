@@ -54,7 +54,6 @@ func setup() {
 	if err != nil {
 		log.Fatal("create client  fail")
 	}
-
 }
 
 func shutdown() {
@@ -128,7 +127,6 @@ func TestNewClient(t *testing.T) {
 	if got.String() != want {
 		t.Errorf("URL is %v, want %v", got, want)
 	}
-
 }
 
 // TestGetApproval test get approval request to preCreateBucket or preCreateObject
@@ -167,7 +165,7 @@ func TestGetApproval(t *testing.T) {
 	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), false, expectHash, "", storageType.REDUNDANCY_EC_TYPE, 0, nil, nil)
 	err = createObjectMsg.ValidateBasic()
 	require.NoError(t, err)
-	//test preCreateObject
+	// test preCreateObject
 	_, err = client.GetCreateObjectApproval(context.Background(), createObjectMsg, spClient.NewAuthInfo(false, ""))
 
 	require.NoError(t, err)

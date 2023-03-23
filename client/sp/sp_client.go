@@ -46,10 +46,6 @@ type SPClientConfig struct {
 	UploadLimitSpeed uint64
 }
 
-type Option struct {
-	secure bool
-}
-
 type RetryOptions struct {
 	Count      int
 	Interval   time.Duration
@@ -109,7 +105,7 @@ func NewSpClient(endpoint string, opts ...SpClientOption) (*SPClient, error) {
 	return c, nil
 }
 
-// SetKeyManager set the keyManager and signer of client
+// SetKeyManager sets the keyManager and signer of client
 func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
 	if keyManager == nil {
 		return errors.New("keyManager can not be nil")
@@ -128,7 +124,7 @@ func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
 	return nil
 }
 
-// GetKeyManager return the keyManager object
+// GetKeyManager returns the keyManager object
 func (c *SPClient) GetKeyManager() (keys.KeyManager, error) {
 	if c.keyManager == nil {
 		return nil, types.ErrorKeyManagerNotInit
@@ -136,7 +132,7 @@ func (c *SPClient) GetKeyManager() (keys.KeyManager, error) {
 	return c.keyManager, nil
 }
 
-// GetMsgSigner return the signer
+// GetMsgSigner returns the signer
 func (c *SPClient) GetMsgSigner() (*signer.MsgSigner, error) {
 	if c.signer == nil {
 		return nil, errors.New("signer is nil")
@@ -150,7 +146,7 @@ func (c *SPClient) GetURL() *url.URL {
 	return &endpoint
 }
 
-// requestMeta - contain the metadata to construct the http request.
+// requestMeta - contains the metadata to construct the http request.
 type requestMeta struct {
 	bucketName       string
 	objectName       string
@@ -176,12 +172,12 @@ type sendOptions struct {
 	isAdminApi       bool        // indicate if it is an admin api request
 }
 
-// SetHost set host name of request
+// SetHost sets the host name of request
 func (c *SPClient) SetHost(hostName string) {
 	c.host = hostName
 }
 
-// GetHost get host name of request
+// GetHost gets the host name of request
 func (c *SPClient) GetHost() string {
 	return c.host
 }
@@ -190,24 +186,25 @@ func (c *SPClient) SetUrl(url *url.URL) {
 	c.endpoint = url
 }
 
-// SetAccount set client sender address
+// SetAccount set the client sender address
 func (c *SPClient) SetAccount(addr sdktype.AccAddress) {
 	c.sender = addr
 }
 
-// GetAccount get sender address info
+// GetAccount gets the sender address info
 func (c *SPClient) GetAccount() sdktype.AccAddress {
 	return c.sender
 }
 
-// GetAgent get agent name
+// GetAgent gets the agent name
 func (c *SPClient) GetAgent() string {
 	return c.userAgent
 }
 
-// newRequest construct the http request, set url, body and headers
+// newRequest constructs the http request, set url, body and headers
 func (c *SPClient) newRequest(ctx context.Context,
-	method string, meta requestMeta, body interface{}, txnHash string, isAdminAPi bool, authInfo AuthInfo) (req *http.Request, err error) {
+	method string, meta requestMeta, body interface{}, txnHash string, isAdminAPi bool, authInfo AuthInfo,
+) (req *http.Request, err error) {
 	// construct the target url
 	desURL, err := c.GenerateURL(meta.bucketName, meta.objectName, meta.urlRelPath, meta.urlValues, isAdminAPi)
 	log.Debug().Msg("new request Url:" + desURL.String())
@@ -366,7 +363,7 @@ func (c *SPClient) doAPI(ctx context.Context, req *http.Request, meta requestMet
 	return resp, nil
 }
 
-// sendReq new restful request, send the message and handle the response
+// sendReq sends the message via REST and handles the response
 func (c *SPClient) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo AuthInfo) (res *http.Response, err error) {
 	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, authInfo)
 	if err != nil {
@@ -382,9 +379,10 @@ func (c *SPClient) sendReq(ctx context.Context, metadata requestMeta, opt *sendO
 	return resp, nil
 }
 
-// GenerateURL construct the target request url based on the parameters
+// GenerateURL constructs the target request url based on the parameters
 func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePath string,
-	queryValues url.Values, isAdminApi bool) (*url.URL, error) {
+	queryValues url.Values, isAdminApi bool,
+) (*url.URL, error) {
 	host := c.endpoint.Host
 	scheme := c.endpoint.Scheme
 
@@ -435,7 +433,7 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 	return url.Parse(urlStr)
 }
 
-// SignRequest sign the request and set authorization before send to server
+// SignRequest signs the request and set authorization before send to server
 func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 	var authStr []string
 	if info.SignType == AuthV1 {
@@ -476,7 +474,7 @@ func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 	return nil
 }
 
-// GetPieceHashRoots return primary pieces, secondary piece Hash roots list and the object size
+// GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
 // It is used for generate meta of object on the chain
 func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64, dataShards, parityShards int) ([]byte, [][]byte, int64, error) {
 	pieceHashRoots, size, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards)
