@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/rs/zerolog/log"
-
 	"github.com/stretchr/testify/require"
 
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
