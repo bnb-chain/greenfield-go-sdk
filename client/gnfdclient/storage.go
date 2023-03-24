@@ -11,10 +11,10 @@ import (
 	sdkmath "cosmossdk.io/math"
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
-	"github.com/bnb-chain/greenfield-go-sdk/utils"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/common"
+	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
@@ -110,7 +110,7 @@ type NewStatementOptions struct {
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
 func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts CreateBucketOptions) (string, error) {
-	if err := utils.VerifyBucketName(bucketName); err != nil {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
 
@@ -156,14 +156,14 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 	return resp.TxResponse.TxHash, err
 }
 
-// DelBucket send DeleteBucket txn to greenfield chain and return txn hash
-func (c *GnfdClient) DelBucket(bucketName string, opt DeleteBucketOption) (string, error) {
+// DeleteBucket send DeleteBucket txn to greenfield chain and return txn hash
+func (c *GnfdClient) DeleteBucket(bucketName string, opt DeleteBucketOption) (string, error) {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
+		return "", err
+	}
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
-	}
-	if err := utils.VerifyBucketName(bucketName); err != nil {
-		return "", err
 	}
 	delBucketMsg := storageTypes.NewMsgDeleteBucket(km.GetAddr(), bucketName)
 
@@ -206,11 +206,11 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return "", errors.New("fail to compute hash of payload, reader is nil")
 	}
 
-	if err := utils.VerifyBucketName(bucketName); err != nil {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
 
-	if err := utils.VerifyObjectName(objectName); err != nil {
+	if err := s3util.CheckValidObjectName(objectName); err != nil {
 		return "", err
 	}
 
@@ -265,16 +265,17 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 // DeleteObject send DeleteBucket txn to greenfield chain and return txn hash
 func (c *GnfdClient) DeleteObject(bucketName, objectName string,
 	opt DeleteObjectOption) (string, error) {
-	km, err := c.ChainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-	if err := utils.VerifyBucketName(bucketName); err != nil {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
 
-	if err := utils.VerifyObjectName(objectName); err != nil {
+	if err := s3util.CheckValidObjectName(objectName); err != nil {
 		return "", err
+	}
+
+	km, err := c.ChainClient.GetKeyManager()
+	if err != nil {
+		return "", errors.New("key manager is nil")
 	}
 	delObjectMsg := storageTypes.NewMsgDeleteObject(km.GetAddr(), bucketName, objectName)
 
@@ -288,16 +289,17 @@ func (c *GnfdClient) DeleteObject(bucketName, objectName string,
 
 // CancelCreateObject send CancelCreateObject txn to greenfield chain
 func (c *GnfdClient) CancelCreateObject(bucketName, objectName string, opt CancelCreateOption) (string, error) {
-	km, err := c.ChainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-	if err := utils.VerifyBucketName(bucketName); err != nil {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
 
-	if err := utils.VerifyObjectName(objectName); err != nil {
+	if err := s3util.CheckValidObjectName(objectName); err != nil {
 		return "", err
+	}
+
+	km, err := c.ChainClient.GetKeyManager()
+	if err != nil {
+		return "", errors.New("key manager is nil")
 	}
 
 	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(km.GetAddr(), bucketName, objectName)

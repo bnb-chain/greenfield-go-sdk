@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
+	"github.com/bnb-chain/greenfield/types/s3util"
+	"github.com/rs/zerolog/log"
 )
 
 // UploadResult contains information about the object which has been uploaded
@@ -131,10 +131,11 @@ func (o *GetObjectOption) SetRange(start, end int64) error {
 
 // GetObject download s3 object payload and return the related object info
 func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts GetObjectOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
-	if err := utils.VerifyBucketName(bucketName); err != nil {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
-	if err := utils.VerifyObjectName(objectName); err != nil {
+
+	if err := s3util.CheckValidObjectName(objectName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
 
