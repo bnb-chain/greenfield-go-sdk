@@ -162,7 +162,7 @@ func TestGetApproval(t *testing.T) {
 	for id, hash := range hashList {
 		expectHash[id+1] = hash
 	}
-	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), false, expectHash, "", storageType.REDUNDANCY_EC_TYPE, 0, nil, nil)
+	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), storageType.VISIBILITY_TYPE_PRIVATE, expectHash, "", storageType.REDUNDANCY_EC_TYPE, 0, nil, nil)
 	err = createObjectMsg.ValidateBasic()
 	require.NoError(t, err)
 	// test preCreateObject
