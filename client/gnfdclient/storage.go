@@ -31,7 +31,7 @@ type Principal string
 
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
-	IsPublic         bool
+	Visibility       *storageTypes.VisibilityType
 	TxOpts           *types.TxOption
 	PaymentAddress   *sdk.AccAddress
 	PrimarySPAddress *sdk.AccAddress
@@ -39,7 +39,7 @@ type CreateBucketOptions struct {
 
 // CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
 type CreateObjectOptions struct {
-	IsPublic        bool
+	Visibility      *storageTypes.VisibilityType
 	TxOpts          *types.TxOption
 	SecondarySPAccs []sdk.AccAddress
 	ContentType     string
@@ -59,6 +59,10 @@ type CancelCreateOption struct {
 }
 
 type BuyQuotaOption struct {
+	TxOpts *types.TxOption
+}
+
+type UpdateVisibilityOption struct {
 	TxOpts *types.TxOption
 }
 
@@ -124,8 +128,15 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 		}
 	}
 
+	var visibility storageTypes.VisibilityType
+	if opts.Visibility != nil {
+		visibility = *opts.Visibility
+	} else {
+		visibility = storageTypes.VISIBILITY_TYPE_DEFAULT
+	}
+
 	createBucketMsg := storageTypes.NewMsgCreateBucket(km.GetAddr(), bucketName,
-		opts.IsPublic, primaryAddr, *opts.PaymentAddress, 0, nil)
+		visibility, primaryAddr, *opts.PaymentAddress, 0, nil, 0)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
@@ -224,8 +235,15 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		redundancyType = storageTypes.REDUNDANCY_REPLICA_TYPE
 	}
 
+	var visibility storageTypes.VisibilityType
+	if opts.Visibility != nil {
+		visibility = *opts.Visibility
+	} else {
+		visibility = storageTypes.VISIBILITY_TYPE_DEFAULT
+	}
+
 	createObjectMsg := storageTypes.NewMsgCreateObject(km.GetAddr(), bucketName, objectName,
-		uint64(size), opts.IsPublic, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
+		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
 		return "", err
@@ -243,8 +261,8 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 	return resp.TxResponse.TxHash, err
 }
 
-// DelObject send DeleteBucket txn to greenfield chain and return txn hash
-func (c *GnfdClient) DelObject(bucketName, objectName string,
+// DeleteObject send DeleteBucket txn to greenfield chain and return txn hash
+func (c *GnfdClient) DeleteObject(bucketName, objectName string,
 	opt DeleteObjectOption) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
@@ -306,13 +324,48 @@ func (c *GnfdClient) GetObject(ctx context.Context, bucketName, objectName strin
 
 // BuyQuotaForBucket buy the target quota of the specific bucket
 // targetQuota indicates the target quota to set for the bucket
-func (c *GnfdClient) BuyQuotaForBucket(bucketName string,
-	targetQuota uint64, paymentAcc sdk.AccAddress, opt BuyQuotaOption) (string, error) {
+func (c *GnfdClient) BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt BuyQuotaOption) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
 	}
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, targetQuota, paymentAcc)
+	bucketInfo, err := c.HeadBucket(ctx, bucketName)
+	if err != nil {
+		return "", err
+	}
+
+	paymentAddr, err := sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
+	if err != nil {
+		return "", err
+	}
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
+
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.TxResponse.TxHash, err
+}
+
+// UpdateBucketVisibility update the visibilityType of bucket
+func (c *GnfdClient) UpdateBucketVisibility(ctx context.Context, bucketName string,
+	visibility storageTypes.VisibilityType, opt UpdateVisibilityOption) (string, error) {
+	km, err := c.ChainClient.GetKeyManager()
+	if err != nil {
+		return "", errors.New("key manager is nil")
+	}
+	bucketInfo, err := c.HeadBucket(ctx, bucketName)
+	if err != nil {
+		return "", err
+	}
+
+	paymentAddr, err := sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
+	if err != nil {
+		return "", err
+	}
+
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {
@@ -417,7 +470,7 @@ func (c *GnfdClient) ListSP(ctx context.Context, isInService bool) ([]spTypes.St
 		if isInService && info.Status != spTypes.STATUS_IN_SERVICE {
 			continue
 		}
-		spInfoList = append(spInfoList, info)
+		spInfoList = append(spInfoList, *info)
 	}
 
 	return spInfoList, nil
