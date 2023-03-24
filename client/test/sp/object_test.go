@@ -99,7 +99,7 @@ func TestGetObject(t *testing.T) {
 		}
 	})
 
-	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.DownloadOption{}, spClient.NewAuthInfo(false, ""))
+	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.GetObjectOption{}, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	buf := new(strings.Builder)
@@ -119,7 +119,7 @@ func TestGetObject(t *testing.T) {
 		t.Errorf("size error")
 	}
 
-	option := spClient.DownloadOption{}
+	option := spClient.GetObjectOption{}
 	err = option.SetRange(1, 10)
 	require.NoError(t, err)
 	part_data, _, err := client.GetObject(context.Background(), bucketName, ObjectName, option, spClient.NewAuthInfo(false, ""))

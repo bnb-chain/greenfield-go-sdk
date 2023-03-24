@@ -34,7 +34,7 @@ type SPClient struct {
 
 	conf       *SPClientConfig
 	sender     sdktype.AccAddress // sender greenfield chain address
-	keyManager keys.KeyManager
+	keyManager *keys.KeyManager
 	signer     *signer.MsgSigner
 }
 
@@ -115,7 +115,7 @@ func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
 		return errors.New("private key must be set")
 	}
 
-	c.keyManager = keyManager
+	c.keyManager = &keyManager
 
 	signer := signer.NewMsgSigner(keyManager)
 	c.signer = signer
@@ -124,8 +124,8 @@ func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
 	return nil
 }
 
-// GetKeyManager returns the keyManager object
-func (c *SPClient) GetKeyManager() (keys.KeyManager, error) {
+// GetKeyManager return the keyManager object
+func (c *SPClient) GetKeyManager() (*keys.KeyManager, error) {
 	if c.keyManager == nil {
 		return nil, types.ErrorKeyManagerNotInit
 	}

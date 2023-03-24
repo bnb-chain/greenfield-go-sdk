@@ -107,12 +107,12 @@ type ObjectInfo struct {
 	Size        int64
 }
 
-// DownloadOption contains the options of getObject
-type DownloadOption struct {
+// GetObjectOption contains the options of getObject
+type GetObjectOption struct {
 	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
 }
 
-func (o *DownloadOption) SetRange(start, end int64) error {
+func (o *GetObjectOption) SetRange(start, end int64) error {
 	switch {
 	case 0 < start && end == 0:
 		// `bytes=N-`.
@@ -129,8 +129,8 @@ func (o *DownloadOption) SetRange(start, end int64) error {
 	return nil
 }
 
-// GetObject downloads s3 object payload and returns the related object info
-func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts DownloadOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
+// GetObject download s3 object payload and return the related object info
+func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts GetObjectOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
 	if err := utils.VerifyBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
@@ -167,8 +167,8 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 	return resp.Body, ObjInfo, nil
 }
 
-// FGetObject downloads s3 object payload adn write the object content into local file specified by filePath
-func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts DownloadOption, authinfo AuthInfo) error {
+// FGetObject download s3 object payload adn write the object content into local file specified by filePath
+func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts GetObjectOption, authinfo AuthInfo) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {
