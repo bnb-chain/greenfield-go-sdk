@@ -35,6 +35,7 @@ type CreateBucketOptions struct {
 	TxOpts           *types.TxOption
 	PaymentAddress   *sdk.AccAddress
 	PrimarySPAddress *sdk.AccAddress
+	ChargedQuota     uint64
 }
 
 // CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
@@ -136,7 +137,7 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 	}
 
 	createBucketMsg := storageTypes.NewMsgCreateBucket(km.GetAddr(), bucketName,
-		visibility, primaryAddr, *opts.PaymentAddress, 0, nil, 0)
+		visibility, primaryAddr, *opts.PaymentAddress, 0, nil, opts.ChargedQuota)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
