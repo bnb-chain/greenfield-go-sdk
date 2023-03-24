@@ -150,6 +150,8 @@ github.com/bnb-chain/greenfield v0.0.0-20230323015450-cc32130bccd6 h1:NiTWkvhumB
 github.com/bnb-chain/greenfield v0.0.0-20230323015450-cc32130bccd6/go.mod h1:+Tjjg6vJBcbFnimmLBLsDpU6g3fQ5dPlkROgvjv/3PY=
 github.com/bnb-chain/greenfield v0.0.0-20230323091239-d7237bf6eebf h1:6qmZ0GaeG0tFXFeOyFxrrnPJM+R6Zecj74/A7ulylV4=
 github.com/bnb-chain/greenfield v0.0.0-20230323091239-d7237bf6eebf/go.mod h1:+Tjjg6vJBcbFnimmLBLsDpU6g3fQ5dPlkROgvjv/3PY=
+github.com/bnb-chain/greenfield v0.0.0-20230324074553-d1b4be8b3c3c h1:f2LptEK3571si9stuZsnoUO0OZz0snC30K+EqhpY39Q=
+github.com/bnb-chain/greenfield v0.0.0-20230324074553-d1b4be8b3c3c/go.mod h1:+Tjjg6vJBcbFnimmLBLsDpU6g3fQ5dPlkROgvjv/3PY=
 github.com/bnb-chain/greenfield v0.0.9 h1:nU3TgGloyysyyrbW/t9X2gdEvllxfIBudhuOdZTljV4=
 github.com/bnb-chain/greenfield v0.0.9/go.mod h1:uH3iyy7RfTaO+qM34AF1XN4CrCPcoUSTJs3zvaIWIf4=
 github.com/bnb-chain/greenfield-common/go v0.0.0-20230310033112-2d379fdc2987 h1:+SOlI4dfp5y/2srTBdAEOujoJboMx+m22zvj5xuBLgU=
