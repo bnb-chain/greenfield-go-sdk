@@ -161,6 +161,7 @@ type requestMeta struct {
 	contentMD5Base64 string // base64 encoded md5sum
 	contentSHA256    string // hex encoded sha256sum
 	challengeInfo    ChallengeInfo
+	userInfo         UserInfo
 }
 
 // sendOptions -  options to use to send the http message
@@ -303,6 +304,11 @@ func (c *SPClient) newRequest(ctx context.Context,
 		}
 	}
 
+	if meta.userInfo.Address != "" {
+		info := meta.userInfo
+		req.Header.Set(HTTPHeaderUserAddress, info.Address)
+	}
+
 	// set date header
 	stNow := time.Now().UTC()
 	req.Header.Set(HTTPHeaderDate, stNow.Format(iso8601DateFormatSecond))
@@ -401,13 +407,8 @@ func (c *SPClient) GenerateURL(bucketName string, objectName string, relativePat
 		prefix := AdminURLPrefix + AdminURLVersion
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
-		if bucketName == "" {
-			err := errors.New("no BucketName in path")
-			return nil, err
-		}
-
-		// generate s3 virtual hosted style url
-		if utils.IsDomainNameValid(host) {
+		// generate s3 virtual hosted style url, consider case where ListBuckets not having a bucket name
+		if utils.IsDomainNameValid(host) && bucketName != "" {
 			urlStr = scheme + "://" + bucketName + "." + host + "/"
 		} else {
 			urlStr = scheme + "://" + host + "/"
