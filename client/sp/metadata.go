@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/bnb-chain/greenfield/types/s3util"
 
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
@@ -29,7 +32,7 @@ type ListBucketsResponse struct {
 
 // ListObjects return object list of the specific bucket
 func (c *SPClient) ListObjects(ctx context.Context, bucketName string, authInfo AuthInfo) (ListObjectsResponse, error) {
-	if err := utils.VerifyBucketName(bucketName); err != nil {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return ListObjectsResponse{}, err
 	}
 
