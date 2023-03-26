@@ -189,10 +189,10 @@ func (c *GnfdClient) GetRedundancyParams() (uint32, uint32, uint64, error) {
 }
 
 // ComputeHashRoots return the hash roots list and content size
-func (c *GnfdClient) ComputeHashRoots(reader io.Reader) ([][]byte, int64, error) {
+func (c *GnfdClient) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error) {
 	dataBlocks, parityBlocks, segSize, err := c.GetRedundancyParams()
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, storageTypes.REDUNDANCY_EC_TYPE, err
 	}
 
 	// get hash and objectSize from reader
@@ -219,7 +219,7 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return "", errors.New("key manager is nil")
 	}
 	// compute hash root of payload
-	expectCheckSums, size, err := c.ComputeHashRoots(reader)
+	expectCheckSums, size, redundancyType, err := c.ComputeHashRoots(reader)
 	if err != nil {
 		return "", err
 	}
@@ -231,16 +231,11 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		contentType = sp.ContentDefault
 	}
 
-	redundancyType := storageTypes.REDUNDANCY_EC_TYPE
-	if opts.IsReplicaType {
-		redundancyType = storageTypes.REDUNDANCY_REPLICA_TYPE
-	}
-
 	var visibility storageTypes.VisibilityType
 	if opts.Visibility != nil {
 		visibility = *opts.Visibility
 	} else {
-		visibility = storageTypes.VISIBILITY_TYPE_DEFAULT
+		visibility = storageTypes.VISIBILITY_TYPE_INHERIT
 	}
 
 	createObjectMsg := storageTypes.NewMsgCreateObject(km.GetAddr(), bucketName, objectName,
@@ -263,8 +258,7 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 }
 
 // DeleteObject send DeleteBucket txn to greenfield chain and return txn hash
-func (c *GnfdClient) DeleteObject(bucketName, objectName string,
-	opt DeleteObjectOption) (string, error) {
+func (c *GnfdClient) DeleteObject(bucketName, objectName string, opt DeleteObjectOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -314,7 +308,7 @@ func (c *GnfdClient) CancelCreateObject(bucketName, objectName string, opt Cance
 
 // PutObject upload payload of object to storage provider
 func (c *GnfdClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-	reader io.Reader, opt sp.UploadOption,
+	reader io.Reader, opt sp.PutObjectOption,
 ) (res sp.UploadResult, err error) {
 	return c.SPClient.PutObject(ctx, bucketName, objectName, txnHash,
 		objectSize, reader, sp.NewAuthInfo(false, ""), opt)
