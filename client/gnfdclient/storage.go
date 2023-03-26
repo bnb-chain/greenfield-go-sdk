@@ -133,7 +133,7 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 	if opts.Visibility != nil {
 		visibility = *opts.Visibility
 	} else {
-		visibility = storageTypes.VISIBILITY_TYPE_DEFAULT
+		visibility = storageTypes.VISIBILITY_TYPE_PRIVATE
 	}
 
 	createBucketMsg := storageTypes.NewMsgCreateBucket(km.GetAddr(), bucketName,
