@@ -22,7 +22,7 @@ type UploadResult struct {
 	ETag       string // Hex encoded unique entity tag of the object.
 }
 
-type UploadOption struct {
+type PutObjectOption struct {
 	ContentType string
 }
 
@@ -33,7 +33,7 @@ func (t *UploadResult) String() string {
 // PutObject supports the second stage of uploading the object to bucket.
 // txnHash should be the str which hex.encoding from txn hash bytes
 func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-	reader io.Reader, authInfo AuthInfo, opt UploadOption,
+	reader io.Reader, authInfo AuthInfo, opt PutObjectOption,
 ) (res UploadResult, err error) {
 	if txnHash == "" {
 		return UploadResult{}, errors.New("txn hash empty")
@@ -96,13 +96,12 @@ func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
 		return UploadResult{}, err
 	}
 
-	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, UploadOption{ContentType: contentType})
+	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, PutObjectOption{ContentType: contentType})
 }
 
 // ObjectInfo contains the metadata of downloaded objects
 type ObjectInfo struct {
 	ObjectName  string
-	Etag        string
 	ContentType string
 	Size        int64
 }
@@ -130,7 +129,8 @@ func (o *GetObjectOption) SetRange(start, end int64) error {
 }
 
 // GetObject download s3 object payload and return the related object info
-func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts GetObjectOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
+func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
+	opts GetObjectOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
@@ -203,12 +203,6 @@ func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, fileP
 
 // getObjInfo generates objectInfo base on the response http header content
 func getObjInfo(bucketName string, objectName string, h http.Header) (ObjectInfo, error) {
-	var etagVal string
-	etag := h.Get("Etag")
-	if etag != "" {
-		etagVal = strings.TrimSuffix(strings.TrimPrefix(etag, "\""), "\"")
-	}
-
 	// Parse content length is exists
 	var size int64 = -1
 	var err error
@@ -234,7 +228,6 @@ func getObjInfo(bucketName string, objectName string, h http.Header) (ObjectInfo
 
 	return ObjectInfo{
 		ObjectName:  objectName,
-		Etag:        etagVal,
 		ContentType: contentType,
 		Size:        size,
 	}, nil

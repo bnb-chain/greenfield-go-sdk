@@ -16,6 +16,7 @@ import (
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
+	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
 
@@ -477,11 +478,12 @@ func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
 // It is used for generate meta of object on the chain
-func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64, dataShards, parityShards int) ([]byte, [][]byte, int64, error) {
-	pieceHashRoots, size, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards)
+func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64,
+	dataShards, parityShards int) ([]byte, [][]byte, int64, storageTypes.RedundancyType, error) {
+	pieceHashRoots, size, redundancyType, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, storageTypes.REDUNDANCY_EC_TYPE, err
 	}
 
-	return pieceHashRoots[0], pieceHashRoots[1:], size, nil
+	return pieceHashRoots[0], pieceHashRoots[1:], size, redundancyType, nil
 }

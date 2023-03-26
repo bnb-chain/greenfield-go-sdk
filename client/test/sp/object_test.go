@@ -40,7 +40,7 @@ func TestPutObject(t *testing.T) {
 	newReader := bytes.NewReader([]byte("test content of object"))
 
 	_, err = client.PutObject(context.Background(), bucketName,
-		ObjectName, txnHash, length, newReader, spClient.NewAuthInfo(false, ""), spClient.UploadOption{})
+		ObjectName, txnHash, length, newReader, spClient.NewAuthInfo(false, ""), spClient.PutObjectOption{})
 	require.NoError(t, err)
 }
 
