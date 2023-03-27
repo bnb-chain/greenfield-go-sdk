@@ -676,7 +676,7 @@ func (c *GnfdClient) PutBucketPolicy(bucketName string, principalStr Principal,
 	putPolicyMsg := storageTypes.NewMsgPutPolicy(km.GetAddr(), resource.String(),
 		principal, statements, opt.PolicyExpireTime)
 
-	return c.sendPutPolicyTxn(putPolicyMsg, *opt.TxOpts)
+	return c.sendPutPolicyTxn(putPolicyMsg, opt.TxOpts)
 }
 
 // PutObjectPolicy apply object policy to the principal, return the txn hash
@@ -697,7 +697,7 @@ func (c *GnfdClient) PutObjectPolicy(bucketName, objectName string, principalStr
 	putPolicyMsg := storageTypes.NewMsgPutPolicy(km.GetAddr(), resource.String(),
 		principal, statements, opt.PolicyExpireTime)
 
-	return c.sendPutPolicyTxn(putPolicyMsg, *opt.TxOpts)
+	return c.sendPutPolicyTxn(putPolicyMsg, opt.TxOpts)
 }
 
 // PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
@@ -713,16 +713,16 @@ func (c *GnfdClient) PutGroupPolicy(groupName string, principalAddr sdk.AccAddre
 	putPolicyMsg := storageTypes.NewMsgPutPolicy(km.GetAddr(), resource.String(),
 		permTypes.NewPrincipalWithAccount(principalAddr), statements, opt.PolicyExpireTime)
 
-	return c.sendPutPolicyTxn(putPolicyMsg, *opt.TxOpts)
+	return c.sendPutPolicyTxn(putPolicyMsg, opt.TxOpts)
 }
 
 // sendPutPolicyTxn broadcast the putPolicy msg and return the txn hash
-func (c *GnfdClient) sendPutPolicyTxn(msg *storageTypes.MsgPutPolicy, txOpts types.TxOption) (string, error) {
+func (c *GnfdClient) sendPutPolicyTxn(msg *storageTypes.MsgPutPolicy, txOpts *types.TxOption) (string, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{msg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{msg}, txOpts)
 	if err != nil {
 		return "", err
 	}
