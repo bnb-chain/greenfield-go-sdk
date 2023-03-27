@@ -28,7 +28,7 @@ func TestCreateBucket(t *testing.T) {
 	})
 
 	_, _, testAddr := testdata.KeyEthSecp256k1TestPubAddr()
-	createBucketMsg := storage_type.NewMsgCreateBucket(client.GetAccount(), bucketName, true, testAddr, nil, 0, nil)
+	createBucketMsg := storage_type.NewMsgCreateBucket(client.GetAccount(), bucketName, storage_type.VISIBILITY_TYPE_PRIVATE, testAddr, nil, 0, nil, 0)
 
 	err := createBucketMsg.ValidateBasic()
 	require.NoError(t, err)

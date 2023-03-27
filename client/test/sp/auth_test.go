@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	spClient "github.com/bnb-chain/greenfield-go-sdk/client/sp"
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	signer "github.com/bnb-chain/greenfield-go-sdk/keys/signer"
@@ -63,7 +64,7 @@ func TestRequestSignV1(t *testing.T) {
 	require.NoError(t, err)
 
 	// (2) server get sender addr
-	signMsg := spClient.GetMsgToSign(req)
+	signMsg := httplib.GetMsgToSign(req)
 	if hex.EncodeToString(signMsg) != signStr {
 		t.Errorf("string to sign not same")
 	}

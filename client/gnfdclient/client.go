@@ -9,7 +9,6 @@ import (
 
 type (
 	GreenfieldClient       = client.GreenfieldClient
-	TmClient               = client.TendermintClient
 	GreenfieldClientOption = client.GreenfieldClientOption
 )
 
