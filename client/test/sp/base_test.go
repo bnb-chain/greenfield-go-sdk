@@ -152,7 +152,7 @@ func TestGetApproval(t *testing.T) {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
-	primaryHsh, hashList, _, err := client.GetPieceHashRoots(bytes.NewReader(buffer.Bytes()), int64(segmentSize), redundancy.DataBlocks, redundancy.ParityBlocks)
+	primaryHsh, hashList, _, redundancyType, err := client.GetPieceHashRoots(bytes.NewReader(buffer.Bytes()), int64(segmentSize), redundancy.DataBlocks, redundancy.ParityBlocks)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -162,7 +162,7 @@ func TestGetApproval(t *testing.T) {
 	for id, hash := range hashList {
 		expectHash[id+1] = hash
 	}
-	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), storageType.VISIBILITY_TYPE_PRIVATE, expectHash, "", storageType.REDUNDANCY_EC_TYPE, 0, nil, nil)
+	createObjectMsg := storageType.NewMsgCreateObject(client.GetAccount(), bucketName, objectName, uint64(1000), storageType.VISIBILITY_TYPE_PRIVATE, expectHash, "", redundancyType, 0, nil, nil)
 	err = createObjectMsg.ValidateBasic()
 	require.NoError(t, err)
 	// test preCreateObject

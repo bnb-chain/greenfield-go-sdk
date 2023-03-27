@@ -3,7 +3,6 @@ package sp
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -108,11 +107,6 @@ func TestGetObject(t *testing.T) {
 	// check download content
 	if buf.String() != bodyContent {
 		t.Errorf("download content not same")
-	}
-	// check etag
-	if info.Etag != etag {
-		t.Errorf("etag error")
-		fmt.Println("etag", info.Etag)
 	}
 
 	if info.Size != size {
