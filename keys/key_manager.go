@@ -6,5 +6,7 @@ type (
 	KeyManager = keys.KeyManager
 )
 
-var NewPrivateKeyManager = keys.NewPrivateKeyManager
-var NewMnemonicKeyManager = keys.NewMnemonicKeyManager
+var (
+	NewPrivateKeyManager  = keys.NewPrivateKeyManager
+	NewMnemonicKeyManager = keys.NewMnemonicKeyManager
+)

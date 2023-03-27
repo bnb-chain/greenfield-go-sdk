@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
+	"github.com/bnb-chain/greenfield/types/s3util"
+	"github.com/rs/zerolog/log"
 )
 
 // UploadResult contains information about the object which has been uploaded
@@ -22,7 +22,7 @@ type UploadResult struct {
 	ETag       string // Hex encoded unique entity tag of the object.
 }
 
-type UploadOption struct {
+type PutObjectOption struct {
 	ContentType string
 }
 
@@ -33,7 +33,8 @@ func (t *UploadResult) String() string {
 // PutObject supports the second stage of uploading the object to bucket.
 // txnHash should be the str which hex.encoding from txn hash bytes
 func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-	reader io.Reader, authInfo AuthInfo, opt UploadOption) (res UploadResult, err error) {
+	reader io.Reader, authInfo AuthInfo, opt PutObjectOption,
+) (res UploadResult, err error) {
 	if txnHash == "" {
 		return UploadResult{}, errors.New("txn hash empty")
 	}
@@ -78,9 +79,10 @@ func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHas
 	}, nil
 }
 
-// FPutObject support upload object from local file
+// FPutObject supports uploading object from local file
 func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
-	filePath, txnHash, contentType string, authInfo AuthInfo) (res UploadResult, err error) {
+	filePath, txnHash, contentType string, authInfo AuthInfo,
+) (res UploadResult, err error) {
 	fReader, err := os.Open(filePath)
 	// If any error fail quickly here.
 	if err != nil {
@@ -94,23 +96,22 @@ func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
 		return UploadResult{}, err
 	}
 
-	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, UploadOption{ContentType: contentType})
+	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, PutObjectOption{ContentType: contentType})
 }
 
-// ObjectInfo contain the meta of downloaded objects
+// ObjectInfo contains the metadata of downloaded objects
 type ObjectInfo struct {
 	ObjectName  string
-	Etag        string
 	ContentType string
 	Size        int64
 }
 
-// DownloadOption contains the options of getObject
-type DownloadOption struct {
+// GetObjectOption contains the options of getObject
+type GetObjectOption struct {
 	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
 }
 
-func (o *DownloadOption) SetRange(start, end int64) error {
+func (o *GetObjectOption) SetRange(start, end int64) error {
 	switch {
 	case 0 < start && end == 0:
 		// `bytes=N-`.
@@ -128,11 +129,13 @@ func (o *DownloadOption) SetRange(start, end int64) error {
 }
 
 // GetObject download s3 object payload and return the related object info
-func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string, opts DownloadOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
-	if err := utils.VerifyBucketName(bucketName); err != nil {
+func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
+	opts GetObjectOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
-	if err := utils.VerifyObjectName(objectName); err != nil {
+
+	if err := s3util.CheckValidObjectName(objectName); err != nil {
 		return nil, ObjectInfo{}, err
 	}
 
@@ -166,7 +169,7 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts DownloadOption, authinfo AuthInfo) error {
+func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts GetObjectOption, authinfo AuthInfo) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {
@@ -177,7 +180,7 @@ func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, fileP
 	}
 
 	// If file exist, open it in append mode
-	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0660)
+	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o660)
 	if err != nil {
 		return err
 	}
@@ -198,14 +201,8 @@ func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, fileP
 	return nil
 }
 
-// getObjInfo generate objectInfo base on the response http header content
+// getObjInfo generates objectInfo base on the response http header content
 func getObjInfo(bucketName string, objectName string, h http.Header) (ObjectInfo, error) {
-	var etagVal string
-	etag := h.Get("Etag")
-	if etag != "" {
-		etagVal = strings.TrimSuffix(strings.TrimPrefix(etag, "\""), "\"")
-	}
-
 	// Parse content length is exists
 	var size int64 = -1
 	var err error
@@ -231,9 +228,7 @@ func getObjInfo(bucketName string, objectName string, h http.Header) (ObjectInfo
 
 	return ObjectInfo{
 		ObjectName:  objectName,
-		Etag:        etagVal,
 		ContentType: contentType,
 		Size:        size,
 	}, nil
-
 }

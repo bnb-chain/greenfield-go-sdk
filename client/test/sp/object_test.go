@@ -3,7 +3,6 @@ package sp
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -40,7 +39,7 @@ func TestPutObject(t *testing.T) {
 	newReader := bytes.NewReader([]byte("test content of object"))
 
 	_, err = client.PutObject(context.Background(), bucketName,
-		ObjectName, txnHash, length, newReader, spClient.NewAuthInfo(false, ""), spClient.UploadOption{})
+		ObjectName, txnHash, length, newReader, spClient.NewAuthInfo(false, ""), spClient.PutObjectOption{})
 	require.NoError(t, err)
 }
 
@@ -99,7 +98,7 @@ func TestGetObject(t *testing.T) {
 		}
 	})
 
-	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.DownloadOption{}, spClient.NewAuthInfo(false, ""))
+	body, info, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.GetObjectOption{}, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 
 	buf := new(strings.Builder)
@@ -109,17 +108,12 @@ func TestGetObject(t *testing.T) {
 	if buf.String() != bodyContent {
 		t.Errorf("download content not same")
 	}
-	// check etag
-	if info.Etag != etag {
-		t.Errorf("etag error")
-		fmt.Println("etag", info.Etag)
-	}
 
 	if info.Size != size {
 		t.Errorf("size error")
 	}
 
-	option := spClient.DownloadOption{}
+	option := spClient.GetObjectOption{}
 	err = option.SetRange(1, 10)
 	require.NoError(t, err)
 	part_data, _, err := client.GetObject(context.Background(), bucketName, ObjectName, option, spClient.NewAuthInfo(false, ""))
@@ -132,5 +126,4 @@ func TestGetObject(t *testing.T) {
 	if buf.String() != bodyContent[1:10] {
 		t.Errorf("download range fail")
 	}
-
 }

@@ -2,10 +2,11 @@ package chain
 
 import (
 	"context"
+	"sync"
+
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/bnb-chain/greenfield/sdk/client"
 	jsonrpcclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
-	"sync"
 )
 
 type (
@@ -14,10 +15,13 @@ type (
 	GreenfieldClientOption = client.GreenfieldClientOption
 )
 
-var WithKeyManager = client.WithKeyManager
-var WithGrpcDialOption = client.WithGrpcDialOption
-var NewGreenfieldClient = client.NewGreenfieldClient
+var (
+	WithKeyManager      = client.WithKeyManager
+	WithGrpcDialOption  = client.WithGrpcDialOption
+	NewGreenfieldClient = client.NewGreenfieldClient
+)
 
+// TendermintClient wraps a rpc and jsonrpc client
 type TendermintClient struct {
 	RpcClient     *TmClient
 	JsonRpcClient *jsonrpcclient.Client // for interacting with votepool
@@ -35,16 +39,19 @@ func NewTendermintClient(provider string) *TendermintClient {
 	}
 }
 
+// GnfdCompositeClient wraps a gRPC and tendermint(rpc) client
 type GnfdCompositeClient struct {
 	*GreenfieldClient
 	*TendermintClient
 	Height int64
 }
 
+// GnfdCompositeClients wraps a slice of GnfdCompositeClients into struct
 type GnfdCompositeClients struct {
 	clients []*GnfdCompositeClient
 }
 
+// NewGnfdCompositClients creates a GnfdCompositeClients using a slice of gRPC and RPC addresses.
 func NewGnfdCompositClients(grpcAddrs, rpcAddrs []string, chainId string, opts ...GreenfieldClientOption) *GnfdCompositeClients {
 	if len(grpcAddrs) == 0 || len(rpcAddrs) == 0 {
 		panic(types.ErrorUrlNotProvided)
@@ -68,6 +75,7 @@ func NewGnfdCompositClients(grpcAddrs, rpcAddrs []string, chainId string, opts .
 	}
 }
 
+// GetClient gets the GnfdCompositeClient with the highest block height
 func (gc *GnfdCompositeClients) GetClient() *GnfdCompositeClient {
 	wg := new(sync.WaitGroup)
 	wg.Add(len(gc.clients))
