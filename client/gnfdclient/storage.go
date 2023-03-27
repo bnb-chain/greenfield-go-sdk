@@ -740,7 +740,7 @@ func (c *GnfdClient) DeleteBucketPolicy(bucketName string, principalAddr sdk.Acc
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 
-	return c.sendDelPolicyTxn(km.GetAddr(), resource, principal, *opt.TxOpts)
+	return c.sendDelPolicyTxn(km.GetAddr(), resource, principal, opt.TxOpts)
 }
 
 func (c *GnfdClient) DeleteObjectPolicy(bucketName, objectName string, principalAddr sdk.AccAddress, opt DeletePolicyOption) (string, error) {
@@ -751,7 +751,7 @@ func (c *GnfdClient) DeleteObjectPolicy(bucketName, objectName string, principal
 
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
-	return c.sendDelPolicyTxn(km.GetAddr(), resource.String(), principal, *opt.TxOpts)
+	return c.sendDelPolicyTxn(km.GetAddr(), resource.String(), principal, opt.TxOpts)
 }
 
 // DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
@@ -764,18 +764,18 @@ func (c *GnfdClient) DeleteGroupPolicy(groupName string, principalAddr sdk.AccAd
 	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 
-	return c.sendDelPolicyTxn(sender, resource, principal, *opt.TxOpts)
+	return c.sendDelPolicyTxn(sender, resource, principal, opt.TxOpts)
 }
 
 // sendDelPolicyTxn broadcast the deletePolicy msg and return the txn hash
-func (c *GnfdClient) sendDelPolicyTxn(operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts types.TxOption) (string, error) {
+func (c *GnfdClient) sendDelPolicyTxn(operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts *types.TxOption) (string, error) {
 	delPolicyMsg := storageTypes.NewMsgDeletePolicy(operator, resource, principal)
 
 	if err := delPolicyMsg.ValidateBasic(); err != nil {
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{delPolicyMsg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{delPolicyMsg}, txOpts)
 	if err != nil {
 		return "", err
 	}
