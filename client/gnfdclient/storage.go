@@ -33,8 +33,8 @@ type Principal string
 type CreateBucketOptions struct {
 	Visibility       *storageTypes.VisibilityType
 	TxOpts           *types.TxOption
-	PaymentAddress   *sdk.AccAddress
-	PrimarySPAddress *sdk.AccAddress
+	PaymentAddress   sdk.AccAddress
+	PrimarySPAddress sdk.AccAddress
 	ChargedQuota     uint64
 }
 
@@ -119,8 +119,8 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 		return "", errors.New("key manager is nil")
 	}
 	var primaryAddr sdk.AccAddress
-	if opts.PrimarySPAddress != nil {
-		primaryAddr = *opts.PrimarySPAddress
+	if len(opts.PrimarySPAddress) > 0 {
+		primaryAddr = opts.PrimarySPAddress
 	} else {
 		// if user has not set primarySP chain address, fetch it from chain
 		primaryAddr, err = c.GetSpAddrFromEndpoint(ctx)
@@ -137,7 +137,7 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 	}
 
 	createBucketMsg := storageTypes.NewMsgCreateBucket(km.GetAddr(), bucketName,
-		visibility, primaryAddr, *opts.PaymentAddress, 0, nil, opts.ChargedQuota)
+		visibility, primaryAddr, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
