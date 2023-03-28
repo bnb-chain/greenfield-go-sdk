@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/bnb-chain/greenfield-go-sdk/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	storage_type "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

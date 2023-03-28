@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bnb-chain/greenfield-go-sdk/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	"github.com/rs/zerolog/log"
 )
