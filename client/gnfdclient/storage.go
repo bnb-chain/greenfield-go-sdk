@@ -148,6 +148,11 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primar
 		return "", err
 	}
 
+	txOpts := &types.TxOption{}
+	if opts.TxOpts != nil {
+		txOpts = opts.TxOpts
+	}
+
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
@@ -250,7 +255,12 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
+	txOpts := &types.TxOption{}
+	if opts.TxOpts != nil {
+		txOpts = opts.TxOpts
+	}
+
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, txOpts)
 	if err != nil {
 		return "", err
 	}

@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield/types/s3util"
 
 	"github.com/bnb-chain/greenfield-go-sdk/types"
-	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
 type UserInfo struct {

@@ -9,9 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield/types/s3util"
-
-	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
 // QuotaInfo indicates the quota info of bucket

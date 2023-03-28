@@ -16,12 +16,12 @@ import (
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
+	error2 "github.com/bnb-chain/greenfield-go-sdk/pkg/error"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	signer "github.com/bnb-chain/greenfield-go-sdk/keys/signer"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/bnb-chain/greenfield-go-sdk/utils"
 )
 
@@ -127,7 +127,7 @@ func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
 // GetKeyManager return the keyManager object
 func (c *SPClient) GetKeyManager() (*keys.KeyManager, error) {
 	if c.keyManager == nil {
-		return nil, types.ErrorKeyManagerNotInit
+		return nil, error2.ErrorKeyManagerNotInit
 	}
 	return c.keyManager, nil
 }
