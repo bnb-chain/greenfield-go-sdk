@@ -7,7 +7,7 @@ import (
 type Account struct {
 }
 
-func (a Account) Sign() {
+func (a Account) Sign(unsignedBytes []byte) ([]byte, error) {
 
 }
 

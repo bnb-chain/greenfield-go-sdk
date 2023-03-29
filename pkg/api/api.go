@@ -36,6 +36,8 @@ func New(chainID string, grpcAddress, rpcAddress string, opts *client.Options) (
 	}, nil
 }
 
-func (c Client) getSPEndpoint(spAddress string) (*url.URL, error) {
-
+func (c Client) bucketRouter(bucketName string) (*url.URL, error) {
+	// 1. headBucket()
+	// 2. get from spEndpoints
+	// 3. get from chain
 }

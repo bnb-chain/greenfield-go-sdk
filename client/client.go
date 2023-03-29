@@ -17,7 +17,6 @@ type IClient interface {
 	Bucket
 	Object
 	Group
-	Account
 	SP
 	Payment
 	Tx
@@ -35,15 +34,11 @@ type Bucket interface {
 	// PutBucketPolicy apply bucket policy to the principal, return the txn hash
 	PutBucketPolicy(bucketName string, principalStr Principal,
 		statements []*permTypes.Statement, opt PutPolicyOption) (string, error)
-
 	// DeleteBucketPolicy delete the bucket policy of the principal
 	DeleteBucketPolicy(bucketName string, principalAddr sdk.AccAddress, opt DeletePolicyOption) (string, error)
-
 	DeleteObjectPolicy(bucketName, objectName string, principalAddr sdk.AccAddress, opt DeletePolicyOption) (string, error)
-
 	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-
 	// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
 	// it queries a bucket policy that grants permission to a group
 	GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error)
@@ -78,6 +73,9 @@ type Object interface {
 type Payment interface {
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt BuyQuotaOption) (string, error)
 	GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (uint64, error)
+	Send()
+	MultiSend()
+	QueryBalances()
 }
 
 type Group interface {
@@ -127,12 +125,6 @@ type Tx interface {
 	CreateTx()
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) error
-}
-
-type Account interface {
-	Send()
-	MultiSend()
-	QueryBalances()
 }
 
 func New() (IClient, error) {
