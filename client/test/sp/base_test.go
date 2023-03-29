@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -210,4 +212,52 @@ func TestChallenge(t *testing.T) {
 	}
 
 	fmt.Println("get hash result", res.PiecesHash)
+}
+
+const errCode = "InternalError"
+const errMsg = "test message"
+const errStatusCode = 403
+
+func TestErrResponse(t *testing.T) {
+	setup()
+	defer shutdown()
+
+	bucketName := "test-bucket"
+	ObjectName := "test-object"
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		startHandle(t, r)
+		testMethod(t, r, "GET")
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(errStatusCode)
+		var (
+			xmlBody []byte
+			err     error
+		)
+
+		var xmlInfo = struct {
+			XMLName   xml.Name `xml:"Error"`
+			Code      string   `xml:"Code"`
+			Message   string   `xml:"Message"`
+			RequestId string   `xml:"RequestId"`
+		}{
+			Code:      errCode,
+			Message:   errMsg,
+			RequestId: "greenfield",
+		}
+		xmlBody, err = xml.Marshal(&xmlInfo)
+		require.NoError(t, err)
+		_, err = w.Write(xmlBody)
+		require.NoError(t, err)
+	})
+
+	_, _, err := client.GetObject(context.Background(), bucketName, ObjectName, spClient.GetObjectOption{}, spClient.NewAuthInfo(false, ""))
+	require.Error(t, err)
+
+	errInfo := err.Error()
+	if !strings.Contains(errInfo, errMsg) || !strings.Contains(errInfo, errCode) || !strings.Contains(errInfo, strconv.Itoa(errStatusCode)) {
+		t.Errorf("err content not right")
+	}
+
 }

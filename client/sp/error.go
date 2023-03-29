@@ -6,45 +6,35 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/bnb-chain/greenfield-go-sdk/utils"
-	"github.com/rs/zerolog/log"
 )
 
-/* **** SAMPLE ERROR RESPONSE ****
+/*
+	**** SAMPLE ERROR RESPONSE ****
+
 <?xml version="1.0" encoding="UTF-8"?>
 <Error>
-   <Code>AccessDenied</Code>
-   <Message>Access Denied</Message>
-   <RequestId>xxx</RequestId>
+
+	<Code>AccessDenied</Code>
+	<Message>Access Denied</Message>
+	<RequestId>xxx</RequestId>
+	<StatusCode>403</StatusCode>
+
 </Error>
 */
+const unknownErr = "unknown error"
 
 // ErrResponse define the information of the error response
 type ErrResponse struct {
-	XMLName    xml.Name       `xml:"Error" json:"-"`
-	Response   *http.Response `xml:"-"`
-	Code       string
+	XMLName    xml.Name `xml:"Error"`
+	Code       string   `xml:"Code"`
+	Message    string   `xml:"Message"`
+	RequestId  string   `xml:"RequestId"`
 	StatusCode int
-	Message    string
-	Resource   string
-	RequestID  string `xml:"RequestId"`
-	Server     string
-	BucketName string
-	ObjectName string
 }
 
 // Error returns the error msg
 func (r ErrResponse) Error() string {
-	decodeURL := ""
-	method := ""
-	if r.Response != nil {
-		decodeURL, _ = utils.DecodeURIComponent(r.Response.Request.URL.String())
-		method = r.Response.Request.Method
-	}
-
-	return fmt.Sprintf("%v %v: %d %v  (Message: %v)",
-		method, decodeURL,
+	return fmt.Sprintf("statusCode %v : code : %s  (Message: %s)",
 		r.StatusCode, r.Code, r.Message)
 }
 
@@ -55,94 +45,77 @@ func constructErrResponse(r *http.Response, bucketName, objectName string) error
 	}
 
 	if r == nil {
-		msg := "Response is empty. "
-		return toInvalidArgumentResp(msg)
-	}
-
-	errorResp := ErrResponse{
-		StatusCode: r.StatusCode,
-		Server:     r.Header.Get("Server"),
-	}
-
-	if errorResp.RequestID == "" {
-		errorResp.RequestID = r.Header.Get("X-Gnfd-Request-Id")
-	}
-	// read error body of response
-	var data []byte
-	var readErr error
-	if r.Body != nil {
-		data, readErr = io.ReadAll(r.Body)
-		if readErr != nil {
-			errorResp = ErrResponse{
-				StatusCode: r.StatusCode,
-				Code:       r.Status,
-				Message:    readErr.Error(),
-				BucketName: bucketName,
-			}
+		return ErrResponse{
+			StatusCode: r.StatusCode,
+			Code:       unknownErr,
+			Message:    "Response is empty ",
+			RequestId:  "greenfield",
 		}
 	}
 
-	var decodeErr error
-	// decode the xml error body if exists
-	if readErr == nil && data != nil {
-		decodeErr = xml.Unmarshal(data, &errorResp)
-		if decodeErr != nil {
-			log.Debug().Err(decodeErr).Msg("unmarshal xml body fail ")
+	errResp := ErrResponse{}
+	errResp.StatusCode = r.StatusCode
+
+	// read err body of max 10M size
+	const maxBodySize = 10 * 1024 * 1024
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxBodySize))
+	if err != nil {
+		return ErrResponse{
+			StatusCode: r.StatusCode,
+			Code:       "InternalError",
+			Message:    err.Error(),
 		}
 	}
-
-	if decodeErr != nil || data == nil || r.Body == nil {
-		errBody := bytes.TrimSpace(data)
-
+	// decode the xml content from response body
+	decodeErr := xml.NewDecoder(bytes.NewReader(body)).Decode(&errResp)
+	if decodeErr != nil {
 		switch r.StatusCode {
 		case http.StatusNotFound:
-			if objectName == "" {
-				errorResp = ErrResponse{
-					StatusCode: r.StatusCode,
-					Code:       "NoSuchBucket",
-					Message:    "The specified bucket does not exist.",
-					BucketName: bucketName,
-				}
-			} else {
-				errorResp = ErrResponse{
-					StatusCode: r.StatusCode,
-					Code:       "NoSuchObject",
-					Message:    "The specified object does not exist.",
-					BucketName: bucketName,
-					ObjectName: objectName,
+			if bucketName != "" {
+				if objectName == "" {
+					errResp = ErrResponse{
+						StatusCode: r.StatusCode,
+						Code:       "NoSuchBucket",
+						Message:    "The specified bucket does not exist.",
+					}
+				} else {
+					errResp = ErrResponse{
+						StatusCode: r.StatusCode,
+						Code:       "NoSuchObject",
+						Message:    "The specified object does not exist.",
+					}
 				}
 			}
 		case http.StatusForbidden:
-			errorResp = ErrResponse{
+			errResp = ErrResponse{
 				StatusCode: r.StatusCode,
 				Code:       "AccessDenied",
 				Message:    "no permission to access the resource",
-				BucketName: bucketName,
-				ObjectName: objectName,
 			}
 		default:
-			msg := "unknown error"
+			errBody := bytes.TrimSpace(body)
+			msg := unknownErr
 			if len(errBody) > 0 {
 				msg = string(errBody)
 			}
-			errorResp = ErrResponse{
+			fmt.Println("default error msg :", msg)
+			errResp = ErrResponse{
 				StatusCode: r.StatusCode,
-				Code:       r.Status,
+				Code:       unknownErr,
 				Message:    msg,
-				BucketName: bucketName,
 			}
 		}
 	}
 
-	return errorResp
+	return errResp
 }
 
-// toInvalidArgumentResp returns invalid  argument response.
+// toInvalidArgumentResp returns invalid argument response.
 func toInvalidArgumentResp(message string) error {
 	return ErrResponse{
 		StatusCode: http.StatusBadRequest,
 		Code:       "InvalidArgument",
 		Message:    message,
-		RequestID:  "greenfield",
+		RequestId:  "greenfield",
 	}
 }
