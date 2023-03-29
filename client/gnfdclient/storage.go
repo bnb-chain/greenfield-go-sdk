@@ -31,7 +31,7 @@ type Principal string
 
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
-	Visibility       *storageTypes.VisibilityType
+	Visibility       storageTypes.VisibilityType
 	TxOpts           *types.TxOption
 	PaymentAddress   sdk.AccAddress
 	PrimarySPAddress sdk.AccAddress
@@ -40,7 +40,7 @@ type CreateBucketOptions struct {
 
 // CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
 type CreateObjectOptions struct {
-	Visibility      *storageTypes.VisibilityType
+	Visibility      storageTypes.VisibilityType
 	TxOpts          *types.TxOption
 	SecondarySPAccs []sdk.AccAddress
 	ContentType     string
@@ -129,15 +129,8 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 		}
 	}
 
-	var visibility storageTypes.VisibilityType
-	if opts.Visibility != nil {
-		visibility = *opts.Visibility
-	} else {
-		visibility = storageTypes.VISIBILITY_TYPE_PRIVATE
-	}
-
 	createBucketMsg := storageTypes.NewMsgCreateBucket(km.GetAddr(), bucketName,
-		visibility, primaryAddr, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
+		opts.Visibility, primaryAddr, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
@@ -231,15 +224,8 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		contentType = sp.ContentDefault
 	}
 
-	var visibility storageTypes.VisibilityType
-	if opts.Visibility != nil {
-		visibility = *opts.Visibility
-	} else {
-		visibility = storageTypes.VISIBILITY_TYPE_INHERIT
-	}
-
 	createObjectMsg := storageTypes.NewMsgCreateObject(km.GetAddr(), bucketName, objectName,
-		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
+		uint64(size), opts.Visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
 		return "", err
