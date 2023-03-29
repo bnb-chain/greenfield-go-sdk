@@ -20,6 +20,7 @@ type IClient interface {
 	Account
 	SP
 	Payment
+	Tx
 }
 
 type Bucket interface {
@@ -45,7 +46,7 @@ type Bucket interface {
 
 	// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
 	// it queries a bucket policy that grants permission to a group
-	GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error) {
+	GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error)
 }
 
 type Object interface {
@@ -68,7 +69,6 @@ type Object interface {
 
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-
 
 	// GetObjectPolicyOfGroup get the object policy info of the group specified by group id
 	// it queries an object policy that grants permission to a group
@@ -119,6 +119,14 @@ type SP interface {
 	QueryStorageProviders()
 	QueryStorageProvider()
 	QueryParams()
+}
+
+type Tx interface {
+	BroadcastTx(txBytes []byte)
+	SimulateTx()
+	CreateTx()
+	WaitForBlockHeight(ctx context.Context, height int64) error
+	WaitForTx(ctx context.Context, hash string) error
 }
 
 type Account interface {
