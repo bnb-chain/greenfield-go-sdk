@@ -38,7 +38,7 @@ func TestPutObject(t *testing.T) {
 	txnHash := "test hash"
 	newReader := bytes.NewReader([]byte("test content of object"))
 
-	_, err = client.PutObject(context.Background(), bucketName,
+	err = client.PutObject(context.Background(), bucketName,
 		ObjectName, txnHash, length, newReader, spClient.NewAuthInfo(false, ""), spClient.PutObjectOption{})
 	require.NoError(t, err)
 }
@@ -66,7 +66,7 @@ func TestFPutObject(t *testing.T) {
 
 	txnHash := "test hash"
 
-	_, err := client.FPutObject(context.Background(), bucketName,
+	err := client.FPutObject(context.Background(), bucketName,
 		ObjectName, filePath, txnHash, spClient.ContentDefault, spClient.NewAuthInfo(false, ""))
 	require.NoError(t, err)
 }
