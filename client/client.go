@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/api"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
@@ -138,7 +137,8 @@ type Tx interface {
 	WaitForTx(ctx context.Context, hash string) error
 }
 
+// TODO(leo) check if it is needed ,  cause import cycle
 func New() (IClient, error) {
-	c := api.Client{}
-	return &c, nil
+	// c := api.Client{}
+	return nil, nil
 }
