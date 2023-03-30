@@ -4,8 +4,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/bnb-chain/greenfield-go-sdk/client/sp"
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/api"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
@@ -27,8 +25,8 @@ type Bucket interface {
 	DeleteBucket(bucketName string, opt DeleteBucketOption) (string, error)
 	UpdateBucketVisibility(ctx context.Context, bucketName string,
 		visibility storageTypes.VisibilityType, opt UpdateVisibilityOption) (string, error)
-	GetBucketReadQuota(ctx context.Context, bucketName string) (sp.QuotaInfo, error)
-	ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt ListReadRecordOption) (sp.QuotaRecordInfo, error)
+	GetBucketReadQuota(ctx context.Context, bucketName string, authInfo AuthInfo) (QuotaInfo, error)
+	ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt ListReadRecordOption, authInfo AuthInfo) (QuotaRecordInfo, error)
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
 	// PutBucketPolicy apply bucket policy to the principal, return the txn hash
@@ -39,18 +37,16 @@ type Bucket interface {
 	DeleteObjectPolicy(bucketName, objectName string, principalAddr sdk.AccAddress, opt DeletePolicyOption) (string, error)
 	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-	// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
-	// it queries a bucket policy that grants permission to a group
-	GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error)
+	ListBuckets(ctx context.Context, userInfo UserInfo, authInfo AuthInfo) (ListBucketsResponse, error)
 }
 
 type Object interface {
 	CreateObject(ctx context.Context, bucketName, objectName string,
 		reader io.Reader, opts *CreateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-		reader io.Reader, opt sp.PutObjectOption) (res sp.UploadResult, err error)
+		reader io.Reader, opt PutObjectOption) (err error)
 	CancelCreateObject(bucketName, objectName string, opt CancelCreateOption) (string, error)
-	GetObject(ctx context.Context, bucketName, objectName string, opt sp.GetObjectOption) (io.ReadCloser, sp.ObjectInfo, error)
+	GetObject(ctx context.Context, bucketName, objectName string, opt GetObjectOption) (io.ReadCloser, GetObjectResult, error)
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
 	HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error)
@@ -65,9 +61,7 @@ type Object interface {
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
 
-	// GetObjectPolicyOfGroup get the object policy info of the group specified by group id
-	// it queries an object policy that grants permission to a group
-	GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error)
+	ListObjects(ctx context.Context, bucketName string, authInfo AuthInfo) (ListObjectsResponse, error)
 }
 
 type Payment interface {
@@ -100,6 +94,13 @@ type Group interface {
 
 	// DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
 	DeleteGroupPolicy(groupName string, principalAddr sdk.AccAddress, opt DeletePolicyOption) (string, error)
+
+	// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
+	// it queries a bucket policy that grants permission to a group
+	GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error)
+	// GetObjectPolicyOfGroup get the object policy info of the group specified by group id
+	// it queries an object policy that grants permission to a group
+	GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error)
 }
 
 type SP interface {
@@ -110,6 +111,15 @@ type SP interface {
 	GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
 	GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error)
+
+	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket,
+		authInfo AuthInfo) (*storageTypes.MsgCreateBucket, error)
+
+	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject,
+		authInfo AuthInfo) (*storageTypes.MsgCreateObject, error)
+
+	ChallengeSP(ctx context.Context, info ChallengeInfo, authInfo AuthInfo) (ChallengeResult, error)
+
 	CreateStorageProvider()
 	EditStorageProvider()
 	Deposit()
@@ -127,7 +137,8 @@ type Tx interface {
 	WaitForTx(ctx context.Context, hash string) error
 }
 
+// TODO(leo) check if it is needed ,  cause import cycle
 func New() (IClient, error) {
-	c := api.Client{}
-	return &c, nil
+	// c := api.Client{}
+	return nil, nil
 }

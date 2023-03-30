@@ -1,12 +1,15 @@
 package client
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/account"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/account"
+	sdkerror "github.com/bnb-chain/greenfield-go-sdk/pkg/error"
 )
 
 type BasicOption struct {
@@ -19,7 +22,7 @@ type Principal string
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
 	BasicOption
-	Visibility       *storageTypes.VisibilityType
+	Visibility       storageTypes.VisibilityType
 	TxOpts           *types.TxOption
 	PaymentAddress   sdk.AccAddress
 	PrimarySPAddress sdk.AccAddress
@@ -29,7 +32,7 @@ type CreateBucketOptions struct {
 // CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
 type CreateObjectOptions struct {
 	BasicOption
-	Visibility      *storageTypes.VisibilityType
+	Visibility      storageTypes.VisibilityType
 	TxOpts          *types.TxOption
 	SecondarySPAccs []sdk.AccAddress
 	ContentType     string
@@ -78,9 +81,10 @@ type ComputeHashOptions struct {
 	ParityShards uint32
 }
 
-// ListReadRecordOption indicates the start timestamp of the return read quota record
-type ListReadRecordOption struct {
+// ListReadRecordOptions indicates the start timestamp of the return read quota record
+type ListReadRecordOptions struct {
 	StartTimeStamp int64
+	MaxRecords     int
 }
 
 type PutPolicyOption struct {
@@ -95,4 +99,40 @@ type DeletePolicyOption struct {
 type NewStatementOptions struct {
 	StatementExpireTime *time.Time
 	LimitSize           uint64
+}
+
+type ApproveBucketOptions struct {
+	IsPublic       bool
+	PaymentAddress sdk.AccAddress
+}
+
+type ApproveObjectOptions struct {
+	IsPublic        bool
+	SecondarySPAccs []sdk.AccAddress
+}
+
+type PutObjectOption struct {
+	ContentType string
+}
+
+// GetObjectOption contains the options of getObject
+type GetObjectOption struct {
+	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+}
+
+func (o *GetObjectOption) SetRange(start, end int64) error {
+	switch {
+	case 0 < start && end == 0:
+		// `bytes=N-`.
+		o.Range = fmt.Sprintf("bytes=%d-", start)
+	case 0 <= start && start <= end:
+		// `bytes=N-M`
+		o.Range = fmt.Sprintf("bytes=%d-%d", start, end)
+	default:
+		return sdkerror.ToInvalidArgumentResp(
+			fmt.Sprintf(
+				"Invalid Range : start=%d end=%d",
+				start, end))
+	}
+	return nil
 }
