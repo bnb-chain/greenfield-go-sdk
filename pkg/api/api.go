@@ -70,8 +70,8 @@ func New(chainID string, grpcAddress, rpcAddress string, gnfdopts ...chainclient
 	return c, nil
 }
 
-// getSPUrlFromBucket route url of the sp from bucket name
-func (c *Client) getSPUrlFromBucket(bucketName string) (*url.URL, error) {
+// getSPUrlByBucket route url of the sp from bucket name
+func (c *Client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	ctx := context.Background()
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
@@ -96,8 +96,8 @@ func (c *Client) getSPUrlFromBucket(bucketName string) (*url.URL, error) {
 	}
 }
 
-// getSPUrlFromAddr route url of the sp from sp address
-func (c *Client) getSPUrlFromAddr(address string) (*url.URL, error) {
+// getSPUrlByAddr route url of the sp from sp address
+func (c *Client) getSPUrlByAddr(address string) (*url.URL, error) {
 	if _, ok := c.spEndpoints[address]; ok {
 		return c.spEndpoints[address], nil
 	}

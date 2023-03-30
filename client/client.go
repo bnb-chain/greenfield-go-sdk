@@ -26,7 +26,7 @@ type Bucket interface {
 	UpdateBucketVisibility(ctx context.Context, bucketName string,
 		visibility storageTypes.VisibilityType, opt UpdateVisibilityOption) (string, error)
 	GetBucketReadQuota(ctx context.Context, bucketName string, authInfo AuthInfo) (QuotaInfo, error)
-	ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt ListReadRecordOption, authInfo AuthInfo) (QuotaRecordInfo, error)
+	ListBucketReadRecord(ctx context.Context, bucketName string, maxRecords int, opt ListReadRecordOptions, authInfo AuthInfo) (QuotaRecordInfo, error)
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
 	// PutBucketPolicy apply bucket policy to the principal, return the txn hash
@@ -109,8 +109,8 @@ type SP interface {
 	ListSP(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error)
 	// GetSPInfo return the sp info  the sp chain address
 	GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
-	// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
-	GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error)
+	// GetSpAddrByEndpoint return the chain addr according to the SP endpoint
+	GetSpAddrByEndpoint(ctx context.Context) (sdk.AccAddress, error)
 
 	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket,
 		authInfo AuthInfo) (*storageTypes.MsgCreateBucket, error)

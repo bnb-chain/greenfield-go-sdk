@@ -45,7 +45,7 @@ func (c *Client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 		isAdminApi: true,
 	}
 
-	endpoint, err := c.getSPUrlFromBucket(createBucketMsg.BucketName)
+	endpoint, err := c.getSPUrlByAddr(createBucketMsg.GetPrimarySpAddress())
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (c *Client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 		isAdminApi: true,
 	}
 
-	endpoint, err := c.getSPUrlFromBucket(createObjectMsg.BucketName)
+	endpoint, err := c.getSPUrlByBucket(createObjectMsg.BucketName)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (c *Client) ChallengeSP(ctx context.Context, info client.ChallengeInfo, aut
 		return client.ChallengeResult{}, err
 	}
 
-	endpoint, err := c.getSPUrlFromBucket(objectInfo.BucketName)
+	endpoint, err := c.getSPUrlByBucket(objectInfo.BucketName)
 	if err != nil {
 		return client.ChallengeResult{}, err
 	}
@@ -228,8 +228,8 @@ func (c *Client) ListSP(ctx context.Context, isInService bool) ([]spTypes.Storag
 	return spInfoList, nil
 }
 
-// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
-func (c *Client) GetSpAddrFromEndpoint(ctx context.Context, spEndpoint string) (sdk.AccAddress, error) {
+// GetSpAddrByEndpoint return the chain addr according to the SP endpoint
+func (c *Client) GetSpAddrByEndpoint(ctx context.Context, spEndpoint string) (sdk.AccAddress, error) {
 	spList, err := c.ListSP(ctx, false)
 	if err != nil {
 		return nil, err

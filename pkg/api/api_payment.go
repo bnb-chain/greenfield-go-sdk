@@ -87,7 +87,7 @@ func (c *Client) GetBucketReadQuota(ctx context.Context, bucketName string, auth
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlFromBucket(bucketName)
+	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
 		return client.QuotaInfo{}, err
 	}
@@ -155,7 +155,7 @@ func (c *Client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlFromBucket(bucketName)
+	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
 		return client.QuotaRecordInfo{}, err
 	}

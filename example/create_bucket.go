@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	cli, _ := client.New(,option)
+	cli, _ := client.New()
 	cli.Send()
 
 	cli.Send()

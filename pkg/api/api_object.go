@@ -191,7 +191,7 @@ func (c *Client) PutObject(ctx context.Context, bucketName, objectName, txnHash 
 		txnHash: txnHash,
 	}
 
-	endpoint, err := c.getSPUrlFromBucket(bucketName)
+	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlFromBucket(bucketName)
+	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
 		return nil, ObjectInfo{}, err
 	}
@@ -441,7 +441,7 @@ func (c *Client) ListObjects(ctx context.Context, bucketName string, authInfo Au
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlFromBucket(bucketName)
+	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
 		return client.ListObjectsResponse{}, err
 	}

@@ -218,7 +218,7 @@ func (c *Client) ListBuckets(ctx context.Context, userInfo client.UserInfo, auth
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlFromAddr(userInfo.Address)
+	endpoint, err := c.getSPUrlByAddr(userInfo.Address)
 	if err != nil {
 		return client.ListBucketsResponse{}, err
 	}
