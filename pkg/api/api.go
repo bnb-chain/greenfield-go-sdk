@@ -58,10 +58,10 @@ func New(chainID string, grpcAddress, rpcAddress string, gnfdopts ...chainclient
 		chainClient:      cc,
 		tendermintClient: &tc,
 		httpClient:       &http.Client{},
+		userAgent:        types.UserAgent,
 	}
-
-	ctx := context.Background()
-	spInfo, err := c.GetSPInfo(ctx)
+	// fetch sp endpoints info from chain
+	spInfo, err := c.GetSPAddrInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (c *Client) getSPUrlFromBucket(bucketName string) (*url.URL, error) {
 		return c.spEndpoints[primarySP], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.GetSPInfo(ctx)
+	newSpInfo, err := c.GetSPAddrInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +98,11 @@ func (c *Client) getSPUrlFromBucket(bucketName string) (*url.URL, error) {
 
 // getSPUrlFromAddr route url of the sp from sp address
 func (c *Client) getSPUrlFromAddr(address string) (*url.URL, error) {
-	ctx := context.Background()
 	if _, ok := c.spEndpoints[address]; ok {
 		return c.spEndpoints[address], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.GetSPInfo(ctx)
+	newSpInfo, err := c.GetSPAddrInfo()
 	if err != nil {
 		return nil, err
 	}

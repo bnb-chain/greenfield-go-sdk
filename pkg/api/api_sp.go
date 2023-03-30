@@ -186,9 +186,9 @@ func (c *Client) ChallengeSP(ctx context.Context, info client.ChallengeInfo, aut
 	return result, nil
 }
 
-func (c *Client) GetSPInfo(ctx context.Context) (map[string]*url.URL, error) {
+func (c *Client) GetSPAddrInfo() (map[string]*url.URL, error) {
+	ctx := context.Background()
 	spInfo := make(map[string]*url.URL, 0)
-
 	request := &spTypes.QueryStorageProvidersRequest{}
 	gnfdRep, err := c.chainClient.StorageProviders(ctx, request)
 	if err != nil {
@@ -196,7 +196,6 @@ func (c *Client) GetSPInfo(ctx context.Context) (map[string]*url.URL, error) {
 	}
 	spList := gnfdRep.GetSps()
 	for _, info := range spList {
-		//spInfoList = append(spInfoList, *info)
 		endpoint := info.Endpoint
 		urlInfo, urlErr := utils.GetEndpointURL(endpoint, c.Secure)
 		if urlErr != nil {
