@@ -81,9 +81,10 @@ type ComputeHashOptions struct {
 	ParityShards uint32
 }
 
-// ListReadRecordOption indicates the start timestamp of the return read quota record
-type ListReadRecordOption struct {
+// ListReadRecordOptions indicates the start timestamp of the return read quota record
+type ListReadRecordOptions struct {
 	StartTimeStamp int64
+	MaxRecords     int
 }
 
 type PutPolicyOption struct {
