@@ -31,11 +31,10 @@ type Principal string
 
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
-	Visibility       storageTypes.VisibilityType
-	TxOpts           *types.TxOption
-	PaymentAddress   sdk.AccAddress
-	PrimarySPAddress sdk.AccAddress
-	ChargedQuota     uint64
+	Visibility     storageTypes.VisibilityType
+	TxOpts         *types.TxOption
+	PaymentAddress sdk.AccAddress
+	ChargedQuota   uint64
 }
 
 // CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
@@ -64,6 +63,10 @@ type BuyQuotaOption struct {
 }
 
 type UpdateVisibilityOption struct {
+	TxOpts *types.TxOption
+}
+
+type UpdatePaymentOption struct {
 	TxOpts *types.TxOption
 }
 
@@ -109,7 +112,7 @@ type NewStatementOptions struct {
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts CreateBucketOptions) (string, error) {
+func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primarySPAddr sdk.AccAddress, opts CreateBucketOptions) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -118,19 +121,16 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, opts C
 	if err != nil {
 		return "", errors.New("key manager is nil")
 	}
-	var primaryAddr sdk.AccAddress
-	if len(opts.PrimarySPAddress) > 0 {
-		primaryAddr = opts.PrimarySPAddress
+
+	var visibility storageTypes.VisibilityType
+	if opts.Visibility == storageTypes.VISIBILITY_TYPE_UNSPECIFIED {
+		visibility = storageTypes.VISIBILITY_TYPE_PRIVATE // set default visibility type
 	} else {
-		// if user has not set primarySP chain address, fetch it from chain
-		primaryAddr, err = c.GetSpAddrFromEndpoint(ctx)
-		if err != nil {
-			return "", err
-		}
+		visibility = opts.Visibility
 	}
 
 	createBucketMsg := storageTypes.NewMsgCreateBucket(km.GetAddr(), bucketName,
-		opts.Visibility, primaryAddr, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
+		visibility, primarySPAddr, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
@@ -224,8 +224,15 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		contentType = sp.ContentDefault
 	}
 
+	var visibility storageTypes.VisibilityType
+	if opts.Visibility == storageTypes.VISIBILITY_TYPE_UNSPECIFIED {
+		visibility = storageTypes.VISIBILITY_TYPE_INHERIT // set default visibility type
+	} else {
+		visibility = opts.Visibility
+	}
+
 	createObjectMsg := storageTypes.NewMsgCreateObject(km.GetAddr(), bucketName, objectName,
-		uint64(size), opts.Visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
+		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
 		return "", err
@@ -295,7 +302,7 @@ func (c *GnfdClient) CancelCreateObject(bucketName, objectName string, opt Cance
 // PutObject upload payload of object to storage provider
 func (c *GnfdClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
 	reader io.Reader, opt sp.PutObjectOption,
-) (res sp.UploadResult, err error) {
+) (err error) {
 	return c.SPClient.PutObject(ctx, bucketName, objectName, txnHash,
 		objectSize, reader, sp.NewAuthInfo(false, ""), opt)
 }
@@ -349,6 +356,28 @@ func (c *GnfdClient) UpdateBucketVisibility(ctx context.Context, bucketName stri
 	}
 
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
+
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.TxResponse.TxHash, err
+}
+
+// UpdateBucketPaymentAddr  update the payment addr of bucket
+func (c *GnfdClient) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
+	paymentAddr sdk.AccAddress, opt UpdatePaymentOption) (string, error) {
+	km, err := c.ChainClient.GetKeyManager()
+	if err != nil {
+		return "", errors.New("key manager is nil")
+	}
+	bucketInfo, err := c.HeadBucket(ctx, bucketName)
+	if err != nil {
+		return "", err
+	}
+
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, bucketInfo.Visibility)
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {
