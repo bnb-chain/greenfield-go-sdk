@@ -1,77 +1,52 @@
-package client
+package types
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/bnb-chain/greenfield/sdk/types"
+	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/account"
 	sdkerror "github.com/bnb-chain/greenfield-go-sdk/pkg/error"
 )
-
-type BasicOption struct {
-	TxOption types.TxOption
-	Account  account.Account
-}
 
 type Principal string
 
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
-	BasicOption
 	Visibility       storageTypes.VisibilityType
-	TxOpts           *types.TxOption
+	TxOpts           *gnfdsdktypes.TxOption
 	PaymentAddress   sdk.AccAddress
 	PrimarySPAddress sdk.AccAddress
 	ChargedQuota     uint64
 }
 
-// CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
-type CreateObjectOptions struct {
-	BasicOption
-	Visibility      storageTypes.VisibilityType
-	TxOpts          *types.TxOption
-	SecondarySPAccs []sdk.AccAddress
-	ContentType     string
-	IsReplicaType   bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
-}
-
-type DeleteObjectOption struct {
-	TxOpts *types.TxOption
-}
-
-type DeleteBucketOption struct {
-	TxOpts *types.TxOption
-}
-
 type CancelCreateOption struct {
-	TxOpts *types.TxOption
+	TxOpts *gnfdsdktypes.TxOption
 }
 
 type BuyQuotaOption struct {
-	TxOpts *types.TxOption
+	TxOpts *gnfdsdktypes.TxOption
 }
 
 type UpdateVisibilityOption struct {
-	TxOpts *types.TxOption
+	TxOpts *gnfdsdktypes.TxOption
 }
 
 // CreateGroupOptions  indicates the meta to construct createGroup msg
 type CreateGroupOptions struct {
 	InitGroupMember []sdk.AccAddress
-	TxOpts          *types.TxOption
+	TxOpts          *gnfdsdktypes.TxOption
 }
 
 // UpdateGroupMemberOption indicates the info to update group member
 type UpdateGroupMemberOption struct {
-	TxOpts *types.TxOption
+	TxOpts *gnfdsdktypes.TxOption
 }
 
 type LeaveGroupOption struct {
-	TxOpts *types.TxOption
+	TxOpts *gnfdsdktypes.TxOption
 }
 
 // ComputeHashOptions indicates the metadata of redundancy strategy
@@ -88,12 +63,12 @@ type ListReadRecordOptions struct {
 }
 
 type PutPolicyOption struct {
-	TxOpts           *types.TxOption
+	TxOpts           *gnfdsdktypes.TxOption
 	PolicyExpireTime *time.Time
 }
 
 type DeletePolicyOption struct {
-	TxOpts *types.TxOption
+	TxOpts *gnfdsdktypes.TxOption
 }
 
 type NewStatementOptions struct {

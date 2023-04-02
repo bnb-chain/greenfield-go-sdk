@@ -11,6 +11,7 @@ require (
 	github.com/evmos/ethermint v0.6.1-0.20220919141022-34226aa7b1fa
 	github.com/rs/zerolog v1.29.0
 	github.com/stretchr/testify v1.8.1
+	google.golang.org/grpc v1.53.0
 )
 
 require (
@@ -128,7 +129,6 @@ require (
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923 // indirect
-	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.28.2-0.20220831092852-f930b1dc76e8 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

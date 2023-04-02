@@ -2,10 +2,11 @@ package client
 
 import (
 	"encoding/xml"
-	"io"
 
 	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 )
+
+// TODO: remove to types
 
 // QuotaInfo indicates the quota info of bucket
 type QuotaInfo struct {
@@ -42,22 +43,16 @@ type GetObjectResult struct {
 	Size        int64
 }
 
-// AuthInfo is the authorization info of requests
-type AuthInfo struct {
-	SignType      string // if using wallet sign, set authV2
-	WalletSignStr string
-}
-
 type UserInfo struct {
 	Address string
 }
 
-type ListObjectsResponse struct {
+type ListObjectsResult struct {
 	// objects defines the list of object
 	Objects []*ObjectMeta `json:"objects"`
 }
 
-type ListBucketsResponse struct {
+type ListBucketsResult struct {
 	// buckets defines the list of bucket
 	Buckets []*BucketMeta `json:"buckets"`
 }
@@ -132,20 +127,4 @@ type BucketInfo struct {
 	ReadQuota uint64 `json:"read_quota,string"`
 	// billing info of the bucket
 	BillingInfo storageType.BillingInfo `json:"billing_info"`
-}
-
-// ChallengeInfo indicates the challenge object info
-// RedundancyIndex if it is primary sp, the value should be -1，
-// else it indicates the index of secondary sp
-type ChallengeInfo struct {
-	ObjectId        string
-	PieceIndex      int
-	RedundancyIndex int
-}
-
-// ChallengeResult indicates the challenge hash and data results
-type ChallengeResult struct {
-	PieceData     io.ReadCloser
-	IntegrityHash string
-	PiecesHash    []string
 }

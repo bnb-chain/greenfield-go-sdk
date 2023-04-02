@@ -1,21 +1,52 @@
-package api
+package client
 
 import (
 	"context"
 	"errors"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/bnb-chain/greenfield-go-sdk/client"
-	"github.com/bnb-chain/greenfield/sdk/types"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
+	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+type Group interface {
+	// CreateGroup create a new group on greenfield chain
+	// the group members can be initialized  or not
+	CreateGroup(groupName string, opt types.CreateGroupOptions) (string, error)
+	// DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
+	DeleteGroup(groupName string, txOpts gnfdSdkTypes.TxOption) (string, error)
+	// UpdateGroupMember support adding or removing members from the group and return the txn hash
+	UpdateGroupMember(groupName string, groupOwner sdk.AccAddress,
+		addMembers, removeMembers []sdk.AccAddress, opts types.UpdateGroupMemberOption) (string, error)
+	LeaveGroup(groupName string, groupOwner sdk.AccAddress, opt types.LeaveGroupOption) (string, error)
+	// HeadGroup query the groupInfo on chain, return the group info if exists
+	// return err info if group not exist
+	HeadGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress) (*storageTypes.GroupInfo, error)
+	// HeadGroupMember query the group member info on chain, return true if the member exists in group
+	HeadGroupMember(ctx context.Context, groupName string, groupOwner, headMember sdk.AccAddress) bool
+
+	// PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
+	PutGroupPolicy(groupName string, principalAddr sdk.AccAddress,
+		statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
+
+	// DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
+	DeleteGroupPolicy(groupName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
+
+	// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
+	// it queries a bucket policy that grants permission to a group
+	GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error)
+	// GetObjectPolicyOfGroup get the object policy info of the group specified by group id
+	// it queries an object policy that grants permission to a group
+	GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error)
+}
+
 // CreateGroup create a new group on greenfield chain
 // the group members can be initialized  or not
-func (c *Client) CreateGroup(groupName string, opt client.CreateGroupOptions) (string, error) {
+func (c *client) CreateGroup(groupName string, opt types.CreateGroupOptions) (string, error) {
 	km, err := c.chainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -36,7 +67,7 @@ func (c *Client) CreateGroup(groupName string, opt client.CreateGroupOptions) (s
 }
 
 // DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
-func (c *Client) DeleteGroup(groupName string, txOpts types.TxOption) (string, error) {
+func (c *client) DeleteGroup(groupName string, txOpts gnfdSdkTypes.TxOption) (string, error) {
 	km, err := c.chainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -56,8 +87,8 @@ func (c *Client) DeleteGroup(groupName string, txOpts types.TxOption) (string, e
 }
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
-func (c *Client) UpdateGroupMember(groupName string, groupOwner sdk.AccAddress,
-	addMembers, removeMembers []sdk.AccAddress, opts client.UpdateGroupMemberOption) (string, error) {
+func (c *client) UpdateGroupMember(groupName string, groupOwner sdk.AccAddress,
+	addMembers, removeMembers []sdk.AccAddress, opts types.UpdateGroupMemberOption) (string, error) {
 	km, err := c.chainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -83,7 +114,7 @@ func (c *Client) UpdateGroupMember(groupName string, groupOwner sdk.AccAddress,
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *Client) LeaveGroup(groupName string, groupOwner sdk.AccAddress, opt client.LeaveGroupOption) (string, error) {
+func (c *client) LeaveGroup(groupName string, groupOwner sdk.AccAddress, opt types.LeaveGroupOption) (string, error) {
 	km, err := c.chainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -100,7 +131,7 @@ func (c *Client) LeaveGroup(groupName string, groupOwner sdk.AccAddress, opt cli
 
 // HeadGroup query the groupInfo on chain, return the group info if exists
 // return err info if group not exist
-func (c *Client) HeadGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress) (*storageTypes.GroupInfo, error) {
+func (c *client) HeadGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress) (*storageTypes.GroupInfo, error) {
 	headGroupRequest := storageTypes.QueryHeadGroupRequest{
 		GroupOwner: groupOwner.String(),
 		GroupName:  groupName,
@@ -115,7 +146,7 @@ func (c *Client) HeadGroup(ctx context.Context, groupName string, groupOwner sdk
 }
 
 // HeadGroupMember query the group member info on chain, return true if the member exists in group
-func (c *Client) HeadGroupMember(ctx context.Context, groupName string, groupOwner, headMember sdk.AccAddress) bool {
+func (c *client) HeadGroupMember(ctx context.Context, groupName string, groupOwner, headMember sdk.AccAddress) bool {
 	headGroupRequest := storageTypes.QueryHeadGroupMemberRequest{
 		GroupName:  groupName,
 		GroupOwner: groupOwner.String(),
@@ -127,8 +158,8 @@ func (c *Client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 }
 
 // PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
-func (c *Client) PutGroupPolicy(groupName string, principalAddr sdk.AccAddress,
-	statements []*permTypes.Statement, opt client.PutPolicyOption) (string, error) {
+func (c *client) PutGroupPolicy(groupName string, principalAddr sdk.AccAddress,
+	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
 	km, err := c.chainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -144,7 +175,7 @@ func (c *Client) PutGroupPolicy(groupName string, principalAddr sdk.AccAddress,
 
 // GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
 // it queries a bucket policy that grants permission to a group
-func (c *Client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error) {
+func (c *client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 
 	queryPolicy := storageTypes.QueryPolicyForGroupRequest{
@@ -162,7 +193,7 @@ func (c *Client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, 
 
 // GetObjectPolicyOfGroup get the object policy info of the group specified by group id
 // it queries an object policy that grants permission to a group
-func (c *Client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error) {
+func (c *client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
 	queryPolicy := storageTypes.QueryPolicyForGroupRequest{
 		Resource:         resource.String(),
