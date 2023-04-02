@@ -70,6 +70,13 @@ type UpdatePaymentOption struct {
 	TxOpts *types.TxOption
 }
 
+type UpdateBucketOption struct {
+	Visibility     storageTypes.VisibilityType
+	TxOpts         *types.TxOption
+	PaymentAddress sdk.AccAddress
+	ChargedQuota   *uint64
+}
+
 // CreateGroupOptions  indicates the meta to construct createGroup msg
 type CreateGroupOptions struct {
 	InitGroupMember []sdk.AccAddress
@@ -329,6 +336,10 @@ func (c *GnfdClient) BuyQuotaForBucket(ctx context.Context, bucketName string, t
 		return "", err
 	}
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
+	err = updateBucketMsg.ValidateBasic()
+	if err != nil {
+		return "", err
+	}
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {
@@ -356,6 +367,10 @@ func (c *GnfdClient) UpdateBucketVisibility(ctx context.Context, bucketName stri
 	}
 
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
+	err = updateBucketMsg.ValidateBasic()
+	if err != nil {
+		return "", err
+	}
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {
@@ -378,8 +393,69 @@ func (c *GnfdClient) UpdateBucketPaymentAddr(ctx context.Context, bucketName str
 	}
 
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, bucketInfo.Visibility)
+	err = updateBucketMsg.ValidateBasic()
+	if err != nil {
+		return "", err
+	}
 
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.TxResponse.TxHash, err
+}
+
+// UpdateBucketInfo update the bucket meta on chain, including read quota, payment address or visibility
+func (c *GnfdClient) UpdateBucketInfo(ctx context.Context, bucketName string, opts UpdateBucketOption) (string, error) {
+	km, err := c.ChainClient.GetKeyManager()
+	if err != nil {
+		return "", errors.New("key manager is nil")
+	}
+
+	bucketInfo, err := c.HeadBucket(ctx, bucketName)
+	if err != nil {
+		return "", err
+	}
+
+	if opts.Visibility == bucketInfo.Visibility && opts.PaymentAddress == nil && opts.ChargedQuota == nil {
+		return "", errors.New("no meta need to update")
+	}
+
+	var visibility storageTypes.VisibilityType
+	var chargedReadQuota uint64
+	var paymentAddr sdk.AccAddress
+
+	if opts.Visibility != bucketInfo.Visibility {
+		visibility = opts.Visibility
+	} else {
+		visibility = bucketInfo.Visibility
+	}
+
+	if opts.PaymentAddress != nil {
+		paymentAddr = opts.PaymentAddress
+	} else {
+		paymentAddr, err = sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if opts.ChargedQuota != nil {
+		chargedReadQuota = *opts.ChargedQuota
+	} else {
+		chargedReadQuota = bucketInfo.ChargedReadQuota
+	}
+
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName,
+		&chargedReadQuota, paymentAddr, visibility)
+
+	err = updateBucketMsg.ValidateBasic()
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
 	}
@@ -502,8 +578,8 @@ func (c *GnfdClient) GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spT
 	return gnfdRep.StorageProvider, nil
 }
 
-// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
-func (c *GnfdClient) GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error) {
+// GetSpAddrByEndpoint return the chain addr according to the SP endpoint
+func (c *GnfdClient) GetSpAddrByEndpoint(ctx context.Context) (sdk.AccAddress, error) {
 	spList, err := c.ListSP(ctx, false)
 	if err != nil {
 		return nil, err
@@ -603,6 +679,10 @@ func (c *GnfdClient) LeaveGroup(groupName string, groupOwner sdk.AccAddress, opt
 	}
 
 	leaveGroupMsg := storageTypes.NewMsgLeaveGroup(km.GetAddr(), groupOwner, groupName)
+	if err = leaveGroupMsg.ValidateBasic(); err != nil {
+		return "", err
+	}
+
 	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{leaveGroupMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
