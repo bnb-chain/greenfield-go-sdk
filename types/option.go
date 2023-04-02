@@ -22,6 +22,10 @@ type CreateBucketOptions struct {
 	ChargedQuota     uint64
 }
 
+type DeleteBucketOption struct {
+	TxOpts *gnfdsdktypes.TxOption
+}
+
 type CancelCreateOption struct {
 	TxOpts *gnfdsdktypes.TxOption
 }

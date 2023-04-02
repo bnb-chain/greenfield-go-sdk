@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/bnb-chain/greenfield-go-sdk/types"
-	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
@@ -29,7 +28,7 @@ import (
 type Bucket interface {
 	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket, authInfo types.AuthInfo) (*storageTypes.MsgCreateBucket, error)
 	CreateBucket(ctx context.Context, bucketName string, opts *types.CreateBucketOptions) (string, error)
-	DeleteBucket(bucketName string, opt DeleteBucketOption) (string, error)
+	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
 	GetBucketReadQuota(ctx context.Context, bucketName string, authInfo types.AuthInfo) (QuotaInfo, error)
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
@@ -124,7 +123,7 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{signedMsg}, opts.TxOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
 	}
@@ -132,12 +131,8 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	return resp.TxResponse.TxHash, err
 }
 
-type DeleteBucketOption struct {
-	TxOpts *gnfdSdkTypes.TxOption
-}
-
 // DeleteBucket send DeleteBucket txn to greenfield chain and return txn hash
-func (c *client) DeleteBucket(bucketName string, opt DeleteBucketOption) (string, error) {
+func (c *client) DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -147,7 +142,7 @@ func (c *client) DeleteBucket(bucketName string, opt DeleteBucketOption) (string
 	}
 	delBucketMsg := storageTypes.NewMsgDeleteBucket(km.GetAddr(), bucketName)
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{delBucketMsg}, opt.TxOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{delBucketMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
 	}
@@ -174,7 +169,7 @@ func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
 	}

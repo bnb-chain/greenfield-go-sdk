@@ -5,14 +5,15 @@ import (
 	"errors"
 
 	types2 "github.com/bnb-chain/greenfield-go-sdk/types"
-	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type Account interface {
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types2.BuyQuotaOption) (string, error)
-	GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (uint64, error)
+	GetAccount()
+	GetAccountBalance()
+	GetPaymentAccount()
 }
 
 // BuyQuotaForBucket buy the target quota of the specific bucket
@@ -33,22 +34,10 @@ func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 	}
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
 	}
 
 	return resp.TxResponse.TxHash, err
-}
-
-// GetQuotaPrice return the quota price of the SP
-func (c *client) GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (uint64, error) {
-	resp, err := c.chainClient.QueryGetSpStoragePriceByTime(ctx, &spTypes.QueryGetSpStoragePriceByTimeRequest{
-		SpAddr:    SPAddress.String(),
-		Timestamp: 0,
-	})
-	if err != nil {
-		return 0, err
-	}
-	return resp.SpStoragePrice.ReadPrice.BigInt().Uint64(), nil
 }

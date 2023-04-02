@@ -18,10 +18,10 @@ import (
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	sdkerror "github.com/bnb-chain/greenfield-go-sdk/pkg/error"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	types3 "github.com/bnb-chain/greenfield-go-sdk/types"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	sdkclient "github.com/bnb-chain/greenfield/sdk/client"
 	"github.com/bnb-chain/greenfield/sdk/keys"
-	types2 "github.com/bnb-chain/greenfield/sdk/types"
+	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -48,7 +48,7 @@ type client struct {
 	// spEndpoints
 	spEndpoints map[string]*url.URL
 
-	// TODO(leo): Unused variables
+	// TODO (leo): Unused variables
 	userAgent string
 
 	host   string
@@ -60,7 +60,8 @@ type Option struct {
 	KeyManager keys.KeyManager
 	// grpcDialOption is the list of grpc dial options.
 	GrpcDialOption grpc.DialOption
-	Secure         bool
+	// Use https or not
+	Secure bool
 }
 
 // New - instantiate greenfield chain with options
@@ -72,7 +73,7 @@ func New(chainID string, grpcAddress, rpcAddress string, option *Option) (Client
 		chainClient:      cc,
 		tendermintClient: &tc,
 		httpClient:       &http.Client{},
-		userAgent:        types3.UserAgent,
+		userAgent:        types.UserAgent,
 	}
 	// fetch sp endpoints info from chain
 	spInfo, err := c.GetSPAddrInfo()
@@ -143,7 +144,7 @@ type requestMeta struct {
 	contentLength    int64
 	contentMD5Base64 string // base64 encoded md5sum
 	contentSHA256    string // hex encoded sha256sum
-	challengeInfo    types3.ChallengeInfo
+	challengeInfo    types.ChallengeInfo
 	userInfo         UserInfo
 }
 
@@ -158,7 +159,7 @@ type sendOptions struct {
 
 // newRequest constructs the http request, set url, body and headers
 func (c *client) newRequest(ctx context.Context, method string, meta requestMeta,
-	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL, authInfo types3.AuthInfo) (req *http.Request, err error) {
+	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL, authInfo types.AuthInfo) (req *http.Request, err error) {
 	// construct the target url
 	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath, meta.urlValues, isAdminAPi, endpoint)
 	if err != nil {
@@ -173,7 +174,7 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 		if ObjectReader, ok := body.(io.Reader); ok {
 			reader = ObjectReader
 			if meta.contentType == "" {
-				contentType = types3.ContentDefault
+				contentType = types.ContentDefault
 			}
 		} else {
 			// the body content is xml type
@@ -181,7 +182,7 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 			if err != nil {
 				return nil, err
 			}
-			contentType = types3.ContentTypeXML
+			contentType = types.ContentTypeXML
 			reader = bytes.NewReader(content)
 			sha256Hex = utils.CalcSHA256Hex(content)
 		}
@@ -205,32 +206,32 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 
 	// set txn hash header
 	if txnHash != "" {
-		req.Header.Set(types3.HTTPHeaderTransactionHash, txnHash)
+		req.Header.Set(types.HTTPHeaderTransactionHash, txnHash)
 	}
 
 	// set content type header
 	if meta.contentType != "" {
-		req.Header.Set(types3.HTTPHeaderContentType, meta.contentType)
+		req.Header.Set(types.HTTPHeaderContentType, meta.contentType)
 	} else if contentType != "" {
-		req.Header.Set(types3.HTTPHeaderContentType, contentType)
+		req.Header.Set(types.HTTPHeaderContentType, contentType)
 	} else {
-		req.Header.Set(types3.HTTPHeaderContentType, types3.ContentDefault)
+		req.Header.Set(types.HTTPHeaderContentType, types.ContentDefault)
 	}
 
 	// set md5 header
 	if meta.contentMD5Base64 != "" {
-		req.Header[types3.HTTPHeaderContentMD5] = []string{meta.contentMD5Base64}
+		req.Header[types.HTTPHeaderContentMD5] = []string{meta.contentMD5Base64}
 	}
 
 	// set sha256 header
 	if meta.contentSHA256 != "" {
-		req.Header[types3.HTTPHeaderContentSHA256] = []string{meta.contentSHA256}
+		req.Header[types.HTTPHeaderContentSHA256] = []string{meta.contentSHA256}
 	} else {
-		req.Header[types3.HTTPHeaderContentSHA256] = []string{sha256Hex}
+		req.Header[types.HTTPHeaderContentSHA256] = []string{sha256Hex}
 	}
 
 	if meta.Range != "" && method == http.MethodGet {
-		req.Header.Set(types3.HTTPHeaderRange, meta.Range)
+		req.Header.Set(types.HTTPHeaderRange, meta.Range)
 	}
 
 	if isAdminAPi {
@@ -238,13 +239,13 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 		// if challengeInfo.ObjectId is not empty, other field should be set as well
 		if meta.challengeInfo.ObjectId != "" {
 			info := meta.challengeInfo
-			req.Header.Set(types3.HTTPHeaderObjectId, info.ObjectId)
-			req.Header.Set(types3.HTTPHeaderRedundancyIndex, strconv.Itoa(info.RedundancyIndex))
-			req.Header.Set(types3.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
+			req.Header.Set(types.HTTPHeaderObjectId, info.ObjectId)
+			req.Header.Set(types.HTTPHeaderRedundancyIndex, strconv.Itoa(info.RedundancyIndex))
+			req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
 		}
 
 		if meta.TxnMsg != "" {
-			req.Header.Set(types3.HTTPHeaderUnsignedMsg, meta.TxnMsg)
+			req.Header.Set(types.HTTPHeaderUnsignedMsg, meta.TxnMsg)
 		}
 
 	} else {
@@ -258,12 +259,12 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 
 	if meta.userInfo.Address != "" {
 		info := meta.userInfo
-		req.Header.Set(types3.HTTPHeaderUserAddress, info.Address)
+		req.Header.Set(types.HTTPHeaderUserAddress, info.Address)
 	}
 
 	// set date header
 	stNow := time.Now().UTC()
-	req.Header.Set(types3.HTTPHeaderDate, stNow.Format(types3.Iso8601DateFormatSecond))
+	req.Header.Set(types.HTTPHeaderDate, stNow.Format(types.Iso8601DateFormatSecond))
 
 	// set user-agent
 	// req.Header.Set(types.HTTPHeaderUserAgent, c.userAgent)
@@ -322,7 +323,7 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 }
 
 // sendReq sends the message via REST and handles the response
-func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo types3.AuthInfo, endpoint *url.URL) (res *http.Response, err error) {
+func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo types.AuthInfo, endpoint *url.URL) (res *http.Response, err error) {
 	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, endpoint, authInfo)
 	if err != nil {
 		log.Debug().Msg("new request error stop send request" + err.Error())
@@ -355,7 +356,7 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 
 	var urlStr string
 	if isAdminApi {
-		prefix := types3.AdminURLPrefix + types3.AdminURLVersion
+		prefix := types.AdminURLPrefix + types.AdminURLVersion
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
 		// generate s3 virtual hosted style url, consider case where ListBuckets not having a bucket name
@@ -386,9 +387,9 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 }
 
 // signRequest signs the request and set authorization before send to server
-func (c *client) signRequest(req *http.Request, info types3.AuthInfo) error {
+func (c *client) signRequest(req *http.Request, info types.AuthInfo) error {
 	var authStr []string
-	if info.SignType == types3.AuthV1 {
+	if info.SignType == types.AuthV1 {
 		signMsg := httplib.GetMsgToSign(req)
 
 		km, err := c.chainClient.GetKeyManager()
@@ -402,18 +403,18 @@ func (c *client) signRequest(req *http.Request, info types3.AuthInfo) error {
 		}
 
 		authStr = []string{
-			types3.AuthV1 + " " + types3.SignAlgorithm,
+			types.AuthV1 + " " + types.SignAlgorithm,
 			" SignedMsg=" + hex.EncodeToString(signMsg),
 			"Signature=" + hex.EncodeToString(signature),
 		}
 
-	} else if info.SignType == types3.AuthV2 {
+	} else if info.SignType == types.AuthV2 {
 		if info.WalletSignStr == "" {
 			return errors.New("wallet signature can not be empty with auth v2 type")
 		}
 		// wallet should use same sign algorithm
 		authStr = []string{
-			types3.AuthV2 + " " + types3.SignAlgorithm,
+			types.AuthV2 + " " + types.SignAlgorithm,
 			" Signature=" + info.WalletSignStr,
 		}
 	} else {
@@ -421,7 +422,7 @@ func (c *client) signRequest(req *http.Request, info types3.AuthInfo) error {
 	}
 
 	// set auth header
-	req.Header.Set(types3.HTTPHeaderAuthorization, strings.Join(authStr, ", "))
+	req.Header.Set(types.HTTPHeaderAuthorization, strings.Join(authStr, ", "))
 
 	return nil
 }
@@ -439,7 +440,7 @@ func (c *client) GetPieceHashRoots(reader io.Reader, segSize int64,
 }
 
 // sendPutPolicyTxn broadcast the putPolicy msg and return the txn hash
-func (c *client) sendPutPolicyTxn(msg *storageTypes.MsgPutPolicy, txOpts *types2.TxOption) (string, error) {
+func (c *client) sendPutPolicyTxn(msg *storageTypes.MsgPutPolicy, txOpts *gnfdSdkTypes.TxOption) (string, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return "", err
 	}
@@ -453,7 +454,7 @@ func (c *client) sendPutPolicyTxn(msg *storageTypes.MsgPutPolicy, txOpts *types2
 }
 
 // sendDelPolicyTxn broadcast the deletePolicy msg and return the txn hash
-func (c *client) sendDelPolicyTxn(operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts *types2.TxOption) (string, error) {
+func (c *client) sendDelPolicyTxn(operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts *gnfdSdkTypes.TxOption) (string, error) {
 	delPolicyMsg := storageTypes.NewMsgDeletePolicy(operator, resource, principal)
 
 	if err := delPolicyMsg.ValidateBasic(); err != nil {
