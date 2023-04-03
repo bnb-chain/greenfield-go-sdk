@@ -506,7 +506,7 @@ func (c *GnfdClient) HeadBucketByID(ctx context.Context, bucketID string) (*stor
 		BucketId: bucketID,
 	}
 
-	headBucketResponse, err := c.ChainClient.HeadBucketById(ctx, headBucketRequest, nil)
+	headBucketResponse, err := c.ChainClient.HeadBucketById(ctx, headBucketRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -535,7 +535,7 @@ func (c *GnfdClient) HeadObjectByID(ctx context.Context, objID string) (*storage
 	headObjectRequest := storageTypes.QueryHeadObjectByIdRequest{
 		ObjectId: objID,
 	}
-	queryHeadObjectResponse, err := c.ChainClient.HeadObjectById(ctx, &headObjectRequest, nil)
+	queryHeadObjectResponse, err := c.ChainClient.HeadObjectById(ctx, &headObjectRequest)
 	if err != nil {
 		return nil, err
 	}
