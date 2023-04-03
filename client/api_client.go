@@ -52,7 +52,7 @@ type client struct {
 	// The hostname of the blockchain node.
 	host string
 	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
-	Secure bool
+	secure bool
 	// TODO (leo): Unused variables
 	userAgent string
 }
@@ -85,6 +85,7 @@ func New(chainID string, grpcAddress, rpcAddress string, option *Option) (Client
 		httpClient:       &http.Client{Transport: option.Transport},
 		userAgent:        types.UserAgent,
 		defaultAccount:   option.Account,
+		secure:           option.Secure,
 	}
 	// fetch sp endpoints info from chain
 	spInfo, err := c.GetSPAddrInfo()

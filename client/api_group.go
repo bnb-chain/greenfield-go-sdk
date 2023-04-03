@@ -14,28 +14,21 @@ import (
 )
 
 type Group interface {
-	// CreateGroup create a new group on greenfield chain
-	// the group members can be initialized  or not
+	// CreateGroup create a new group on greenfield chain the group members can be initialized  or not
 	CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error)
 	// DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
 	DeleteGroup(ctx context.Context, groupName string, txOpts gnfdSdkTypes.TxOption) (string, error)
 	// UpdateGroupMember support adding or removing members from the group and return the txn hash
-	UpdateGroupMember(ctx context.Context, groupName string, groupOwner sdk.AccAddress,
-		addMembers, removeMembers []sdk.AccAddress, opts types.UpdateGroupMemberOption) (string, error)
+	UpdateGroupMember(ctx context.Context, groupName string, groupOwner sdk.AccAddress, addMembers, removeMembers []sdk.AccAddress, opts types.UpdateGroupMemberOption) (string, error)
 	LeaveGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress, opt types.LeaveGroupOption) (string, error)
-	// HeadGroup query the groupInfo on chain, return the group info if exists
-	// return err info if group not exist
+	// HeadGroup query the groupInfo on chain, return the group info if exists return err info if group not exist
 	HeadGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress) (*storageTypes.GroupInfo, error)
 	// HeadGroupMember query the group member info on chain, return true if the member exists in group
 	HeadGroupMember(ctx context.Context, groupName string, groupOwner, headMember sdk.AccAddress) bool
-
 	// PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
-	PutGroupPolicy(ctx context.Context, groupName string, principalAddr sdk.AccAddress,
-		statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
-
+	PutGroupPolicy(ctx context.Context, groupName string, principalAddr sdk.AccAddress, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
 	// DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
 	DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
-
 	// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
 	// it queries a bucket policy that grants permission to a group
 	GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error)

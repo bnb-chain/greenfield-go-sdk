@@ -20,9 +20,6 @@ type SP interface {
 	// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
 	GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error)
 	GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (uint64, error)
-	CreateStorageProvider()
-	EditStorageProvider()
-	VoteCreateStorageProvider()
 }
 
 // GetQuotaPrice return the quota price of the SP
@@ -98,7 +95,7 @@ func (c *client) GetSPAddrInfo() (map[string]*url.URL, error) {
 	spList := gnfdRep.GetSps()
 	for _, info := range spList {
 		endpoint := info.Endpoint
-		urlInfo, urlErr := utils.GetEndpointURL(endpoint, c.Secure)
+		urlInfo, urlErr := utils.GetEndpointURL(endpoint, c.secure)
 		if urlErr != nil {
 			return nil, urlErr
 		}

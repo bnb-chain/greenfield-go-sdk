@@ -39,7 +39,6 @@ type Bucket interface {
 	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-
 	ListBuckets(ctx context.Context, userInfo UserInfo, authInfo types.AuthInfo) (ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions, authInfo types.AuthInfo) (QuotaRecordInfo, error)
 }
