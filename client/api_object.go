@@ -34,7 +34,8 @@ type Object interface {
 		reader io.Reader, opts *CreateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
 		reader io.Reader, opt types.PutObjectOption) (err error)
-	CancelCreateObject(bucketName, objectName string, opt types.CancelCreateOption) (string, error)
+	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
+	DeleteObject(ctx context.Context, bucketName, objectName string, opt DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opt types.GetObjectOption) (io.ReadCloser, GetObjectResult, error)
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
@@ -43,8 +44,9 @@ type Object interface {
 	// return err info if object not exist
 	HeadObjectByID(ctx context.Context, objID string) (*storageTypes.ObjectInfo, error)
 	// PutObjectPolicy apply object policy to the principal, return the txn hash
-	PutObjectPolicy(bucketName, objectName string, principalStr types.Principal,
+	PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 		statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
+	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
 	ListObjects(ctx context.Context, bucketName string, authInfo types.AuthInfo) (ListObjectsResult, error)
@@ -138,7 +140,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
 	}
@@ -146,7 +148,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 }
 
 // DeleteObject send DeleteBucket txn to greenfield chain and return txn hash
-func (c *client) DeleteObject(bucketName, objectName string, opt DeleteObjectOption) (string, error) {
+func (c *client) DeleteObject(ctx context.Context, bucketName, objectName string, opt DeleteObjectOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -161,7 +163,7 @@ func (c *client) DeleteObject(bucketName, objectName string, opt DeleteObjectOpt
 	}
 	delObjectMsg := storageTypes.NewMsgDeleteObject(km.GetAddr(), bucketName, objectName)
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{delObjectMsg}, opt.TxOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{delObjectMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
 	}
@@ -170,7 +172,7 @@ func (c *client) DeleteObject(bucketName, objectName string, opt DeleteObjectOpt
 }
 
 // CancelCreateObject send CancelCreateObject txn to greenfield chain
-func (c *client) CancelCreateObject(bucketName, objectName string, opt types.CancelCreateOption) (string, error) {
+func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -186,7 +188,7 @@ func (c *client) CancelCreateObject(bucketName, objectName string, opt types.Can
 
 	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(km.GetAddr(), bucketName, objectName)
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{cancelCreateMsg}, opt.TxOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{cancelCreateMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
 	}
@@ -397,7 +399,7 @@ func (c *client) HeadObjectByID(ctx context.Context, objID string) (*storageType
 }
 
 // PutObjectPolicy apply object policy to the principal, return the txn hash
-func (c *client) PutObjectPolicy(bucketName, objectName string, principalStr types.Principal,
+func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
 	km, err := c.chainClient.GetKeyManager()
 	if err != nil {
@@ -414,10 +416,10 @@ func (c *client) PutObjectPolicy(bucketName, objectName string, principalStr typ
 	putPolicyMsg := storageTypes.NewMsgPutPolicy(km.GetAddr(), resource.String(),
 		principal, statements, opt.PolicyExpireTime)
 
-	return c.sendPutPolicyTxn(putPolicyMsg, opt.TxOpts)
+	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)
 }
 
-func (c *client) DeleteObjectPolicy(bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
+func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
 	km, err := c.chainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -425,7 +427,7 @@ func (c *client) DeleteObjectPolicy(bucketName, objectName string, principalAddr
 
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
-	return c.sendDelPolicyTxn(km.GetAddr(), resource.String(), principal, opt.TxOpts)
+	return c.sendDelPolicyTxn(ctx, km.GetAddr(), resource.String(), principal, opt.TxOpts)
 }
 
 // IsObjectPermissionAllowed check if the permission of the object is allowed to the user
@@ -514,11 +516,12 @@ func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 	unsignedBytes := createObjectMsg.GetSignBytes()
 
 	// set the action type
-	urlVal := make(url.Values)
-	urlVal["action"] = []string{types.CreateObjectAction}
+	urlValues := url.Values{
+		"action": {types.CreateObjectAction},
+	}
 
 	reqMeta := requestMeta{
-		urlValues:     urlVal,
+		urlValues:     urlValues,
 		urlRelPath:    "get-approval",
 		contentSHA256: types.EmptyStringSHA256,
 		TxnMsg:        hex.EncodeToString(unsignedBytes),

@@ -20,7 +20,6 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	sdkclient "github.com/bnb-chain/greenfield/sdk/client"
-	"github.com/bnb-chain/greenfield/sdk/keys"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
@@ -38,42 +37,60 @@ type Client interface {
 	Account
 }
 
+// client represents a Greenfield SDK client that can interact with the blockchain
+// using the REST API, gRPC, or WebSocket endpoints.
 type client struct {
-	// chainClients
+	// The chain client is used to interact with the blockchain via the REST API.
 	chainClient *sdkclient.GreenfieldClient
-	// tendermintClient
+
+	// The Tendermint client is used to interact with the blockchain via gRPC.
 	tendermintClient *sdkclient.TendermintClient
-	// httpClient
+
+	// The HTTP client is used to send HTTP requests to the blockchain's REST API.
 	httpClient *http.Client
-	// spEndpoints
+
+	// Service provider endpoints
 	spEndpoints map[string]*url.URL
+
+	// The default account to use when sending transactions.
+	defaultAccount types.Account
+
+	// The hostname of the blockchain node.
+	host string
+
+	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
+	Secure bool
 
 	// TODO (leo): Unused variables
 	userAgent string
-
-	host   string
-	Secure bool
 }
 
 type Option struct {
 	// keyManager is the manager used for generating and managing keys.
-	KeyManager keys.KeyManager
+	Account types.Account
 	// grpcDialOption is the list of grpc dial options.
 	GrpcDialOption grpc.DialOption
 	// Use https or not
-	Secure bool
+	Secure    bool
+	Transport http.RoundTripper
 }
 
 // New - instantiate greenfield chain with options
 func New(chainID string, grpcAddress, rpcAddress string, option *Option) (Client, error) {
 	tc := sdkclient.NewTendermintClient(rpcAddress)
-	cc := sdkclient.NewGreenfieldClient(grpcAddress, chainID, sdkclient.WithKeyManager(option.KeyManager), sdkclient.WithGrpcDialOption(option.GrpcDialOption))
+	cc := sdkclient.NewGreenfieldClient(
+		grpcAddress,
+		chainID,
+		sdkclient.WithKeyManager(option.Account.GetKeyManager()),
+		sdkclient.WithGrpcDialOption(option.GrpcDialOption),
+	)
 
 	c := client{
 		chainClient:      cc,
 		tendermintClient: &tc,
-		httpClient:       &http.Client{},
+		httpClient:       &http.Client{Transport: option.Transport},
 		userAgent:        types.UserAgent,
+		defaultAccount:   option.Account,
 	}
 	// fetch sp endpoints info from chain
 	spInfo, err := c.GetSPAddrInfo()
@@ -390,21 +407,17 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 func (c *client) signRequest(req *http.Request, info types.AuthInfo) error {
 	var authStr []string
 	if info.SignType == types.AuthV1 {
-		signMsg := httplib.GetMsgToSign(req)
+		unsignMsg := httplib.GetMsgToSign(req)
 
-		km, err := c.chainClient.GetKeyManager()
-		if err != nil {
-			return err
-		}
 		// sign the request header info, generate the signature
-		signature, err := km.Sign(signMsg)
+		signature, err := c.defaultAccount.Sign(unsignMsg)
 		if err != nil {
 			return err
 		}
 
 		authStr = []string{
 			types.AuthV1 + " " + types.SignAlgorithm,
-			" SignedMsg=" + hex.EncodeToString(signMsg),
+			" SignedMsg=" + hex.EncodeToString(unsignMsg),
 			"Signature=" + hex.EncodeToString(signature),
 		}
 

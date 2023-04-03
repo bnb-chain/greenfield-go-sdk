@@ -21,10 +21,16 @@ type Basic interface {
 	LatestBlockHeight(ctx context.Context) (int64, error)
 }
 
+// Status returns the current status of the Tendermint node that the client is connected to.
+// It takes a context as input and returns a ResultStatus object and an error (if any).
 func (c *client) Status(ctx context.Context) (*ctypes.ResultStatus, error) {
 	return c.tendermintClient.TmClient.Status(ctx)
 }
 
+// BroadcastRawTx broadcasts raw transaction bytes to a Tendermint node.
+// It takes a context, transaction bytes, and a sync boolean.
+// If sync is true, the transaction is broadcast synchronously.
+// If sync is false, the transaction is broadcast asynchronously.
 func (c *client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*ctypes.ResultBroadcastTx, error) {
 	if sync {
 		return c.tendermintClient.TmClient.BroadcastTxSync(ctx, txBytes)
@@ -33,6 +39,9 @@ func (c *client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) 
 	}
 }
 
+// SimulateRawTx simulates the execution of a raw transaction on the blockchain without broadcasting it to the network.
+// It takes a context, transaction bytes, and any additional gRPC call options.
+// It returns a SimulateResponse object and an error (if any).
 func (c *client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
 	simulateResponse, err := c.chainClient.TxClient.Simulate(
 		ctx,
@@ -47,7 +56,8 @@ func (c *client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc
 	return simulateResponse, nil
 }
 
-// LatestBlockHeight returns the latest block height of the app.
+// LatestBlockHeight returns the latest block height of the blockchain.
+// It takes a context as input and returns an int64 representing the latest block height and an error (if any).
 func (c *client) LatestBlockHeight(ctx context.Context) (int64, error) {
 	resp, err := c.Status(ctx)
 	if err != nil {
