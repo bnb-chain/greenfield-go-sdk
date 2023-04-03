@@ -13,9 +13,9 @@ import (
 )
 
 type Basic interface {
-	Status() (*ctypes.ResultStatus, error)
+	Status(ctx context.Context) (*ctypes.ResultStatus, error)
 	BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*ctypes.ResultBroadcastTx, error)
-	SimulateRawTx(ctx context.Context, txBytes []byte)
+	SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error)
 	LatestBlockHeight(ctx context.Context) (int64, error)

@@ -27,7 +27,7 @@ import (
 
 type Bucket interface {
 	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket, authInfo types.AuthInfo) (*storageTypes.MsgCreateBucket, error)
-	CreateBucket(ctx context.Context, bucketName string, opts *types.CreateBucketOptions) (string, error)
+	CreateBucket(ctx context.Context, bucketName string, primaryAddr sdk.AccAddress, opts types.CreateBucketOptions) (string, error)
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
 	GetBucketReadQuota(ctx context.Context, bucketName string, authInfo types.AuthInfo) (QuotaInfo, error)

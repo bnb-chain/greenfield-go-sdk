@@ -207,3 +207,12 @@ func (c *client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectN
 
 	return queryPolicyResp.Policy, nil
 }
+
+// DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
+func (c *client) DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
+	sender := c.defaultAccount.GetAddress()
+	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
+	principal := permTypes.NewPrincipalWithAccount(principalAddr)
+
+	return c.sendDelPolicyTxn(ctx, sender, resource, principal, opt.TxOpts)
+}

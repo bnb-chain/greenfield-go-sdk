@@ -30,12 +30,12 @@ type Object interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject,
 		authInfo types.AuthInfo) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string,
-		reader io.Reader, opts *CreateObjectOptions) (string, error)
+		reader io.Reader, opts CreateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-		reader io.Reader, opt types.PutObjectOption) (err error)
+		reader io.Reader, authInfo types.AuthInfo, opt types.PutObjectOption) error
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt DeleteObjectOption) (string, error)
-	GetObject(ctx context.Context, bucketName, objectName string, opt types.GetObjectOption) (io.ReadCloser, GetObjectResult, error)
+	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption, authInfo types.AuthInfo) (io.ReadCloser, types.ObjectStat, error)
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
 	HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error)

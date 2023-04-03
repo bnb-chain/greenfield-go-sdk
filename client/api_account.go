@@ -15,12 +15,11 @@ import (
 
 type Account interface {
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types2.BuyQuotaOption) (string, error)
-	GetAccount(ctx context.Context, address string) error
+	GetAccount(ctx context.Context, address string) (types.AccountI, error)
 	GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error)
 	GetPaymentAccount(ctx context.Context, address string) (*types5.PaymentAccount, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*types5.PaymentAccount, error)
-
-	TransferToken(ctx context.Context, toAddress string, amount sdk.Coins) error
+	Transfer(ctx context.Context, toAddress string, amount int64) (*sdk.TxResponse, error)
 }
 
 // BuyQuotaForBucket buy the target quota of the specific bucket
