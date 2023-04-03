@@ -93,15 +93,6 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
 func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAddr sdk.AccAddress, opts types.CreateBucketOptions) (string, error) {
-	if err := s3util.CheckValidBucketName(bucketName); err != nil {
-		return "", err
-	}
-
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-
 	var visibility storageTypes.VisibilityType
 	if opts.Visibility == storageTypes.VISIBILITY_TYPE_UNSPECIFIED {
 		visibility = storageTypes.VISIBILITY_TYPE_PRIVATE // set default visibility type
@@ -109,10 +100,10 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		visibility = opts.Visibility
 	}
 
-	createBucketMsg := storageTypes.NewMsgCreateBucket(km.GetAddr(), bucketName,
+	createBucketMsg := storageTypes.NewMsgCreateBucket(c.defaultAccount.GetAddress(), bucketName,
 		visibility, primaryAddr, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
 
-	err = createBucketMsg.ValidateBasic()
+	err := createBucketMsg.ValidateBasic()
 	if err != nil {
 		return "", err
 	}

@@ -6,20 +6,29 @@ import (
 )
 
 type Account struct {
-	name    string
-	km      keys.KeyManager
-	privKey []byte
+	name string
+	km   keys.KeyManager
 }
 
-func NewAccountWithPrivKey(name, privKey string) (*Account, error) {
+func NewAccountFromPrivKey(name, privKey string) (*Account, error) {
 	km, err := keys.NewPrivateKeyManager(privKey)
 	if err != nil {
 		return nil, err
 	}
 	return &Account{
-		name:    name,
-		km:      km,
-		privKey: []byte(privKey),
+		name: name,
+		km:   km,
+	}, nil
+}
+
+func NewAccountFromMnemonic(name, mnemonic string) (*Account, error) {
+	km, err := keys.NewMnemonicKeyManager(mnemonic)
+	if err != nil {
+		return nil, err
+	}
+	return &Account{
+		name: name,
+		km:   km,
 	}, nil
 }
 
