@@ -432,7 +432,7 @@ func (c *GnfdClient) UpdateBucketInfo(ctx context.Context, bucketName string, op
 		visibility = bucketInfo.Visibility
 	}
 
-	if opts.PaymentAddress != nil {
+	if len(opts.PaymentAddress) > 0 {
 		paymentAddr = opts.PaymentAddress
 	} else {
 		paymentAddr, err = sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
