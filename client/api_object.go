@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
-	sdkerror "github.com/bnb-chain/greenfield-go-sdk/pkg/error"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
@@ -349,7 +348,7 @@ func getObjInfo(objectName string, h http.Header) (types.ObjectStat, error) {
 	if contentLength != "" {
 		size, err = strconv.ParseInt(contentLength, 10, 64)
 		if err != nil {
-			return types.ObjectStat{}, sdkerror.ErrResponse{
+			return types.ObjectStat{}, types.ErrResponse{
 				Code:    "InternalError",
 				Message: fmt.Sprintf("Content-Length parse error %v", err),
 			}

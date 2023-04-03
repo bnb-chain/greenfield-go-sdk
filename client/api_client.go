@@ -16,7 +16,6 @@ import (
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
-	sdkerror "github.com/bnb-chain/greenfield-go-sdk/pkg/error"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	sdkclient "github.com/bnb-chain/greenfield/sdk/client"
@@ -40,38 +39,33 @@ type Client interface {
 // client represents a Greenfield SDK client that can interact with the blockchain
 // using the REST API, gRPC, or WebSocket endpoints.
 type client struct {
-	// The chain client is used to interact with the blockchain via the REST API.
+	// The chain client is used to interact with the blockchain
 	chainClient *sdkclient.GreenfieldClient
-
 	// The Tendermint client is used to interact with the blockchain via gRPC.
 	tendermintClient *sdkclient.TendermintClient
-
-	// The HTTP client is used to send HTTP requests to the blockchain's REST API.
+	// The HTTP client is used to send HTTP requests to the greenfield blockchain and sp
 	httpClient *http.Client
-
 	// Service provider endpoints
 	spEndpoints map[string]*url.URL
-
 	// The default account to use when sending transactions.
 	defaultAccount types.Account
-
 	// The hostname of the blockchain node.
 	host string
-
 	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
 	Secure bool
-
 	// TODO (leo): Unused variables
 	userAgent string
 }
 
+// Option is a configuration struct used to provide optional parameters to the client constructor.
 type Option struct {
-	// keyManager is the manager used for generating and managing keys.
+	// Account is the account used for signing transactions.
 	Account types.Account
-	// grpcDialOption is the list of grpc dial options.
+	// GrpcDialOption is the list of gRPC dial options used to configure the connection to the blockchain node.
 	GrpcDialOption grpc.DialOption
-	// Use https or not
-	Secure    bool
+	// Secure is a flag that specifies whether the client should use HTTPS or not.
+	Secure bool
+	// Transport is the HTTP transport used to send requests to the storage provider endpoint.
 	Transport http.RoundTripper
 }
 
@@ -331,7 +325,7 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 	}()
 
 	// construct err responses and messages
-	err = sdkerror.ConstructErrResponse(resp, meta.bucketName, meta.objectName)
+	err = types.ConstructErrResponse(resp, meta.bucketName, meta.objectName)
 	if err != nil {
 		return resp, err
 	}

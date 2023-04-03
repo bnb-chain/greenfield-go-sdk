@@ -7,8 +7,6 @@ import (
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	sdkerror "github.com/bnb-chain/greenfield-go-sdk/pkg/error"
 )
 
 type Principal string
@@ -108,7 +106,7 @@ func (o *GetObjectOption) SetRange(start, end int64) error {
 		// `bytes=N-M`
 		o.Range = fmt.Sprintf("bytes=%d-%d", start, end)
 	default:
-		return sdkerror.ToInvalidArgumentResp(
+		return ToInvalidArgumentResp(
 			fmt.Sprintf(
 				"Invalid Range : start=%d end=%d",
 				start, end))
