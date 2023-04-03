@@ -440,12 +440,12 @@ func (c *client) GetPieceHashRoots(reader io.Reader, segSize int64,
 }
 
 // sendPutPolicyTxn broadcast the putPolicy msg and return the txn hash
-func (c *client) sendPutPolicyTxn(msg *storageTypes.MsgPutPolicy, txOpts *gnfdSdkTypes.TxOption) (string, error) {
+func (c *client) sendPutPolicyTxn(ctx context.Context, msg *storageTypes.MsgPutPolicy, txOpts *gnfdSdkTypes.TxOption) (string, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return "", err
 	}
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{msg}, txOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOpts)
 	if err != nil {
 		return "", err
 	}
@@ -454,14 +454,14 @@ func (c *client) sendPutPolicyTxn(msg *storageTypes.MsgPutPolicy, txOpts *gnfdSd
 }
 
 // sendDelPolicyTxn broadcast the deletePolicy msg and return the txn hash
-func (c *client) sendDelPolicyTxn(operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts *gnfdSdkTypes.TxOption) (string, error) {
+func (c *client) sendDelPolicyTxn(ctx context.Context, operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts *gnfdSdkTypes.TxOption) (string, error) {
 	delPolicyMsg := storageTypes.NewMsgDeletePolicy(operator, resource, principal)
 
 	if err := delPolicyMsg.ValidateBasic(); err != nil {
 		return "", err
 	}
 
-	resp, err := c.chainClient.BroadcastTx([]sdk.Msg{delPolicyMsg}, txOpts)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{delPolicyMsg}, txOpts)
 	if err != nil {
 		return "", err
 	}

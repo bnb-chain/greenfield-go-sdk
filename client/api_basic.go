@@ -7,13 +7,15 @@ import (
 	"time"
 
 	"cosmossdk.io/errors"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	"google.golang.org/grpc"
 )
 
 type Basic interface {
 	Status() (*ctypes.ResultStatus, error)
-	BroadcastRawTx(txBytes []byte, sync bool) (*ctypes.ResultBroadcastTx, error)
-	SimulateRawTx()
+	BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*ctypes.ResultBroadcastTx, error)
+	SimulateRawTx(ctx context.Context, txBytes []byte)
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error)
 	LatestBlockHeight(ctx context.Context) (int64, error)
@@ -29,6 +31,20 @@ func (c *client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) 
 	} else {
 		return c.tendermintClient.TmClient.BroadcastTxAsync(ctx, txBytes)
 	}
+}
+
+func (c *client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
+	simulateResponse, err := c.chainClient.TxClient.Simulate(
+		ctx,
+		&tx.SimulateRequest{
+			TxBytes: txBytes,
+		},
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return simulateResponse, nil
 }
 
 // LatestBlockHeight returns the latest block height of the app.

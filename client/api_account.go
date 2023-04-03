@@ -14,6 +14,9 @@ type Account interface {
 	GetAccount()
 	GetAccountBalance()
 	GetPaymentAccount()
+
+	BankSendTx(ctx context.Context, toAddress string, amount sdk.Coins) error
+	BankBalance(ctx context.Context) error
 }
 
 // BuyQuotaForBucket buy the target quota of the specific bucket
