@@ -479,3 +479,15 @@ func (c *client) sendDelPolicyTxn(ctx context.Context, operator sdk.AccAddress, 
 
 	return resp.TxResponse.TxHash, err
 }
+
+func (c *client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxOption) (string, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return "", err
+	}
+
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, opt)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, err
+}

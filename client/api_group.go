@@ -6,7 +6,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
-	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
@@ -17,7 +16,7 @@ type Group interface {
 	// CreateGroup create a new group on greenfield chain the group members can be initialized  or not
 	CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error)
 	// DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
-	DeleteGroup(ctx context.Context, groupName string, txOpts gnfdSdkTypes.TxOption) (string, error)
+	DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error)
 	// UpdateGroupMember support adding or removing members from the group and return the txn hash
 	UpdateGroupMember(ctx context.Context, groupName string, groupOwner sdk.AccAddress, addMembers, removeMembers []sdk.AccAddress, opts types.UpdateGroupMemberOption) (string, error)
 	LeaveGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress, opt types.LeaveGroupOption) (string, error)
@@ -41,32 +40,13 @@ type Group interface {
 // the group members can be initialized  or not
 func (c *client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
 	createGroupMsg := storageTypes.NewMsgCreateGroup(c.defaultAccount.GetAddress(), groupName, opt.InitGroupMember)
-
-	if err := createGroupMsg.ValidateBasic(); err != nil {
-		return "", err
-	}
-
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{createGroupMsg}, opt.TxOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, err
+	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
 }
 
 // DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
-func (c *client) DeleteGroup(ctx context.Context, groupName string, txOpts gnfdSdkTypes.TxOption) (string, error) {
+func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error) {
 	deleteGroupMsg := storageTypes.NewMsgDeleteGroup(c.defaultAccount.GetAddress(), groupName)
-	if err := deleteGroupMsg.ValidateBasic(); err != nil {
-		return "", err
-	}
-
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{deleteGroupMsg}, &txOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, err
+	return c.sendTxn(ctx, deleteGroupMsg, opt.TxOpts)
 }
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
@@ -80,30 +60,13 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 		return "", errors.New("no update member")
 	}
 	updateGroupMsg := storageTypes.NewMsgUpdateGroupMember(c.defaultAccount.GetAddress(), groupOwner, groupName, addMembers, removeMembers)
-	if err := updateGroupMsg.ValidateBasic(); err != nil {
-		return "", err
-	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateGroupMsg}, opts.TxOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, nil
+	return c.sendTxn(ctx, updateGroupMsg, opts.TxOpts)
 }
 
 func (c *client) LeaveGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress, opt types.LeaveGroupOption) (string, error) {
 	leaveGroupMsg := storageTypes.NewMsgLeaveGroup(c.defaultAccount.GetAddress(), groupOwner, groupName)
-	if err := leaveGroupMsg.ValidateBasic(); err != nil {
-		return "", err
-	}
-
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{leaveGroupMsg}, opt.TxOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, nil
+	return c.sendTxn(ctx, leaveGroupMsg, opt.TxOpts)
 }
 
 // HeadGroup query the groupInfo on chain, return the group info if exists

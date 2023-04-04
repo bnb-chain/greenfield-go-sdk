@@ -125,15 +125,7 @@ func (c *client) DeleteBucket(ctx context.Context, bucketName string, opt types.
 		return "", err
 	}
 	delBucketMsg := storageTypes.NewMsgDeleteBucket(c.defaultAccount.GetAddress(), bucketName)
-	if err := delBucketMsg.ValidateBasic(); err != nil {
-		return "", err
-	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{delBucketMsg}, opt.TxOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, err
+	return c.sendTxn(ctx, delBucketMsg, opt.TxOpts)
 }
 
 // UpdateBucketVisibility update the visibilityType of bucket
@@ -150,16 +142,60 @@ func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 	}
 
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
-	if err = updateBucketMsg.ValidateBasic(); err != nil {
-		return "", err
-	}
+	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
+}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
+// UpdateBucketPaymentAddr  update the payment addr of bucket
+func (c *client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
+	paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption) (string, error) {
+	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
 	}
 
-	return resp.TxResponse.TxHash, err
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, bucketInfo.Visibility)
+	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
+}
+
+// UpdateBucketInfo update the bucket meta on chain, including read quota, payment address or visibility
+func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOption) (string, error) {
+	bucketInfo, err := c.HeadBucket(ctx, bucketName)
+	if err != nil {
+		return "", err
+	}
+
+	if opts.Visibility == bucketInfo.Visibility && opts.PaymentAddress == nil && opts.ChargedQuota == nil {
+		return "", errors.New("no meta need to update")
+	}
+
+	var visibility storageTypes.VisibilityType
+	var chargedReadQuota uint64
+	var paymentAddr sdk.AccAddress
+
+	if opts.Visibility != bucketInfo.Visibility {
+		visibility = opts.Visibility
+	} else {
+		visibility = bucketInfo.Visibility
+	}
+
+	if len(opts.PaymentAddress) > 0 {
+		paymentAddr = opts.PaymentAddress
+	} else {
+		paymentAddr, err = sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if opts.ChargedQuota != nil {
+		chargedReadQuota = *opts.ChargedQuota
+	} else {
+		chargedReadQuota = bucketInfo.ChargedReadQuota
+	}
+
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName,
+		&chargedReadQuota, paymentAddr, visibility)
+	return c.sendTxn(ctx, updateBucketMsg, opts.TxOpts)
 }
 
 // HeadBucket query the bucketInfo on chain, return the bucket info if exists

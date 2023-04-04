@@ -9,8 +9,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-type Principal string
-
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
 	Visibility       storageTypes.VisibilityType
@@ -24,6 +22,17 @@ type DeleteBucketOption struct {
 	TxOpts *gnfdsdktypes.TxOption
 }
 
+type UpdatePaymentOption struct {
+	TxOpts *gnfdsdktypes.TxOption
+}
+
+type UpdateBucketOption struct {
+	Visibility     storageTypes.VisibilityType
+	TxOpts         *gnfdsdktypes.TxOption
+	PaymentAddress sdk.AccAddress
+	ChargedQuota   *uint64
+}
+
 type CancelCreateOption struct {
 	TxOpts *gnfdsdktypes.TxOption
 }
@@ -34,6 +43,23 @@ type BuyQuotaOption struct {
 
 type UpdateVisibilityOption struct {
 	TxOpts *gnfdsdktypes.TxOption
+}
+
+type DeleteObjectOption struct {
+	TxOpts *gnfdsdktypes.TxOption
+}
+
+type DeleteGroupOption struct {
+	TxOpts *gnfdsdktypes.TxOption
+}
+
+// CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
+type CreateObjectOptions struct {
+	Visibility      storageTypes.VisibilityType
+	TxOpts          *gnfdsdktypes.TxOption
+	SecondarySPAccs []sdk.AccAddress
+	ContentType     string
+	IsReplicaType   bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
 }
 
 // CreateGroupOptions  indicates the meta to construct createGroup msg

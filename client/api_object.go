@@ -17,7 +17,6 @@ import (
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
-	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
@@ -29,11 +28,11 @@ import (
 type Object interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string,
-		reader io.Reader, opts CreateObjectOptions) (string, error)
+		reader io.Reader, opts types.CreateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
 		reader io.Reader, opt types.PutObjectOption) error
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
-	DeleteObject(ctx context.Context, bucketName, objectName string, opt DeleteObjectOption) (string, error)
+	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
@@ -48,19 +47,6 @@ type Object interface {
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
 	ListObjects(ctx context.Context, bucketName string) (types.ListObjectsResult, error)
-}
-
-// CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
-type CreateObjectOptions struct {
-	Visibility      storageTypes.VisibilityType
-	TxOpts          *gnfdSdkTypes.TxOption
-	SecondarySPAccs []sdk.AccAddress
-	ContentType     string
-	IsReplicaType   bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
-}
-
-type DeleteObjectOption struct {
-	TxOpts *gnfdSdkTypes.TxOption
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -89,7 +75,7 @@ func (c *client) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTyp
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
 func (c *client) CreateObject(ctx context.Context, bucketName, objectName string,
-	reader io.Reader, opts CreateObjectOptions) (string, error) {
+	reader io.Reader, opts types.CreateObjectOptions) (string, error) {
 	if reader == nil {
 		return "", errors.New("fail to compute hash of payload, reader is nil")
 	}
@@ -142,7 +128,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 }
 
 // DeleteObject send DeleteBucket txn to greenfield chain and return txn hash
-func (c *client) DeleteObject(ctx context.Context, bucketName, objectName string, opt DeleteObjectOption) (string, error) {
+func (c *client) DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -152,15 +138,7 @@ func (c *client) DeleteObject(ctx context.Context, bucketName, objectName string
 	}
 
 	delObjectMsg := storageTypes.NewMsgDeleteObject(c.defaultAccount.GetAddress(), bucketName, objectName)
-	if err := delObjectMsg.ValidateBasic(); err != nil {
-		return "", err
-	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{delObjectMsg}, opt.TxOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, err
+	return c.sendTxn(ctx, delObjectMsg, opt.TxOpts)
 }
 
 // CancelCreateObject send CancelCreateObject txn to greenfield chain
@@ -174,15 +152,7 @@ func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName 
 	}
 
 	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(c.defaultAccount.GetAddress(), bucketName, objectName)
-	if err := cancelCreateMsg.ValidateBasic(); err != nil {
-		return "", err
-	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{cancelCreateMsg}, opt.TxOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, err
+	return c.sendTxn(ctx, cancelCreateMsg, opt.TxOpts)
 }
 
 // PutObject supports the second stage of uploading the object to bucket.

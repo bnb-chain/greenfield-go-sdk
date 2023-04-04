@@ -9,13 +9,13 @@ import (
 	"net/http"
 )
 
+const unknownErr = "unknown error"
+
 var (
 	ErrorKeyManagerNotInit = errors.New("Key manager is not initialized yet ")
 	ErrorUrlNotProvided    = errors.New("Url address not provided yet ")
 	ErrorUrlsMismatch      = errors.New("Number of RPC and GRPC Urls does not match ")
 )
-
-const unknownErr = "unknown error"
 
 // ErrResponse define the information of the error response
 type ErrResponse struct {
@@ -32,7 +32,7 @@ func (r ErrResponse) Error() string {
 		r.StatusCode, r.Code, r.Message)
 }
 
-// constructErrResponse  checks the response is an error response
+// ConstructErrResponse  checks the response is an error response
 func ConstructErrResponse(r *http.Response, bucketName, objectName string) error {
 	if c := r.StatusCode; 200 <= c && c <= 299 {
 		return nil
