@@ -27,15 +27,14 @@ import (
 )
 
 type Object interface {
-	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject,
-		authInfo types.AuthInfo) (*storageTypes.MsgCreateObject, error)
+	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string,
 		reader io.Reader, opts CreateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-		reader io.Reader, authInfo types.AuthInfo, opt types.PutObjectOption) error
+		reader io.Reader, opt types.PutObjectOption) error
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt DeleteObjectOption) (string, error)
-	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption, authInfo types.AuthInfo) (io.ReadCloser, types.ObjectStat, error)
+	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
 	HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error)
@@ -48,7 +47,7 @@ type Object interface {
 	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-	ListObjects(ctx context.Context, bucketName string, authInfo types.AuthInfo) (types.ListObjectsResult, error)
+	ListObjects(ctx context.Context, bucketName string) (types.ListObjectsResult, error)
 }
 
 // CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
@@ -134,7 +133,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	signedCreateObjectMsg, err := c.GetCreateObjectApproval(ctx, createObjectMsg, types.NewAuthInfo(false, ""))
+	signedCreateObjectMsg, err := c.GetCreateObjectApproval(ctx, createObjectMsg)
 	if err != nil {
 		return "", err
 	}
@@ -198,7 +197,7 @@ func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName 
 // PutObject supports the second stage of uploading the object to bucket.
 // txnHash should be the str which hex.encoding from txn hash bytes
 func (c *client) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-	reader io.Reader, authInfo types.AuthInfo, opt types.PutObjectOption,
+	reader io.Reader, opt types.PutObjectOption,
 ) (err error) {
 	if txnHash == "" {
 		return errors.New("txn hash empty")
@@ -234,7 +233,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName, txnHash 
 		return err
 	}
 
-	_, err = c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	_, err = c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return err
 	}
@@ -244,8 +243,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName, txnHash 
 
 // FPutObject supports uploading object from local file
 func (c *client) FPutObject(ctx context.Context, bucketName, objectName,
-	filePath, txnHash, contentType string, authInfo types.AuthInfo,
-) (err error) {
+	filePath, txnHash, contentType string) (err error) {
 	fReader, err := os.Open(filePath)
 	// If any error fail quickly here.
 	if err != nil {
@@ -259,12 +257,12 @@ func (c *client) FPutObject(ctx context.Context, bucketName, objectName,
 		return err
 	}
 
-	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, types.PutObjectOption{ContentType: contentType})
+	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, types.PutObjectOption{ContentType: contentType})
 }
 
 // GetObject download s3 object payload and return the related object info
 func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
-	opts types.GetObjectOption, authInfo types.AuthInfo) (io.ReadCloser, types.ObjectStat, error) {
+	opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, types.ObjectStat{}, err
 	}
@@ -293,7 +291,7 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 		return nil, types.ObjectStat{}, err
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return nil, types.ObjectStat{}, err
 	}
@@ -308,7 +306,7 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption, authInfo types.AuthInfo) error {
+func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {
@@ -324,7 +322,7 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 		return err
 	}
 
-	body, _, err := c.GetObject(ctx, bucketName, objectName, opts, authInfo)
+	body, _, err := c.GetObject(ctx, bucketName, objectName, opts)
 	if err != nil {
 		return err
 	}
@@ -464,7 +462,7 @@ func (c *client) GetObjectPolicy(ctx context.Context, bucketName, objectName str
 }
 
 // ListObjects return object list of the specific bucket
-func (c *client) ListObjects(ctx context.Context, bucketName string, authInfo types.AuthInfo) (types.ListObjectsResult, error) {
+func (c *client) ListObjects(ctx context.Context, bucketName string) (types.ListObjectsResult, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.ListObjectsResult{}, err
 	}
@@ -484,7 +482,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, authInfo ty
 		return types.ListObjectsResult{}, err
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return types.ListObjectsResult{}, err
 	}
@@ -511,7 +509,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, authInfo ty
 }
 
 // GetCreateObjectApproval returns the signature info for the approval of preCreating resources
-func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject, authInfo types.AuthInfo) (*storageTypes.MsgCreateObject, error) {
+func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error) {
 	unsignedBytes := createObjectMsg.GetSignBytes()
 
 	// set the action type
@@ -536,7 +534,7 @@ func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 		return nil, err
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return nil, err
 	}

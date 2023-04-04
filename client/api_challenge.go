@@ -11,11 +11,11 @@ import (
 )
 
 type Challenge interface {
-	ChallengeSP(ctx context.Context, info types.ChallengeInfo, authInfo types.AuthInfo) (types.ChallengeResult, error)
+	ChallengeSP(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error)
 }
 
 // ChallengeSP sends request to challenge and get challenge result info
-func (c *client) ChallengeSP(ctx context.Context, info types.ChallengeInfo, authInfo types.AuthInfo) (types.ChallengeResult, error) {
+func (c *client) ChallengeSP(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error) {
 	if info.ObjectId == "" {
 		return types.ChallengeResult{}, errors.New("fail to get objectId")
 	}
@@ -50,7 +50,7 @@ func (c *client) ChallengeSP(ctx context.Context, info types.ChallengeInfo, auth
 		return types.ChallengeResult{}, err
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return types.ChallengeResult{}, err
 	}

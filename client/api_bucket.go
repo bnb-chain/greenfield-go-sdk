@@ -26,11 +26,11 @@ import (
 )
 
 type Bucket interface {
-	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket, authInfo types.AuthInfo) (*storageTypes.MsgCreateBucket, error)
+	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error)
 	CreateBucket(ctx context.Context, bucketName string, primaryAddr sdk.AccAddress, opts types.CreateBucketOptions) (string, error)
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
-	GetBucketReadQuota(ctx context.Context, bucketName string, authInfo types.AuthInfo) (types.QuotaInfo, error)
+	GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error)
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
 	// PutBucketPolicy apply bucket policy to the principal, return the txn hash
@@ -39,13 +39,12 @@ type Bucket interface {
 	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-	ListBuckets(ctx context.Context, userInfo types.UserInfo, authInfo types.AuthInfo) (types.ListBucketsResult, error)
-	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions, authInfo types.AuthInfo) (types.QuotaRecordInfo, error)
+	ListBuckets(ctx context.Context, userInfo types.UserInfo) (types.ListBucketsResult, error)
+	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
-func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket,
-	authInfo types.AuthInfo) (*storageTypes.MsgCreateBucket, error) {
+func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error) {
 	unsignedBytes := createBucketMsg.GetSignBytes()
 
 	// set the action type
@@ -69,7 +68,7 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 		return nil, err
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +106,7 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	if err != nil {
 		return "", err
 	}
-	signedMsg, err := c.GetCreateBucketApproval(ctx, createBucketMsg, types.NewAuthInfo(false, ""))
+	signedMsg, err := c.GetCreateBucketApproval(ctx, createBucketMsg)
 	if err != nil {
 		return "", err
 	}
@@ -263,7 +262,7 @@ func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, princip
 }
 
 // ListBuckets list buckets for the owner
-func (c *client) ListBuckets(ctx context.Context, userInfo types.UserInfo, authInfo types.AuthInfo) (types.ListBucketsResult, error) {
+func (c *client) ListBuckets(ctx context.Context, userInfo types.UserInfo) (types.ListBucketsResult, error) {
 	if userInfo.Address == "" {
 		return types.ListBucketsResult{}, errors.New("fail to get user address")
 	}
@@ -285,7 +284,7 @@ func (c *client) ListBuckets(ctx context.Context, userInfo types.UserInfo, authI
 		return types.ListBucketsResult{}, err
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		log.Error().Msg("the list of user's buckets failed: " + err.Error())
 		return types.ListBucketsResult{}, err
@@ -314,7 +313,7 @@ func (c *client) ListBuckets(ctx context.Context, userInfo types.UserInfo, authI
 
 // ListBucketReadRecord returns the read record of this month, the return items should be no more than maxRecords
 // ListReadRecordOption indicates the start timestamp of return read records
-func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions, authInfo types.AuthInfo) (types.QuotaRecordInfo, error) {
+func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.QuotaRecordInfo{}, err
 	}
@@ -364,7 +363,7 @@ func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 		return types.QuotaRecordInfo{}, err
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return types.QuotaRecordInfo{}, err
 	}
@@ -381,7 +380,7 @@ func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 }
 
 // GetBucketReadQuota return quota info of bucket of current month, include chain quota, free quota and consumed quota
-func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string, authInfo types.AuthInfo) (types.QuotaInfo, error) {
+func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.QuotaInfo{}, err
 	}
@@ -414,7 +413,7 @@ func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string, auth
 		return types.QuotaInfo{}, err
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return types.QuotaInfo{}, err
 	}

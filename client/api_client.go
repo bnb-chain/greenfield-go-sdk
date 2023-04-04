@@ -49,11 +49,11 @@ type client struct {
 	spEndpoints map[string]*url.URL
 	// The default account to use when sending transactions.
 	defaultAccount *types.Account
-	// The hostname of the blockchain node.
-	host string
 	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
 	secure bool
-	// TODO (leo): Unused variables
+	// Host is the target sp server hostname，it is the host info in the request which sent to SP
+	host string
+	// The user agent info
 	userAgent string
 }
 
@@ -67,11 +67,17 @@ type Option struct {
 	Secure bool
 	// Transport is the HTTP transport used to send requests to the storage provider endpoint.
 	Transport http.RoundTripper
+	// Host is the target sp server hostname
+	Host string
 }
 
 // New - instantiate greenfield chain with options
 func New(chainID string, grpcAddress, rpcAddress string, option *Option) (Client, error) {
 	tc := sdkclient.NewTendermintClient(rpcAddress)
+
+	if grpcAddress == "" || chainID == "" {
+		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
+	}
 	cc := sdkclient.NewGreenfieldClient(
 		grpcAddress,
 		chainID,
@@ -86,6 +92,7 @@ func New(chainID string, grpcAddress, rpcAddress string, option *Option) (Client
 		userAgent:        types.UserAgent,
 		defaultAccount:   option.DefaultAccount,
 		secure:           option.Secure,
+		host:             option.Host,
 	}
 	// fetch sp endpoints info from chain
 	spInfo, err := c.GetSPAddrInfo()
@@ -171,7 +178,7 @@ type sendOptions struct {
 
 // newRequest constructs the http request, set url, body and headers
 func (c *client) newRequest(ctx context.Context, method string, meta requestMeta,
-	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL, authInfo types.AuthInfo) (req *http.Request, err error) {
+	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL) (req *http.Request, err error) {
 	// construct the target url
 	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath, meta.urlValues, isAdminAPi, endpoint)
 	if err != nil {
@@ -279,10 +286,10 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	req.Header.Set(types.HTTPHeaderDate, stNow.Format(types.Iso8601DateFormatSecond))
 
 	// set user-agent
-	// req.Header.Set(types.HTTPHeaderUserAgent, c.userAgent)
+	req.Header.Set(types.HTTPHeaderUserAgent, c.userAgent)
 
 	// sign the total http request info when auth type v1
-	err = c.signRequest(req, authInfo)
+	err = c.signRequest(req)
 	if err != nil {
 		return req, err
 	}
@@ -335,8 +342,8 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 }
 
 // sendReq sends the message via REST and handles the response
-func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo types.AuthInfo, endpoint *url.URL) (res *http.Response, err error) {
-	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, endpoint, authInfo)
+func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, endpoint *url.URL) (res *http.Response, err error) {
+	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, endpoint)
 	if err != nil {
 		log.Debug().Msg("new request error stop send request" + err.Error())
 		return nil, err
@@ -399,34 +406,19 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 }
 
 // signRequest signs the request and set authorization before send to server
-func (c *client) signRequest(req *http.Request, info types.AuthInfo) error {
-	var authStr []string
-	if info.SignType == types.AuthV1 {
-		unsignMsg := httplib.GetMsgToSign(req)
+func (c *client) signRequest(req *http.Request) error {
+	unsignedMsg := httplib.GetMsgToSign(req)
 
-		// sign the request header info, generate the signature
-		signature, err := c.defaultAccount.Sign(unsignMsg)
-		if err != nil {
-			return err
-		}
+	// sign the request header info, generate the signature
+	signature, err := c.defaultAccount.Sign(unsignedMsg)
+	if err != nil {
+		return err
+	}
 
-		authStr = []string{
-			types.AuthV1 + " " + types.SignAlgorithm,
-			" SignedMsg=" + hex.EncodeToString(unsignMsg),
-			"Signature=" + hex.EncodeToString(signature),
-		}
-
-	} else if info.SignType == types.AuthV2 {
-		if info.WalletSignStr == "" {
-			return errors.New("wallet signature can not be empty with auth v2 type")
-		}
-		// wallet should use same sign algorithm
-		authStr = []string{
-			types.AuthV2 + " " + types.SignAlgorithm,
-			" Signature=" + info.WalletSignStr,
-		}
-	} else {
-		return errors.New("sign type error")
+	authStr := []string{
+		types.AuthV1 + " " + types.SignAlgorithm,
+		" SignedMsg=" + hex.EncodeToString(unsignedMsg),
+		"Signature=" + hex.EncodeToString(signature),
 	}
 
 	// set auth header
