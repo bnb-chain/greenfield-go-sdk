@@ -114,13 +114,13 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 	return paymentAccounts, nil
 }
 
-func (c *client) Transfer(ctx context.Context, toAddress string, amount int64) (*sdk.TxResponse, error) {
+func (c *client) Transfer(ctx context.Context, toAddress string, amount int64, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	toAddr, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
 		return nil, err
 	}
 	msgSend := types3.NewMsgSend(c.defaultAccount.GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: sdk.NewInt(amount)}})
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, nil)
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, &txOption)
 	if err != nil {
 		return nil, err
 	}

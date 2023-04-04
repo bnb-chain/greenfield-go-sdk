@@ -21,6 +21,8 @@ type Basic interface {
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error)
 	LatestBlockHeight(ctx context.Context) (int64, error)
+	SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
+	BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
 }
 
 // Status returns the current status of the Tendermint node that the client is connected to.
@@ -133,6 +135,10 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 	}
 }
 
-func (c *client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
-	return c.chainClient.BroadcastTx(ctx, msgs, txOpt, opts...)
+func (c *client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
+	return c.chainClient.BroadcastTx(ctx, msgs, &txOpt, opts...)
+}
+
+func (c *client) SimulateTx(msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
+	return c.chainClient.SimulateTx(msgs, &txOpt, opts...)
 }
