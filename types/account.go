@@ -10,7 +10,7 @@ type Account struct {
 	km   keys.KeyManager
 }
 
-func NewAccountFromPrivKey(name, privKey string) (*Account, error) {
+func NewAccountFromPrivateKey(name, privKey string) (*Account, error) {
 	km, err := keys.NewPrivateKeyManager(privKey)
 	if err != nil {
 		return nil, err
