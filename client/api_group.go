@@ -40,14 +40,9 @@ type Group interface {
 // CreateGroup create a new group on greenfield chain
 // the group members can be initialized  or not
 func (c *client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
+	createGroupMsg := storageTypes.NewMsgCreateGroup(c.defaultAccount.GetAddress(), groupName, opt.InitGroupMember)
 
-	createGroupMsg := storageTypes.NewMsgCreateGroup(km.GetAddr(), groupName, opt.InitGroupMember)
-
-	if err = createGroupMsg.ValidateBasic(); err != nil {
+	if err := createGroupMsg.ValidateBasic(); err != nil {
 		return "", err
 	}
 
@@ -61,13 +56,8 @@ func (c *client) CreateGroup(ctx context.Context, groupName string, opt types.Cr
 
 // DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
 func (c *client) DeleteGroup(ctx context.Context, groupName string, txOpts gnfdSdkTypes.TxOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-
-	deleteGroupMsg := storageTypes.NewMsgDeleteGroup(km.GetAddr(), groupName)
-	if err = deleteGroupMsg.ValidateBasic(); err != nil {
+	deleteGroupMsg := storageTypes.NewMsgDeleteGroup(c.defaultAccount.GetAddress(), groupName)
+	if err := deleteGroupMsg.ValidateBasic(); err != nil {
 		return "", err
 	}
 
@@ -82,11 +72,6 @@ func (c *client) DeleteGroup(ctx context.Context, groupName string, txOpts gnfdS
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
 func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupOwner sdk.AccAddress,
 	addMembers, removeMembers []sdk.AccAddress, opts types.UpdateGroupMemberOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-
 	if groupName == "" {
 		return "", errors.New("group name is empty")
 	}
@@ -94,8 +79,8 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 	if len(addMembers) == 0 && len(removeMembers) == 0 {
 		return "", errors.New("no update member")
 	}
-	updateGroupMsg := storageTypes.NewMsgUpdateGroupMember(km.GetAddr(), groupOwner, groupName, addMembers, removeMembers)
-	if err = updateGroupMsg.ValidateBasic(); err != nil {
+	updateGroupMsg := storageTypes.NewMsgUpdateGroupMember(c.defaultAccount.GetAddress(), groupOwner, groupName, addMembers, removeMembers)
+	if err := updateGroupMsg.ValidateBasic(); err != nil {
 		return "", err
 	}
 
@@ -108,12 +93,11 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 }
 
 func (c *client) LeaveGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress, opt types.LeaveGroupOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
+	leaveGroupMsg := storageTypes.NewMsgLeaveGroup(c.defaultAccount.GetAddress(), groupOwner, groupName)
+	if err := leaveGroupMsg.ValidateBasic(); err != nil {
+		return "", err
 	}
 
-	leaveGroupMsg := storageTypes.NewMsgLeaveGroup(km.GetAddr(), groupOwner, groupName)
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{leaveGroupMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
@@ -153,14 +137,10 @@ func (c *client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 // PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
 func (c *client) PutGroupPolicy(ctx context.Context, groupName string, principalAddr sdk.AccAddress,
 	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-	sender := km.GetAddr()
+	sender := c.defaultAccount.GetAddress()
 
 	resource := gnfdTypes.NewGroupGRN(sender, groupName)
-	putPolicyMsg := storageTypes.NewMsgPutPolicy(km.GetAddr(), resource.String(),
+	putPolicyMsg := storageTypes.NewMsgPutPolicy(sender, resource.String(),
 		permTypes.NewPrincipalWithAccount(principalAddr), statements, opt.PolicyExpireTime)
 
 	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)

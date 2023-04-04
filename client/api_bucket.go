@@ -124,12 +124,10 @@ func (c *client) DeleteBucket(ctx context.Context, bucketName string, opt types.
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
+	delBucketMsg := storageTypes.NewMsgDeleteBucket(c.defaultAccount.GetAddress(), bucketName)
+	if err := delBucketMsg.ValidateBasic(); err != nil {
+		return "", err
 	}
-	delBucketMsg := storageTypes.NewMsgDeleteBucket(km.GetAddr(), bucketName)
-
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{delBucketMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
@@ -141,10 +139,6 @@ func (c *client) DeleteBucket(ctx context.Context, bucketName string, opt types.
 // UpdateBucketVisibility update the visibilityType of bucket
 func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 	visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
@@ -155,7 +149,10 @@ func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 		return "", err
 	}
 
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
+	if err = updateBucketMsg.ValidateBasic(); err != nil {
+		return "", err
+	}
 
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {
@@ -197,18 +194,13 @@ func (c *client) HeadBucketByID(ctx context.Context, bucketID string) (*storageT
 // PutBucketPolicy apply bucket policy to the principal, return the txn hash
 func (c *client) PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal,
 	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-
 	resource := gnfdTypes.NewBucketGRN(bucketName)
 	principal := &permTypes.Principal{}
-	if err = principal.Unmarshal([]byte(principalStr)); err != nil {
+	if err := principal.Unmarshal([]byte(principalStr)); err != nil {
 		return "", err
 	}
 
-	putPolicyMsg := storageTypes.NewMsgPutPolicy(km.GetAddr(), resource.String(),
+	putPolicyMsg := storageTypes.NewMsgPutPolicy(c.defaultAccount.GetAddress(), resource.String(),
 		principal, statements, opt.PolicyExpireTime)
 
 	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)
@@ -216,15 +208,10 @@ func (c *client) PutBucketPolicy(ctx context.Context, bucketName string, princip
 
 // DeleteBucketPolicy delete the bucket policy of the principal
 func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 
-	return c.sendDelPolicyTxn(ctx, km.GetAddr(), resource, principal, opt.TxOpts)
+	return c.sendDelPolicyTxn(ctx, c.defaultAccount.GetAddress(), resource, principal, opt.TxOpts)
 }
 
 // IsBucketPermissionAllowed check if the permission of bucket is allowed to the user

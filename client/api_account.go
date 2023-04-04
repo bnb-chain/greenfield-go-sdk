@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
@@ -25,10 +24,6 @@ type Account interface {
 // BuyQuotaForBucket buy the target quota of the specific bucket
 // targetQuota indicates the target quota to set for the bucket
 func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
@@ -38,7 +33,7 @@ func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 	if err != nil {
 		return "", err
 	}
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(km.GetAddr(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
 
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {

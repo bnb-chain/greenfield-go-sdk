@@ -102,10 +102,6 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
 	// compute hash root of payload
 	expectCheckSums, size, redundancyType, err := c.ComputeHashRoots(reader)
 	if err != nil {
@@ -126,7 +122,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		visibility = opts.Visibility
 	}
 
-	createObjectMsg := storageTypes.NewMsgCreateObject(km.GetAddr(), bucketName, objectName,
+	createObjectMsg := storageTypes.NewMsgCreateObject(c.defaultAccount.GetAddress(), bucketName, objectName,
 		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
@@ -155,12 +151,10 @@ func (c *client) DeleteObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
+	delObjectMsg := storageTypes.NewMsgDeleteObject(c.defaultAccount.GetAddress(), bucketName, objectName)
+	if err := delObjectMsg.ValidateBasic(); err != nil {
+		return "", err
 	}
-	delObjectMsg := storageTypes.NewMsgDeleteObject(km.GetAddr(), bucketName, objectName)
-
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{delObjectMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
@@ -179,13 +173,10 @@ func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName 
 		return "", err
 	}
 
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
+	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(c.defaultAccount.GetAddress(), bucketName, objectName)
+	if err := cancelCreateMsg.ValidateBasic(); err != nil {
+		return "", err
 	}
-
-	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(km.GetAddr(), bucketName, objectName)
-
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{cancelCreateMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
@@ -398,33 +389,23 @@ func (c *client) HeadObjectByID(ctx context.Context, objID string) (*storageType
 // PutObjectPolicy apply object policy to the principal, return the txn hash
 func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
 
 	principal := &permTypes.Principal{}
-	if err = principal.Unmarshal([]byte(principalStr)); err != nil {
+	if err := principal.Unmarshal([]byte(principalStr)); err != nil {
 		return "", err
 	}
 
-	putPolicyMsg := storageTypes.NewMsgPutPolicy(km.GetAddr(), resource.String(),
+	putPolicyMsg := storageTypes.NewMsgPutPolicy(c.defaultAccount.GetAddress(), resource.String(),
 		principal, statements, opt.PolicyExpireTime)
 
 	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)
 }
 
 func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
-	km, err := c.chainClient.GetKeyManager()
-	if err != nil {
-		return "", errors.New("key manager is nil")
-	}
-
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
-	return c.sendDelPolicyTxn(ctx, km.GetAddr(), resource.String(), principal, opt.TxOpts)
+	return c.sendDelPolicyTxn(ctx, c.defaultAccount.GetAddress(), resource.String(), principal, opt.TxOpts)
 }
 
 // IsObjectPermissionAllowed check if the permission of the object is allowed to the user
