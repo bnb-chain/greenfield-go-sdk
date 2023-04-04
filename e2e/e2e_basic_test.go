@@ -36,7 +36,7 @@ func ParseMnemonicFromFile(fileName string) string {
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-
+			panic(err)
 		}
 	}(file)
 
