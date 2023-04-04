@@ -53,6 +53,10 @@ func GetEndpointURL(endpoint string, secure bool) (*url.URL, error) {
 		scheme = "http"
 	}
 
+	if strings.Contains(endpoint, "http") {
+		s := strings.Split(endpoint, "//")
+		endpoint = s[1]
+	}
 	// Construct a secured endpoint URL.
 	endpointURLStr := scheme + "://" + endpoint
 	endpointURL, err := url.Parse(endpointURLStr)

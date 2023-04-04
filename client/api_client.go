@@ -48,7 +48,7 @@ type client struct {
 	// Service provider endpoints
 	spEndpoints map[string]*url.URL
 	// The default account to use when sending transactions.
-	defaultAccount types.Account
+	defaultAccount *types.Account
 	// The hostname of the blockchain node.
 	host string
 	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
@@ -59,8 +59,8 @@ type client struct {
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
 type Option struct {
-	// Account is the account used for signing transactions.
-	Account types.Account
+	// DefaultAccount is the account used for signing transactions.
+	DefaultAccount *types.Account
 	// GrpcDialOption is the list of gRPC dial options used to configure the connection to the blockchain node.
 	GrpcDialOption grpc.DialOption
 	// Secure is a flag that specifies whether the client should use HTTPS or not.
@@ -75,7 +75,7 @@ func New(chainID string, grpcAddress, rpcAddress string, option *Option) (Client
 	cc := sdkclient.NewGreenfieldClient(
 		grpcAddress,
 		chainID,
-		sdkclient.WithKeyManager(option.Account.GetKeyManager()),
+		sdkclient.WithKeyManager(option.DefaultAccount.GetKeyManager()),
 		sdkclient.WithGrpcDialOption(option.GrpcDialOption),
 	)
 
@@ -84,7 +84,7 @@ func New(chainID string, grpcAddress, rpcAddress string, option *Option) (Client
 		tendermintClient: &tc,
 		httpClient:       &http.Client{Transport: option.Transport},
 		userAgent:        types.UserAgent,
-		defaultAccount:   option.Account,
+		defaultAccount:   option.DefaultAccount,
 		secure:           option.Secure,
 	}
 	// fetch sp endpoints info from chain

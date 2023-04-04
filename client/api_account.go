@@ -51,7 +51,7 @@ func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 // GetAccount retrieves account information for a given address.
 // It takes a context and an address as input and returns an AccountI interface and an error (if any).
 func (c *client) GetAccount(ctx context.Context, address string) (authTypes.AccountI, error) {
-	// Call the Account method of the chain client with a QueryAccountRequest containing the address.
+	// Call the DefaultAccount method of the chain client with a QueryAccountRequest containing the address.
 	response, err := c.chainClient.Account(ctx, &authTypes.QueryAccountRequest{Address: address})
 	if err != nil {
 		// Return an error if there was an issue retrieving the account.
