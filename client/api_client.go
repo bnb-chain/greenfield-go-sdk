@@ -60,7 +60,7 @@ type client struct {
 // Option is a configuration struct used to provide optional parameters to the client constructor.
 type Option struct {
 	// DefaultAccount is the account used for signing transactions.
-	DefaultAccount *types.Account
+	// DefaultAccount *types.Account
 	// GrpcDialOption is the list of gRPC dial options used to configure the connection to the blockchain node.
 	GrpcDialOption grpc.DialOption
 	// Secure is a flag that specifies whether the client should use HTTPS or not.
@@ -71,29 +71,40 @@ type Option struct {
 	Host string
 }
 
-// New - instantiate greenfield chain with options
-func New(chainID string, grpcAddress, rpcAddress string, option *Option) (Client, error) {
-	tc := sdkclient.NewTendermintClient(rpcAddress)
-
+// New - instantiate greenfield chain with chain info, account info and options.
+// The grpcAddress indicate the grpc address of greenfield chain.
+// The account indicate the account used for signing transactions.
+// The rpcAddress indicate the rpc address of the tendermint client.
+func New(chainID string, grpcAddress, rpcAddress string, account *types.Account, option *Option) (Client, error) {
 	if grpcAddress == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
 	}
+
+	if account == nil {
+		return nil, errors.New("fail to get account info")
+	}
+
 	cc := sdkclient.NewGreenfieldClient(
 		grpcAddress,
 		chainID,
-		sdkclient.WithKeyManager(option.DefaultAccount.GetKeyManager()),
+		sdkclient.WithKeyManager(account.GetKeyManager()),
 		sdkclient.WithGrpcDialOption(option.GrpcDialOption),
 	)
 
 	c := client{
-		chainClient:      cc,
-		tendermintClient: &tc,
-		httpClient:       &http.Client{Transport: option.Transport},
-		userAgent:        types.UserAgent,
-		defaultAccount:   option.DefaultAccount,
-		secure:           option.Secure,
-		host:             option.Host,
+		chainClient:    cc,
+		httpClient:     &http.Client{Transport: option.Transport},
+		userAgent:      types.UserAgent,
+		defaultAccount: account,
+		secure:         option.Secure,
+		host:           option.Host,
 	}
+
+	if rpcAddress != "" {
+		tc := sdkclient.NewTendermintClient(rpcAddress)
+		c.tendermintClient = &tc
+	}
+
 	// fetch sp endpoints info from chain
 	spInfo, err := c.GetSPAddrInfo()
 	if err != nil {
