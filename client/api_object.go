@@ -48,7 +48,7 @@ type Object interface {
 	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-	ListObjects(ctx context.Context, bucketName string, authInfo types.AuthInfo) (ListObjectsResult, error)
+	ListObjects(ctx context.Context, bucketName string, authInfo types.AuthInfo) (types.ListObjectsResult, error)
 }
 
 // CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
@@ -464,9 +464,9 @@ func (c *client) GetObjectPolicy(ctx context.Context, bucketName, objectName str
 }
 
 // ListObjects return object list of the specific bucket
-func (c *client) ListObjects(ctx context.Context, bucketName string, authInfo types.AuthInfo) (ListObjectsResult, error) {
+func (c *client) ListObjects(ctx context.Context, bucketName string, authInfo types.AuthInfo) (types.ListObjectsResult, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
-		return ListObjectsResult{}, err
+		return types.ListObjectsResult{}, err
 	}
 
 	reqMeta := requestMeta{
@@ -481,12 +481,12 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, authInfo ty
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
-		return ListObjectsResult{}, err
+		return types.ListObjectsResult{}, err
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
 	if err != nil {
-		return ListObjectsResult{}, err
+		return types.ListObjectsResult{}, err
 	}
 	defer utils.CloseResponse(resp)
 
@@ -495,16 +495,16 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, authInfo ty
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
 		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
-		return ListObjectsResult{}, err
+		return types.ListObjectsResult{}, err
 	}
 
-	listObjectsResult := ListObjectsResult{}
+	listObjectsResult := types.ListObjectsResult{}
 	bufStr := buf.String()
 	err = json.Unmarshal([]byte(bufStr), &listObjectsResult)
 	//TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil && listObjectsResult.Objects == nil {
 		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
-		return ListObjectsResult{}, err
+		return types.ListObjectsResult{}, err
 	}
 
 	return listObjectsResult, nil

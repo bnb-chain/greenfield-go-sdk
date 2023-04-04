@@ -157,7 +157,7 @@ type requestMeta struct {
 	contentMD5Base64 string // base64 encoded md5sum
 	contentSHA256    string // hex encoded sha256sum
 	challengeInfo    types.ChallengeInfo
-	userInfo         UserInfo
+	userInfo         types.UserInfo
 }
 
 // SendOptions -  options to use to send the http message

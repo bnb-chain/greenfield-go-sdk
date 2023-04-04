@@ -1,12 +1,10 @@
-package client
+package types
 
 import (
 	"encoding/xml"
 
 	storageType "github.com/bnb-chain/greenfield/x/storage/types"
 )
-
-// TODO: remove to types
 
 // QuotaInfo indicates the quota info of bucket
 type QuotaInfo struct {
@@ -75,7 +73,7 @@ type BucketMeta struct {
 	Removed bool `protobuf:"varint,2,opt,name=removed,proto3" json:"removed"`
 }
 
-// GetObjectResult differ from GetObjectResult in greenfield as it adds uint64/int64 unmarshal guide in json part
+// ObjectInfo differ from GetObjectResult in greenfield as it adds uint64/int64 unmarshal guide in json part
 type ObjectInfo struct {
 	Owner string `json:"owner"`
 	// bucket_name is the name of the bucket

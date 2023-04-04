@@ -30,7 +30,7 @@ type Bucket interface {
 	CreateBucket(ctx context.Context, bucketName string, primaryAddr sdk.AccAddress, opts types.CreateBucketOptions) (string, error)
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
-	GetBucketReadQuota(ctx context.Context, bucketName string, authInfo types.AuthInfo) (QuotaInfo, error)
+	GetBucketReadQuota(ctx context.Context, bucketName string, authInfo types.AuthInfo) (types.QuotaInfo, error)
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
 	// PutBucketPolicy apply bucket policy to the principal, return the txn hash
@@ -39,8 +39,8 @@ type Bucket interface {
 	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-	ListBuckets(ctx context.Context, userInfo UserInfo, authInfo types.AuthInfo) (ListBucketsResult, error)
-	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions, authInfo types.AuthInfo) (QuotaRecordInfo, error)
+	ListBuckets(ctx context.Context, userInfo types.UserInfo, authInfo types.AuthInfo) (types.ListBucketsResult, error)
+	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions, authInfo types.AuthInfo) (types.QuotaRecordInfo, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
@@ -263,14 +263,14 @@ func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, princip
 }
 
 // ListBuckets list buckets for the owner
-func (c *client) ListBuckets(ctx context.Context, userInfo UserInfo, authInfo types.AuthInfo) (ListBucketsResult, error) {
+func (c *client) ListBuckets(ctx context.Context, userInfo types.UserInfo, authInfo types.AuthInfo) (types.ListBucketsResult, error) {
 	if userInfo.Address == "" {
-		return ListBucketsResult{}, errors.New("fail to get user address")
+		return types.ListBucketsResult{}, errors.New("fail to get user address")
 	}
 
 	reqMeta := requestMeta{
 		contentSHA256: types.EmptyStringSHA256,
-		userInfo: UserInfo{
+		userInfo: types.UserInfo{
 			Address: userInfo.Address,
 		},
 	}
@@ -282,23 +282,23 @@ func (c *client) ListBuckets(ctx context.Context, userInfo UserInfo, authInfo ty
 
 	endpoint, err := c.getSPUrlByAddr(userInfo.Address)
 	if err != nil {
-		return ListBucketsResult{}, err
+		return types.ListBucketsResult{}, err
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
 	if err != nil {
 		log.Error().Msg("the list of user's buckets failed: " + err.Error())
-		return ListBucketsResult{}, err
+		return types.ListBucketsResult{}, err
 	}
 	defer utils.CloseResponse(resp)
 
-	listBucketsResult := ListBucketsResult{}
+	listBucketsResult := types.ListBucketsResult{}
 	//unmarshal the json content from response body
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
 		log.Error().Msg("the list of user's buckets failed: " + err.Error())
-		return ListBucketsResult{}, err
+		return types.ListBucketsResult{}, err
 	}
 
 	bufStr := buf.String()
@@ -306,7 +306,7 @@ func (c *client) ListBuckets(ctx context.Context, userInfo UserInfo, authInfo ty
 
 	//TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil && listBucketsResult.Buckets == nil {
-		return ListBucketsResult{}, err
+		return types.ListBucketsResult{}, err
 	}
 
 	return listBucketsResult, nil
@@ -314,14 +314,14 @@ func (c *client) ListBuckets(ctx context.Context, userInfo UserInfo, authInfo ty
 
 // ListBucketReadRecord returns the read record of this month, the return items should be no more than maxRecords
 // ListReadRecordOption indicates the start timestamp of return read records
-func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions, authInfo types.AuthInfo) (QuotaRecordInfo, error) {
+func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions, authInfo types.AuthInfo) (types.QuotaRecordInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
-		return QuotaRecordInfo{}, err
+		return types.QuotaRecordInfo{}, err
 	}
 	timeNow := time.Now()
 	timeToday := time.Date(timeNow.Year(), timeNow.Month(), timeNow.Day(), 0, 0, 0, 0, timeNow.Location())
 	if opts.StartTimeStamp < 0 {
-		return QuotaRecordInfo{}, errors.New("start timestamp  less than 0")
+		return types.QuotaRecordInfo{}, errors.New("start timestamp  less than 0")
 	}
 	var startTimeStamp int64
 	if opts.StartTimeStamp == 0 {
@@ -334,7 +334,7 @@ func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 	timeMonthEnd := timeToday.AddDate(0, 1, -timeToday.Day()+1).UnixMicro()
 
 	if timeMonthEnd < startTimeStamp {
-		return QuotaRecordInfo{}, errors.New("start timestamp larger than the end timestamp of this month")
+		return types.QuotaRecordInfo{}, errors.New("start timestamp larger than the end timestamp of this month")
 	}
 
 	params := url.Values{}
@@ -361,29 +361,29 @@ func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
-		return QuotaRecordInfo{}, err
+		return types.QuotaRecordInfo{}, err
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
 	if err != nil {
-		return QuotaRecordInfo{}, err
+		return types.QuotaRecordInfo{}, err
 	}
 	defer utils.CloseResponse(resp)
 
-	QuotaRecords := QuotaRecordInfo{}
+	QuotaRecords := types.QuotaRecordInfo{}
 	// decode the xml content from response body
 	err = xml.NewDecoder(resp.Body).Decode(&QuotaRecords)
 	if err != nil {
-		return QuotaRecordInfo{}, err
+		return types.QuotaRecordInfo{}, err
 	}
 
 	return QuotaRecords, nil
 }
 
 // GetBucketReadQuota return quota info of bucket of current month, include chain quota, free quota and consumed quota
-func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string, authInfo types.AuthInfo) (QuotaInfo, error) {
+func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string, authInfo types.AuthInfo) (types.QuotaInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
-		return QuotaInfo{}, err
+		return types.QuotaInfo{}, err
 	}
 
 	year, month, _ := time.Now().Date()
@@ -411,20 +411,20 @@ func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string, auth
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
-		return QuotaInfo{}, err
+		return types.QuotaInfo{}, err
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo, endpoint)
 	if err != nil {
-		return QuotaInfo{}, err
+		return types.QuotaInfo{}, err
 	}
 	defer utils.CloseResponse(resp)
 
-	QuotaResult := QuotaInfo{}
+	QuotaResult := types.QuotaInfo{}
 	// decode the xml content from response body
 	err = xml.NewDecoder(resp.Body).Decode(&QuotaResult)
 	if err != nil {
-		return QuotaInfo{}, err
+		return types.QuotaInfo{}, err
 	}
 
 	return QuotaResult, nil
