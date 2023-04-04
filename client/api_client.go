@@ -23,7 +23,6 @@ import (
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 
@@ -356,13 +355,11 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, endpoint *url.URL) (res *http.Response, err error) {
 	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, endpoint)
 	if err != nil {
-		log.Debug().Msg("new request error stop send request" + err.Error())
 		return nil, err
 	}
 
 	resp, err := c.doAPI(ctx, req, metadata, !opt.disableCloseBody)
 	if err != nil {
-		log.Debug().Msg("do api request fail: " + err.Error())
 		return nil, err
 	}
 	return resp, nil
