@@ -19,7 +19,7 @@ type Account interface {
 	GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error)
 	GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
-	Transfer(ctx context.Context, toAddress string, amount int64) (*sdk.TxResponse, error)
+	Transfer(ctx context.Context, toAddress string, amount int64, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 }
 
 // BuyQuotaForBucket buy the target quota of the specific bucket
