@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"cosmossdk.io/errors"
+	"github.com/bnb-chain/greenfield/sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	"google.golang.org/grpc"
@@ -129,4 +131,8 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 		// Tx found
 		return resp, nil
 	}
+}
+
+func (c *client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
+	return c.chainClient.BroadcastTx(ctx, msgs, txOpt, opts...)
 }
