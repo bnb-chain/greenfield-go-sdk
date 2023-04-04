@@ -54,7 +54,7 @@ func Test_Basic(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, RpcAddress, &client.Option{DefaultAccount: account, GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	cli, err := client.New(ChainID, GrpcAddress, RpcAddress, account, &client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
 	assert.NoError(t, err)
 	ctx := context.Background()
 	status, err := cli.Status(ctx)

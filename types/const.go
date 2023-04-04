@@ -5,13 +5,6 @@ import (
 )
 
 const (
-	Denomm         = "BNB"
-	libraryName    = "greenfield-go-sdk"
-	libraryVersion = "v0.0.1"
-
-	libraryUserAgentPrefix = "Greenfield (" + runtime.GOOS + "; " + runtime.GOARCH + ") "
-	libraryUserAgent       = libraryUserAgentPrefix + libraryName + "/" + libraryVersion
-
 	libName   = "greenfield-go-sdk"
 	Version   = "v0.0.7"
 	UserAgent = "Greenfield (" + runtime.GOOS + "; " + runtime.GOARCH + ") " + libName + "/" + Version
@@ -19,7 +12,6 @@ const (
 	HTTPHeaderAuthorization = "Authorization"
 	SignAlgorithm           = "ECDSA-secp256k1"
 	AuthV1                  = "authTypeV1"
-	AuthV2                  = "authTypeV2"
 
 	HTTPHeaderContentLength   = "Content-Length"
 	HTTPHeaderContentMD5      = "Content-MD5"

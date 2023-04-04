@@ -58,8 +58,6 @@ type client struct {
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
 type Option struct {
-	// DefaultAccount is the account used for signing transactions.
-	// DefaultAccount *types.Account
 	// GrpcDialOption is the list of gRPC dial options used to configure the connection to the blockchain node.
 	GrpcDialOption grpc.DialOption
 	// Secure is a flag that specifies whether the client should use HTTPS or not.
