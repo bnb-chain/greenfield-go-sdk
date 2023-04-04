@@ -15,32 +15,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// UploadResult contains information about the object which has been uploaded
-type UploadResult struct {
-	BucketName string
-	ObjectName string
-	ETag       string // Hex encoded unique entity tag of the object.
-}
-
 type PutObjectOption struct {
 	ContentType string
-}
-
-func (t *UploadResult) String() string {
-	return fmt.Sprintf("upload finish, bucket name  %s, objectname %s, etag %s", t.BucketName, t.ObjectName, t.ETag)
 }
 
 // PutObject supports the second stage of uploading the object to bucket.
 // txnHash should be the str which hex.encoding from txn hash bytes
 func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
 	reader io.Reader, authInfo AuthInfo, opt PutObjectOption,
-) (res UploadResult, err error) {
+) (err error) {
 	if txnHash == "" {
-		return UploadResult{}, errors.New("txn hash empty")
+		return errors.New("txn hash empty")
 	}
 
 	if objectSize <= 0 {
-		return UploadResult{}, errors.New("object size not set")
+		return errors.New("object size not set")
 	}
 
 	var contentType string
@@ -64,36 +53,30 @@ func (c *SPClient) PutObject(ctx context.Context, bucketName, objectName, txnHas
 		txnHash: txnHash,
 	}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
+	_, err = c.sendReq(ctx, reqMeta, &sendOpt, authInfo)
 	if err != nil {
 		log.Printf("upload payload the object failed: %s \n", err.Error())
-		return UploadResult{}, err
+		return err
 	}
 
-	etagValue := resp.Header.Get(HTTPHeaderEtag)
-
-	return UploadResult{
-		BucketName: bucketName,
-		ObjectName: objectName,
-		ETag:       etagValue,
-	}, nil
+	return nil
 }
 
 // FPutObject supports uploading object from local file
 func (c *SPClient) FPutObject(ctx context.Context, bucketName, objectName,
 	filePath, txnHash, contentType string, authInfo AuthInfo,
-) (res UploadResult, err error) {
+) (err error) {
 	fReader, err := os.Open(filePath)
 	// If any error fail quickly here.
 	if err != nil {
-		return UploadResult{}, err
+		return err
 	}
 	defer fReader.Close()
 
 	// Save the file stat.
 	stat, err := fReader.Stat()
 	if err != nil {
-		return UploadResult{}, err
+		return err
 	}
 
 	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, authInfo, PutObjectOption{ContentType: contentType})
@@ -159,7 +142,7 @@ func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
 		return nil, ObjectInfo{}, err
 	}
 
-	ObjInfo, err := getObjInfo(bucketName, objectName, resp.Header)
+	ObjInfo, err := getObjInfo(objectName, resp.Header)
 	if err != nil {
 		utils.CloseResponse(resp)
 		return nil, ObjectInfo{}, err
@@ -202,7 +185,7 @@ func (c *SPClient) FGetObject(ctx context.Context, bucketName, objectName, fileP
 }
 
 // getObjInfo generates objectInfo base on the response http header content
-func getObjInfo(bucketName string, objectName string, h http.Header) (ObjectInfo, error) {
+func getObjInfo(objectName string, h http.Header) (ObjectInfo, error) {
 	// Parse content length is exists
 	var size int64 = -1
 	var err error
@@ -211,11 +194,8 @@ func getObjInfo(bucketName string, objectName string, h http.Header) (ObjectInfo
 		size, err = strconv.ParseInt(contentLength, 10, 64)
 		if err != nil {
 			return ObjectInfo{}, ErrResponse{
-				Code:       "InternalError",
-				Message:    fmt.Sprintf("Content-Length parse error %v", err),
-				BucketName: bucketName,
-				ObjectName: objectName,
-				RequestID:  h.Get("x-gnfd-request-id"),
+				Code:    "InternalError",
+				Message: fmt.Sprintf("Content-Length parse error %v", err),
 			}
 		}
 	}
