@@ -5,13 +5,11 @@ on:
     branches:
       - master
       - develop
-      - new-go-sdk-client
 
   pull_request:
     branches:
       - master
       - develop
-      - new-go-sdk-client
 
 jobs:
   end-to-end-test:
@@ -52,7 +50,9 @@ jobs:
       - name: Localup greenfield blockchain
         run: |
           git clone https://github.com/bnb-chain/greenfield.git
-          cd greenfield && bash ./deployment/localup/localup.sh all 1 7
+          cd greenfield
+          make build
+          bash ./deployment/localup/localup.sh all 1 7
       - name: start e2e
         run: |
           make e2e_test
