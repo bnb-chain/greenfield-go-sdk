@@ -16,7 +16,7 @@ Go version above 1.18
 
 ## Getting started
 To get started working with the SDK setup your project for Go modules, and retrieve the SDK dependencies with `go get`.
-This example shows how you can use the v2 SDK to make an API request using the SDK's [Amazon DynamoDB] client.
+This example shows how you can use the v2 SDK to make an API request using the SDK's client.
 
 ###### Initialize Project
 
