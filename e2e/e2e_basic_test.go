@@ -60,6 +60,7 @@ func Test_Basic(t *testing.T) {
 	assert.NoError(t, err)
 
 	latestBlock, err := cli.LatestBlock(ctx)
+	assert.NoError(t, err)
 	fmt.Println(latestBlock.String())
 
 	heightBefore := latestBlock.Header.Height

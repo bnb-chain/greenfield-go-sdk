@@ -45,7 +45,7 @@ func (c *client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmserv
 // If sync is true, the transaction is broadcast synchronously.
 // If sync is false, the transaction is broadcast asynchronously.
 func (c *client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error) {
-	mode := tx.BroadcastMode_BROADCAST_MODE_UNSPECIFIED
+	var mode tx.BroadcastMode
 	if sync {
 		mode = tx.BroadcastMode_BROADCAST_MODE_SYNC
 	} else {
