@@ -55,7 +55,7 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 		urlValues:     urlVal,
 		urlRelPath:    "get-approval",
 		contentSHA256: types.EmptyStringSHA256,
-		TxnMsg:        hex.EncodeToString(unsignedBytes),
+		txnMsg:        hex.EncodeToString(unsignedBytes),
 	}
 
 	sendOpt := sendOptions{

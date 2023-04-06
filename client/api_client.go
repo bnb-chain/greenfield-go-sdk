@@ -156,10 +156,8 @@ type requestMeta struct {
 	objectName       string
 	urlRelPath       string     // relative path of url
 	urlValues        url.Values // url values to be added into url
-	Range            string
-	ApproveAction    string
-	TxnMsg           string
-	SignType         string
+	rangeInfo        string
+	txnMsg           string
 	contentType      string
 	contentLength    int64
 	contentMD5Base64 string // base64 encoded md5sum
@@ -250,8 +248,8 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 		req.Header[types.HTTPHeaderContentSHA256] = []string{sha256Hex}
 	}
 
-	if meta.Range != "" && method == http.MethodGet {
-		req.Header.Set(types.HTTPHeaderRange, meta.Range)
+	if meta.rangeInfo != "" && method == http.MethodGet {
+		req.Header.Set(types.HTTPHeaderRange, meta.rangeInfo)
 	}
 
 	if isAdminAPi {
@@ -264,8 +262,8 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 			req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
 		}
 
-		if meta.TxnMsg != "" {
-			req.Header.Set(types.HTTPHeaderUnsignedMsg, meta.TxnMsg)
+		if meta.txnMsg != "" {
+			req.Header.Set(types.HTTPHeaderUnsignedMsg, meta.txnMsg)
 		}
 
 	} else {

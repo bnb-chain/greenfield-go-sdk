@@ -239,7 +239,7 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 	}
 
 	if opts.Range != "" {
-		reqMeta.Range = opts.Range
+		reqMeta.rangeInfo = opts.Range
 	}
 
 	sendOpt := sendOptions{
@@ -472,7 +472,7 @@ func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 		urlValues:     urlValues,
 		urlRelPath:    "get-approval",
 		contentSHA256: types.EmptyStringSHA256,
-		TxnMsg:        hex.EncodeToString(unsignedBytes),
+		txnMsg:        hex.EncodeToString(unsignedBytes),
 	}
 
 	sendOpt := sendOptions{
