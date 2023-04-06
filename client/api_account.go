@@ -65,6 +65,8 @@ func (c *client) GetAccount(ctx context.Context, address string) (authTypes.Acco
 	return &baseAccount, err
 }
 
+// GetAccountBalance retrieves balance information of an account for a given address.
+// It takes a context and an address as input and returns an sdk.Coin interface and an error (if any).
 func (c *client) GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error) {
 	response, err := c.chainClient.BankQueryClient.Balance(ctx, &types3.QueryBalanceRequest{Address: address, Denom: gnfdSdkTypes.Denom})
 	if err != nil {
