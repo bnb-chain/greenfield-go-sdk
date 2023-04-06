@@ -598,7 +598,7 @@ func (c *GnfdClient) GetSpAddrByEndpoint(ctx context.Context) (sdk.AccAddress, e
 			endpoint = s[1]
 		}
 		if endpoint == spClientEndpoint {
-			addr := spInfo.GetFundingAddress()
+			addr := spInfo.GetOperatorAddress()
 			if addr == "" {
 				return nil, errors.New("fail to get addr")
 			}
