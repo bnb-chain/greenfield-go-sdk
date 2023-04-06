@@ -54,18 +54,19 @@ func Test_Basic(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, RpcAddress, account, &client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	cli, err := client.New(ChainID, GrpcAddress, account, &client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
 	assert.NoError(t, err)
 	ctx := context.Background()
-	status, err := cli.Status(ctx)
+	_, _, err = cli.GetNodeInfo(ctx)
 	assert.NoError(t, err)
 
-	fmt.Println(status.SyncInfo.LatestBlockHeight)
+	latestBlock, err := cli.LatestBlock(ctx)
+	fmt.Println(latestBlock.String())
 
-	heightBefore := status.SyncInfo.LatestBlockHeight
-	err = cli.WaitForBlockHeight(ctx, status.SyncInfo.LatestBlockHeight+10)
+	heightBefore := latestBlock.Header.Height
+	err = cli.WaitForBlockHeight(ctx, heightBefore+10)
 	assert.NoError(t, err)
-	status, err = cli.Status(ctx)
+	height, err := cli.LatestBlockHeight(ctx)
 	assert.NoError(t, err)
-	assert.GreaterOrEqual(t, status.SyncInfo.LatestBlockHeight, heightBefore+10)
+	assert.GreaterOrEqual(t, height, heightBefore+10)
 }
