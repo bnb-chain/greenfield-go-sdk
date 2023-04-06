@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	RpcAddress  = "http://localhost:26750"
 	GrpcAddress = "localhost:9090"
 	ChainID     = "greenfield_9000-121"
 )
