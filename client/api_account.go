@@ -76,6 +76,9 @@ func (c *client) GetAccountBalance(ctx context.Context, address string) (*sdk.Co
 	return response.Balance, nil
 }
 
+// GetPaymentAccount function takes a context and an address string as parameters and returns a pointer to a paymentTypes.PaymentAccount struct and an error.
+// This function uses the PaymentAccount method of the chainClient field of the client struct to query the payment account associated with the given address.
+// If there is an error, the function returns nil and the error. If there is no error, the function returns a pointer to the PaymentAccount struct and nil.
 func (c *client) GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error) {
 	pa, err := c.chainClient.PaymentAccount(ctx, &paymentTypes.QueryGetPaymentAccountRequest{Addr: address})
 	if err != nil {
@@ -111,6 +114,14 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 	return paymentAccounts, nil
 }
 
+// Transfer function takes a context, a toAddress string, an amount of type int64, and a txOption of
+// type gnfdSdkTypes.TxOption as parameters and returns a pointer to an sdk.TxResponse struct and an error.
+// This function first parses the toAddress parameter into an sdk.AccAddress object, and if there is an error,
+// it returns nil and the error.
+// Then it generates a MsgSend message using the NewMsgSend method of the types3 package and broadcasts the
+// transaction to the chain by calling the BroadcastTx method of the chainClient field of the client struct.
+// If there is an error during the broadcasting, the function returns nil and the error. If there is no error,
+// the function returns a pointer to the TxResponse struct and nil.//
 func (c *client) Transfer(ctx context.Context, toAddress string, amount int64, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	toAddr, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
