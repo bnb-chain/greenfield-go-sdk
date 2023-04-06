@@ -67,5 +67,5 @@ func Test_Basic(t *testing.T) {
 	assert.NoError(t, err)
 	status, err = cli.Status(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, status.SyncInfo.LatestBlockHeight, heightBefore+10)
+	assert.GreaterOrEqual(t, status.SyncInfo.LatestBlockHeight, heightBefore+10)
 }

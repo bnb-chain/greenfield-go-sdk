@@ -2,45 +2,60 @@ package client
 
 import (
 	"context"
-	"encoding/hex"
 	"strings"
 	"time"
 
 	"cosmossdk.io/errors"
 	"github.com/bnb-chain/greenfield/sdk/types"
+	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/types/tx"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/proto/tendermint/p2p"
 	"google.golang.org/grpc"
 )
 
 type Basic interface {
-	Status(ctx context.Context) (*ctypes.ResultStatus, error)
-	BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*ctypes.ResultBroadcastTx, error)
+	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error)
+	BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error)
 	SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	WaitForBlockHeight(ctx context.Context, height int64) error
-	WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error)
+	WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, error)
 	LatestBlockHeight(ctx context.Context) (int64, error)
-	SimulateTx(msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
+	LatestBlock(ctx context.Context) (*tmservice.Block, error)
+	SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
+	GetSyncing(ctx context.Context) (bool, error)
+	GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error)
+	GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error)
 }
 
-// Status returns the current status of the Tendermint node that the client is connected to.
+// GetNodeInfo returns the current node info of the greenfield that the client is connected to.
 // It takes a context as input and returns a ResultStatus object and an error (if any).
-func (c *client) Status(ctx context.Context) (*ctypes.ResultStatus, error) {
-	return c.tendermintClient.TmClient.Status(ctx)
+func (c *client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error) {
+	nodeInfoResponse, err := c.chainClient.TmClient.GetNodeInfo(ctx, &tmservice.GetNodeInfoRequest{})
+	if err != nil {
+		return nil, nil, err
+	}
+	return nodeInfoResponse.DefaultNodeInfo, nodeInfoResponse.ApplicationVersion, nil
 }
 
 // BroadcastRawTx broadcasts raw transaction bytes to a Tendermint node.
 // It takes a context, transaction bytes, and a sync boolean.
 // If sync is true, the transaction is broadcast synchronously.
 // If sync is false, the transaction is broadcast asynchronously.
-func (c *client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*ctypes.ResultBroadcastTx, error) {
+func (c *client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error) {
+	mode := tx.BroadcastMode_BROADCAST_MODE_UNSPECIFIED
 	if sync {
-		return c.tendermintClient.TmClient.BroadcastTxSync(ctx, txBytes)
+		mode = tx.BroadcastMode_BROADCAST_MODE_SYNC
 	} else {
-		return c.tendermintClient.TmClient.BroadcastTxAsync(ctx, txBytes)
+		mode = tx.BroadcastMode_BROADCAST_MODE_ASYNC
 	}
+	broadcastTxResponse, err := c.chainClient.TxClient.BroadcastTx(ctx, &tx.BroadcastTxRequest{TxBytes: txBytes, Mode: mode})
+	if err != nil {
+		return nil, err
+	}
+	return broadcastTxResponse.TxResponse, nil
 }
 
 // SimulateRawTx simulates the execution of a raw transaction on the blockchain without broadcasting it to the network.
@@ -60,14 +75,20 @@ func (c *client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc
 	return simulateResponse, nil
 }
 
-// LatestBlockHeight returns the latest block height of the blockchain.
-// It takes a context as input and returns an int64 representing the latest block height and an error (if any).
-func (c *client) LatestBlockHeight(ctx context.Context) (int64, error) {
-	resp, err := c.Status(ctx)
+func (c *client) LatestBlock(ctx context.Context) (*tmservice.Block, error) {
+	resp, err := c.chainClient.TmClient.GetLatestBlock(ctx, &tmservice.GetLatestBlockRequest{})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return resp.SyncInfo.LatestBlockHeight, nil
+	return resp.SdkBlock, nil
+}
+
+func (c *client) LatestBlockHeight(ctx context.Context) (int64, error) {
+	resp, err := c.LatestBlock(ctx)
+	if err != nil {
+		return 0, nil
+	}
+	return resp.Header.Height, nil
 }
 
 // WaitForBlockHeight waits until block height h is committed, or returns an
@@ -77,11 +98,11 @@ func (c *client) WaitForBlockHeight(ctx context.Context, h int64) error {
 	defer ticker.Stop()
 
 	for {
-		latestHeight, err := c.LatestBlockHeight(ctx)
+		latestBlockHeight, err := c.LatestBlockHeight(ctx)
 		if err != nil {
 			return err
 		}
-		if latestHeight >= h {
+		if latestBlockHeight >= h {
 			return nil
 		}
 		select {
@@ -103,22 +124,21 @@ func (c *client) WaitForNextBlock(ctx context.Context) error {
 // WaitForNBlocks reads the current block height and then waits for another n
 // blocks to be committed, or returns an error if ctx is canceled.
 func (c *client) WaitForNBlocks(ctx context.Context, n int64) error {
-	start, err := c.LatestBlockHeight(ctx)
+	start, err := c.LatestBlock(ctx)
 	if err != nil {
 		return err
 	}
-	return c.WaitForBlockHeight(ctx, start+n)
+	return c.WaitForBlockHeight(ctx, start.Header.Height+n)
 }
 
 // WaitForTx requests the tx from hash, if not found, waits for next block and
 // tries again. Returns an error if ctx is canceled.
-func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error) {
-	bz, err := hex.DecodeString(hash)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to decode tx hash '%s'", hash)
-	}
+func (c *client) WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, error) {
 	for {
-		resp, err := c.tendermintClient.TmClient.Tx(ctx, bz, false)
+		txResponse, err := c.chainClient.TxClient.GetTx(ctx, &tx.GetTxRequest{Hash: hash})
+		if err != nil {
+			return nil, err
+		}
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Tx not found, wait for next block and try again
@@ -131,7 +151,7 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 			return nil, errors.Wrapf(err, "fetching tx '%s'", hash)
 		}
 		// Tx found
-		return resp, nil
+		return txResponse.TxResponse, nil
 	}
 }
 
@@ -139,6 +159,31 @@ func (c *client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.Tx
 	return c.chainClient.BroadcastTx(ctx, msgs, &txOpt, opts...)
 }
 
-func (c *client) SimulateTx(msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
-	return c.chainClient.SimulateTx(msgs, &txOpt, opts...)
+func (c *client) SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
+	return c.chainClient.SimulateTx(ctx, msgs, &txOpt, opts...)
+}
+
+func (c *client) GetSyncing(ctx context.Context) (bool, error) {
+	syncing, err := c.chainClient.GetSyncing(ctx, &tmservice.GetSyncingRequest{})
+	if err != nil {
+		return false, err
+	}
+	return syncing.Syncing, nil
+}
+
+func (c *client) GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error) {
+	blockByHeight, err := c.chainClient.GetBlockByHeight(ctx, &tmservice.GetBlockByHeightRequest{Height: height})
+	if err != nil {
+		return nil, err
+	}
+	return blockByHeight.SdkBlock, nil
+
+}
+
+func (c *client) GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error) {
+	validatorSetResponse, err := c.chainClient.TmClient.GetLatestValidatorSet(ctx, &tmservice.GetLatestValidatorSetRequest{Pagination: request})
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	return validatorSetResponse.BlockHeight, validatorSetResponse.Validators, validatorSetResponse.Pagination, nil
 }

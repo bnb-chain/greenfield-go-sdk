@@ -40,8 +40,6 @@ type Client interface {
 type client struct {
 	// The chain client is used to interact with the blockchain
 	chainClient *sdkclient.GreenfieldClient
-	// The Tendermint client is used to interact with the blockchain via gRPC.
-	tendermintClient *sdkclient.TendermintClient
 	// The HTTP client is used to send HTTP requests to the greenfield blockchain and sp
 	httpClient *http.Client
 	// Service provider endpoints
@@ -72,7 +70,7 @@ type Option struct {
 // The grpcAddress indicate the grpc address of greenfield chain.
 // The account indicate the account used for signing transactions.
 // The rpcAddress indicate the rpc address of the tendermint client.
-func New(chainID string, grpcAddress, rpcAddress string, account *types.Account, option *Option) (Client, error) {
+func New(chainID string, grpcAddress string, account *types.Account, option *Option) (Client, error) {
 	if grpcAddress == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
 	}
@@ -95,11 +93,6 @@ func New(chainID string, grpcAddress, rpcAddress string, account *types.Account,
 		defaultAccount: account,
 		secure:         option.Secure,
 		host:           option.Host,
-	}
-
-	if rpcAddress != "" {
-		tc := sdkclient.NewTendermintClient(rpcAddress)
-		c.tendermintClient = &tc
 	}
 
 	// fetch sp endpoints info from chain

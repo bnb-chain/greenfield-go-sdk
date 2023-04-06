@@ -138,7 +138,7 @@ require (
 
 replace (
 	cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-	github.com/bnb-chain/greenfield v0.0.10 => github.com/bnb-chain/greenfield v0.0.0-20230403003813-e41138ee637d
+	github.com/bnb-chain/greenfield v0.0.10 => github.com/bnb-chain/greenfield v0.0.0-20230406074256-139962954d60
 	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.13
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3
