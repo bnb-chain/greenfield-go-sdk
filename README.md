@@ -11,11 +11,12 @@ The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield in
 
 Interact using GreenfieldClient client, you can perform queries on accounts, chain info, and broadcasting transactions.
 Interact using TendermintClient client, you can perform low-level operations like executing ABCI queries and viewing network/consensus state.
-Interact using SPClient client, you can request storage provider services like putObject and getObject.
+Interact using GnfdClient client, it integrates GreenfieldClient and the ability to access Storage provider, 
+you can call storage functions like createObject,putObject and getObject to realize the basic operation of object storage.
 
 ### Requirement
 
-Go version above 1.19
+Go version above 1.18
 
 ## Usage
 
@@ -30,9 +31,9 @@ import (
 ```go
 replace (
     cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.11
+    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.13
     github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-    github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.2
+    github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3
 )
 ```
 
@@ -177,6 +178,51 @@ gnfdClients := NewGnfdCompositClients(
     WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 client, err := gnfdClients.GetClient()
+```
+
+### Use GnfdClient
+
+The construct fuction need to pass chain grpc address, chain id , SP endpoint
+```go 
+client, err := NewGnfdClient(grpcAddr, chainId, endpoint, keyManager, false,
+          WithKeyManager(keyManager),
+          WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+```
+
+#### Call APIs and Send Requests 
+
+1) create bucket 
+```
+opts := CreateBucketOptions{ChargedQuota: chargeQuota, Visibility: &storageTypes.VISIBILITY_TYPE_PRIVATE}
+txnHash, err = client.CreateBucket(ctx, bucketName, primarySp, opts)
+ 
+// head bucket
+bucketInfo, err := client.HeadBucket(ctx, bucketName)
+fmt.Println("bucket name:", bucketName)
+```
+
+2) two stage of uploading: create Object and putObject
+
+```
+// (1) create object on chain
+txnHash, err = client.CreateObject(ctx, bucketName, objectName,
+           bytes.NewReader(buffer.Bytes()), CreateObjectOptions{})
+            
+object, err := s.gnfdClient.HeadObject(ctx, bucketName, objectName)
+
+// (2) upload payload to SP  
+
+fileReader, err := os.Open(filePath)
+_, err = s.gnfdClient.PutObject(ctx, bucketName, objectName, txnHash, fileSize,
+        fileReader, PutObjectOption{})
+
+```
+
+3) get Object
+
+```
+body, objectInfo, err := s.gnfdClient.GetObject(ctx, bucketName, objectName, sp.GetObjectOption{})
+objectBytes, err := io.ReadAll(body)
 ```
 
 ### Use Storage Provider Client
