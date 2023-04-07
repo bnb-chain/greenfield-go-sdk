@@ -18,7 +18,6 @@ import (
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdktype "github.com/cosmos/cosmos-sdk/types"
-	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	signer "github.com/bnb-chain/greenfield-go-sdk/keys/signer"
@@ -209,7 +208,6 @@ func (c *SPClient) newRequest(ctx context.Context,
 ) (req *http.Request, err error) {
 	// construct the target url
 	desURL, err := c.GenerateURL(meta.bucketName, meta.objectName, meta.urlRelPath, meta.urlValues, isAdminAPi)
-	log.Debug().Msg("new request Url:" + desURL.String())
 	if err != nil {
 		return nil, err
 	}
@@ -374,13 +372,11 @@ func (c *SPClient) doAPI(ctx context.Context, req *http.Request, meta requestMet
 func (c *SPClient) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, authInfo AuthInfo) (res *http.Response, err error) {
 	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, authInfo)
 	if err != nil {
-		log.Debug().Msg("new request error stop send request" + err.Error())
 		return nil, err
 	}
 
 	resp, err := c.doAPI(ctx, req, metadata, !opt.disableCloseBody)
 	if err != nil {
-		log.Debug().Msg("do api request fail: " + err.Error())
 		return nil, err
 	}
 	return resp, nil

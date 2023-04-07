@@ -464,7 +464,7 @@ func (c *GnfdClient) UpdateBucketInfo(ctx context.Context, bucketName string, op
 }
 
 // GetQuotaPrice return the quota price of the SP
-func (c *GnfdClient) GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (uint64, error) {
+func (c *GnfdClient) GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (float64, error) {
 	resp, err := c.ChainClient.QueryGetSpStoragePriceByTime(ctx, &spTypes.QueryGetSpStoragePriceByTimeRequest{
 		SpAddr:    SPAddress.String(),
 		Timestamp: 0,
@@ -472,7 +472,8 @@ func (c *GnfdClient) GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress
 	if err != nil {
 		return 0, err
 	}
-	return resp.SpStoragePrice.ReadPrice.BigInt().Uint64(), nil
+
+	return resp.SpStoragePrice.ReadPrice.Float64()
 }
 
 // GetBucketReadQuota return quota info of bucket of current month, include chain quota, free quota and consumed quota

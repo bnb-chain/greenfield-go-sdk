@@ -9,13 +9,17 @@ for any bug bounty. We advise you to be careful and experiment on the network at
 ## Instruction
 The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield in three ways:
 
-Interact using GreenfieldClient client, you can perform queries on accounts, chain info, and broadcasting transactions.
-Interact using TendermintClient client, you can perform low-level operations like executing ABCI queries and viewing network/consensus state.
-Interact using SPClient client, you can request storage provider services like putObject and getObject.
+1.Interact using GreenfieldClient client, you can perform queries on accounts, chain info, and broadcasting transactions.
+
+2.Interact using GnfdClient, it integrates GreenfieldClient and the ability to access Storage provider, 
+you can call storage functions like createObject,putObject and getObject to realize the basic operation of object storage.
+
+3.Interact using TendermintClient client, you can perform low-level operations like executing ABCI queries and viewing network/consensus state.
+
 
 ### Requirement
 
-Go version above 1.19
+Go version above 1.18
 
 ## Usage
 
@@ -30,9 +34,9 @@ import (
 ```go
 replace (
     cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.11
+    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.13
     github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-    github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.2
+    github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3
 )
 ```
 
@@ -159,6 +163,48 @@ GetNonce() (uint64, error)
 #### Support transaction types
 Please refer to [msgTypes.go](./types/msg_types.go) to see all of the supported types of `sdk.Msg`.
 
+### Use GnfdClient
+
+The construct fuction need to pass chain grpc address, chain id and SP endpoint
+```go 
+client, err := NewGnfdClient(grpcAddr, chainId, endpoint, keyManager, false,
+          WithKeyManager(keyManager),
+          WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+```
+
+#### Call APIs and Send Requests to use storage functions
+
+1) create bucket 
+```go
+opts := CreateBucketOptions{ChargedQuota: chargeQuota, Visibility: &storageTypes.VISIBILITY_TYPE_PRIVATE}
+txnHash, err = client.CreateBucket(ctx, bucketName, primarySp, opts)
+ 
+// head bucket
+bucketInfo, err := client.HeadBucket(ctx, bucketName)
+```
+
+2) two stages of uploading including createObject and putObject
+
+```go
+// (1) create object on chain
+txnHash, err = client.CreateObject(ctx, bucketName, objectName,
+           bytes.NewReader(buffer.Bytes()), CreateObjectOptions{})
+            
+object, err := s.gnfdClient.HeadObject(ctx, bucketName, objectName)
+
+// (2) upload payload to SP  
+fileReader, err := os.Open(filePath)
+err = s.gnfdClient.PutObject(ctx, bucketName, objectName, txnHash, fileSize,
+        fileReader, PutObjectOption{})
+```
+
+3) get Object
+
+```go
+body, objectInfo, err := s.gnfdClient.GetObject(ctx, bucketName, objectName, sp.GetObjectOption{})
+objectBytes, err := io.ReadAll(body)
+```
+
 ### Use Tendermint RPC Client
 
 ```go
@@ -166,7 +212,7 @@ client := NewTendermintClient("http://0.0.0.0:26750")
 abci, err := client.TmClient.ABCIInfo(context.Background())
 ```
 
-There is an option with multiple providers available. Upon interaction with the blockchain, the provider with the highest 
+There is an option with multiple providers available. Upon interaction with the blockchain, the provider with the highest
 block height will be chosen.
 
 ```go
@@ -177,55 +223,4 @@ gnfdClients := NewGnfdCompositClients(
     WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 
 client, err := gnfdClients.GetClient()
-```
-
-### Use Storage Provider Client
-
-#### Authentication Mechanism
-
-The SPclient supports two authentication types. The first type uses the local signer.Sign method, which calls the private 
-key of the key manager to sign the request message. The second type employs a metamask wallet trusted to generate an 
-authentication token.
-
-For the first type, specify the `SignType` of `AuthInfo` as `AuthV1` using the `NewAuthInfo` function,
-and pass it as a parameter to the API.
-
-```
-authInfo := NewAuthInfo(false, "")
-err = client.GetApproval(context.Background(), bucketName, "", authInfo)
-```
-
-For the second type, obtain the MetaMask sign token and specify the `SignType` of the `AuthInfo` as `AuthV2`. The MetaMask 
-sign token can be constructed like a JWT token with an expiration time. It needs to be implemented externally and passed as
-a parameter to the API.
-
-```
-authInfo := NewAuthInfo(true, "this is metamask auto token")
-err = client.GetApproval(context.Background(), bucketName, "", authInfo)
-```
-
-#### Initialize the Client
-
-If the `SPclient` uses `AuthV1`, the client should initialize it with a key manager:
-```
-// if client keep the private key in keyManager locally
-client := NewSpClientWithKeyManager("http://0.0.0.0:26750", &spClient.Option{}, keyManager)
-```
-If the `SPclient` uses `AuthV2`, the client can be initialized without a key manager:
-```
-// If the client does not manage the private key locally and use local
-client := NewSpClient("http://0.0.0.0:26750", &spClient.Option{})
-```
-
-#### Call APIs and Send Requests to the Storage Provider
-
-```go
-fileReader, err := os.Open(filePath)
-
-meta := spClient.ObjectMeta{
-    ObjectSize:  length,
-    ContentType: "application/octet-stream",
-}
-
-err = client.PutObject(ctx, bucketName, ObjectName, txnHash, fileReader, meta, NewAuthInfo(false, "")))
 ```
