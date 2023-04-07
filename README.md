@@ -9,10 +9,13 @@ for any bug bounty. We advise you to be careful and experiment on the network at
 ## Instruction
 The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield in three ways:
 
-Interact using GreenfieldClient client, you can perform queries on accounts, chain info, and broadcasting transactions.
-Interact using TendermintClient client, you can perform low-level operations like executing ABCI queries and viewing network/consensus state.
-Interact using GnfdClient client, it integrates GreenfieldClient and the ability to access Storage provider, 
+1.Interact using GreenfieldClient client, you can perform queries on accounts, chain info, and broadcasting transactions.
+
+2.Interact using GnfdClient, it integrates GreenfieldClient and the ability to access Storage provider, 
 you can call storage functions like createObject,putObject and getObject to realize the basic operation of object storage.
+
+3.Interact using TendermintClient client, you can perform low-level operations like executing ABCI queries and viewing network/consensus state.
+
 
 ### Requirement
 
@@ -201,7 +204,7 @@ bucketInfo, err := client.HeadBucket(ctx, bucketName)
 fmt.Println("bucket name:", bucketName)
 ```
 
-2) two stage of uploading: create Object and putObject
+2) two stage of uploading including createObject and putObject
 
 ```
 // (1) create object on chain
@@ -213,7 +216,7 @@ object, err := s.gnfdClient.HeadObject(ctx, bucketName, objectName)
 // (2) upload payload to SP  
 
 fileReader, err := os.Open(filePath)
-_, err = s.gnfdClient.PutObject(ctx, bucketName, objectName, txnHash, fileSize,
+err = s.gnfdClient.PutObject(ctx, bucketName, objectName, txnHash, fileSize,
         fileReader, PutObjectOption{})
 
 ```
