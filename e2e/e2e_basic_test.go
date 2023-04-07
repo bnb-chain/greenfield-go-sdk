@@ -11,9 +11,12 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
+	// GrpcAddress = "gnfd-testnet-fullnode-cosmos-us.nodereal.io:443"
 	GrpcAddress = "localhost:9090"
 	ChainID     = "greenfield_9000-121"
 )
@@ -51,7 +54,7 @@ func Test_Basic(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, account, client.Option{})
+	cli, err := client.New(ChainID, GrpcAddress, account, client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
 	assert.NoError(t, err)
 	ctx := context.Background()
 	_, _, err = cli.GetNodeInfo(ctx)

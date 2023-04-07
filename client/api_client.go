@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/xml"
 	"errors"
@@ -24,7 +25,7 @@ import (
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 type Client interface {
@@ -83,18 +84,19 @@ func New(chainID string, grpcAddress string, account *types.Account, option Opti
 	// Must with TLS
 	var cc *sdkclient.GreenfieldClient
 	if option.GrpcDialOption == nil {
+		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false})
 		cc = sdkclient.NewGreenfieldClient(
 			grpcAddress,
 			chainID,
 			sdkclient.WithKeyManager(account.GetKeyManager()),
-			sdkclient.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+			sdkclient.WithGrpcDialOption(grpc.WithTransportCredentials(creds)),
 		)
 	} else {
 		cc = sdkclient.NewGreenfieldClient(
 			grpcAddress,
 			chainID,
 			sdkclient.WithKeyManager(account.GetKeyManager()),
-			sdkclient.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials()), option.GrpcDialOption),
+			sdkclient.WithGrpcDialOption(option.GrpcDialOption),
 		)
 	}
 

@@ -96,7 +96,7 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 // Then it generates a MsgSend message using the NewMsgSend method of the types3 package and broadcasts the
 // transaction to the chain by calling the BroadcastTx method of the chainClient field of the client struct.
 // If there is an error during the broadcasting, the function returns nil and the error. If there is no error,
-// the function returns a pointer to the TxResponse struct and nil.//
+// the function returns a pointer to the TxResponse struct and nil
 func (c *client) Transfer(ctx context.Context, toAddress string, amount int64, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	toAddr, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
