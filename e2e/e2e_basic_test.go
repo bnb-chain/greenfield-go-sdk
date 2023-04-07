@@ -11,6 +11,7 @@ import (
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
+	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -107,4 +108,21 @@ func Test_Account(t *testing.T) {
 	assert.NoError(t, err)
 	t.Logf("Balance: %s", balance.String())
 	assert.True(t, balance.Amount.Equal(math.NewInt(1)))
+
+	acc, err := cli.GetAccount(ctx, account1.GetAddress().String())
+	assert.NoError(t, err)
+	t.Logf("Acc: %s", acc.String())
+	assert.Equal(t, acc.GetAddress(), account1.GetAddress())
+	assert.Equal(t, acc.GetSequence(), uint64(0))
+
+	txResp, err := cli.CreatePaymentAccount(ctx, account.GetAddress().String(), &types2.TxOption{})
+	assert.NoError(t, err)
+	t.Logf("Acc: %s", txResp.String())
+	waitForTx, err = cli.WaitForTx(ctx, txResp.TxHash)
+	assert.NoError(t, err)
+	t.Logf("Wair for tx: %s", waitForTx.String())
+
+	paymentAccountsByOwner, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
+	assert.NoError(t, err)
+	assert.Equal(t, len(paymentAccountsByOwner), 1)
 }

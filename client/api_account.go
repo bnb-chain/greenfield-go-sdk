@@ -14,6 +14,7 @@ type Account interface {
 	GetAccount(ctx context.Context, address string) (authTypes.AccountI, error)
 	GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error)
 	GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error)
+	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
 	Transfer(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 }
@@ -38,6 +39,17 @@ func (c *client) GetAccount(ctx context.Context, address string) (authTypes.Acco
 
 	// Return the BaseAccount object as an AccountI interface.
 	return &baseAccount, err
+}
+
+// CreatePaymentAccount creates a new payment account on the blockchain using the provided address.
+// It returns a TxResponse containing information about the transaction, or an error if the transaction failed.
+func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+	msgCreatePaymentAccount := paymentTypes.NewMsgCreatePaymentAccount(address)
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgCreatePaymentAccount}, txOption)
+	if err != nil {
+		return nil, err
+	}
+	return tx.TxResponse, nil
 }
 
 // GetAccountBalance retrieves balance information of an account for a given address.
