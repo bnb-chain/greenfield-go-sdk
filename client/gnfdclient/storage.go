@@ -473,12 +473,7 @@ func (c *GnfdClient) GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress
 		return 0, err
 	}
 
-	price, err := resp.SpStoragePrice.ReadPrice.Float64()
-	if err != nil {
-		return 0, err
-	}
-
-	return price, nil
+	return resp.SpStoragePrice.ReadPrice.Float64()
 }
 
 // GetBucketReadQuota return quota info of bucket of current month, include chain quota, free quota and consumed quota
