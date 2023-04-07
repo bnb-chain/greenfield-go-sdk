@@ -3,44 +3,19 @@ package client
 import (
 	"context"
 
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	paymentTypes "github.com/bnb-chain/greenfield/x/payment/types"
-	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	types3 "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 type Account interface {
-	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error)
 	GetAccount(ctx context.Context, address string) (authTypes.AccountI, error)
 	GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error)
 	GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
 	Transfer(ctx context.Context, toAddress string, amount int64, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
-}
-
-// BuyQuotaForBucket buy the target quota of the specific bucket
-// targetQuota indicates the target quota to set for the bucket
-func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error) {
-	bucketInfo, err := c.HeadBucket(ctx, bucketName)
-	if err != nil {
-		return "", err
-	}
-
-	paymentAddr, err := sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
-	if err != nil {
-		return "", err
-	}
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
-
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
-	if err != nil {
-		return "", err
-	}
-
-	return resp.TxResponse.TxHash, err
 }
 
 // GetAccount retrieves account information for a given address.

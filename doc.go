@@ -36,7 +36,7 @@
 //			log.Fatalf("unable to get node info, %v", err)
 //		}
 //		log.Printf("nodeInfo moniker: %s, go version: %s", nodeInfo.Moniker, versionInfo.GoVersion)
-//		latestBlock, err := cli.LatestBlock(ctx)
+//		latestBlock, err := cli.GetLatestBlock(ctx)
 //		if err != nil {
 //			log.Fatalf("unable to get latest block, %v", err)
 //		}
@@ -48,7 +48,7 @@
 //		if err != nil {
 //			log.Fatalf("unable to wait for block height, %v", err)
 //		}
-//		height, err := cli.LatestBlockHeight(ctx)
+//		height, err := cli.GetLatestBlockHeight(ctx)
 //		if err != nil {
 //			log.Fatalf("unable to get latest block height, %v", err)
 //		}

@@ -59,14 +59,14 @@ func Test_Basic(t *testing.T) {
 	_, _, err = cli.GetNodeInfo(ctx)
 	assert.NoError(t, err)
 
-	latestBlock, err := cli.LatestBlock(ctx)
+	latestBlock, err := cli.GetLatestBlock(ctx)
 	assert.NoError(t, err)
 	fmt.Println(latestBlock.String())
 
 	heightBefore := latestBlock.Header.Height
 	err = cli.WaitForBlockHeight(ctx, heightBefore+10)
 	assert.NoError(t, err)
-	height, err := cli.LatestBlockHeight(ctx)
+	height, err := cli.GetLatestBlockHeight(ctx)
 	assert.NoError(t, err)
 	assert.GreaterOrEqual(t, height, heightBefore+10)
 }

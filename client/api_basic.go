@@ -21,8 +21,8 @@ type Basic interface {
 	SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, error)
-	LatestBlockHeight(ctx context.Context) (int64, error)
-	LatestBlock(ctx context.Context) (*tmservice.Block, error)
+	GetLatestBlockHeight(ctx context.Context) (int64, error)
+	GetLatestBlock(ctx context.Context) (*tmservice.Block, error)
 	SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
 	GetSyncing(ctx context.Context) (bool, error)
@@ -75,7 +75,9 @@ func (c *client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc
 	return simulateResponse, nil
 }
 
-func (c *client) LatestBlock(ctx context.Context) (*tmservice.Block, error) {
+// GetLatestBlock retrieves the latest block from the chain.
+// The function returns a pointer to a Block object and any error that occurred during the operation.
+func (c *client) GetLatestBlock(ctx context.Context) (*tmservice.Block, error) {
 	resp, err := c.chainClient.TmClient.GetLatestBlock(ctx, &tmservice.GetLatestBlockRequest{})
 	if err != nil {
 		return nil, err
@@ -83,8 +85,10 @@ func (c *client) LatestBlock(ctx context.Context) (*tmservice.Block, error) {
 	return resp.SdkBlock, nil
 }
 
-func (c *client) LatestBlockHeight(ctx context.Context) (int64, error) {
-	resp, err := c.LatestBlock(ctx)
+// GetLatestBlockHeight retrieves the height of the latest block from the chain.
+// The function returns the block height and any error that occurred during the operation.
+func (c *client) GetLatestBlockHeight(ctx context.Context) (int64, error) {
+	resp, err := c.GetLatestBlock(ctx)
 	if err != nil {
 		return 0, nil
 	}
@@ -98,7 +102,7 @@ func (c *client) WaitForBlockHeight(ctx context.Context, h int64) error {
 	defer ticker.Stop()
 
 	for {
-		latestBlockHeight, err := c.LatestBlockHeight(ctx)
+		latestBlockHeight, err := c.GetLatestBlockHeight(ctx)
 		if err != nil {
 			return err
 		}
@@ -124,7 +128,7 @@ func (c *client) WaitForNextBlock(ctx context.Context) error {
 // WaitForNBlocks reads the current block height and then waits for another n
 // blocks to be committed, or returns an error if ctx is canceled.
 func (c *client) WaitForNBlocks(ctx context.Context, n int64) error {
-	start, err := c.LatestBlock(ctx)
+	start, err := c.GetLatestBlock(ctx)
 	if err != nil {
 		return err
 	}
@@ -155,14 +159,20 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, e
 	}
 }
 
+// BroadcastTx broadcasts a transaction containing the provided messages to the chain.
+// The function returns a pointer to a BroadcastTxResponse and any error that occurred during the operation.
 func (c *client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
 	return c.chainClient.BroadcastTx(ctx, msgs, &txOpt, opts...)
 }
 
+// SimulateTx simulates a transaction containing the provided messages on the chain.
+// The function returns a pointer to a SimulateResponse and any error that occurred during the operation.
 func (c *client) SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
 	return c.chainClient.SimulateTx(ctx, msgs, &txOpt, opts...)
 }
 
+// GetSyncing retrieves the syncing status of the node. If true, means the node is catching up the latest block.
+// The function returns a boolean indicating whether the node is syncing and any error that occurred during the operation.
 func (c *client) GetSyncing(ctx context.Context) (bool, error) {
 	syncing, err := c.chainClient.GetSyncing(ctx, &tmservice.GetSyncingRequest{})
 	if err != nil {
@@ -171,15 +181,18 @@ func (c *client) GetSyncing(ctx context.Context) (bool, error) {
 	return syncing.Syncing, nil
 }
 
+// GetBlockByHeight retrieves the block at the given height from the chain.
+// The function returns a pointer to a Block object and any error that occurred during the operation.
 func (c *client) GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error) {
 	blockByHeight, err := c.chainClient.GetBlockByHeight(ctx, &tmservice.GetBlockByHeightRequest{Height: height})
 	if err != nil {
 		return nil, err
 	}
 	return blockByHeight.SdkBlock, nil
-
 }
 
+// GetValidatorSet retrieves the latest validator set from the chain.
+// The function returns the block height of the validator set, a slice of Validator objects, a pointer to a PageResponse object, and any error that occurred during the operation.
 func (c *client) GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error) {
 	validatorSetResponse, err := c.chainClient.TmClient.GetLatestValidatorSet(ctx, &tmservice.GetLatestValidatorSetRequest{Pagination: request})
 	if err != nil {

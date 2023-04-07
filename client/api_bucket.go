@@ -41,6 +41,7 @@ type Bucket interface {
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
 	ListBuckets(ctx context.Context, userInfo types.UserInfo) (types.ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)
+	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
@@ -450,4 +451,26 @@ func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string) (typ
 	}
 
 	return QuotaResult, nil
+}
+
+// BuyQuotaForBucket buy the target quota of the specific bucket
+// targetQuota indicates the target quota to set for the bucket
+func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error) {
+	bucketInfo, err := c.HeadBucket(ctx, bucketName)
+	if err != nil {
+		return "", err
+	}
+
+	paymentAddr, err := sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
+	if err != nil {
+		return "", err
+	}
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
+
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.TxResponse.TxHash, err
 }
