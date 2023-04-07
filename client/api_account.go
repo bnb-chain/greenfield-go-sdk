@@ -15,7 +15,7 @@ type Account interface {
 	GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error)
 	GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
-	Transfer(ctx context.Context, toAddress string, amount int64, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	Transfer(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 }
 
 // GetAccount retrieves account information for a given address.
@@ -97,13 +97,13 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 // transaction to the chain by calling the BroadcastTx method of the chainClient field of the client struct.
 // If there is an error during the broadcasting, the function returns nil and the error. If there is no error,
 // the function returns a pointer to the TxResponse struct and nil
-func (c *client) Transfer(ctx context.Context, toAddress string, amount int64, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+func (c *client) Transfer(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	toAddr, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
 		return nil, err
 	}
 	msgSend := types3.NewMsgSend(c.defaultAccount.GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: sdk.NewInt(amount)}})
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, &txOption)
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, txOption)
 	if err != nil {
 		return nil, err
 	}

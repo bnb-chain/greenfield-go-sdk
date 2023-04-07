@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/stretchr/testify/assert"
@@ -70,4 +71,40 @@ func Test_Basic(t *testing.T) {
 	height, err := cli.GetLatestBlockHeight(ctx)
 	assert.NoError(t, err)
 	assert.GreaterOrEqual(t, height, heightBefore+10)
+
+	syncing, err := cli.GetSyncing(ctx)
+	assert.NoError(t, err)
+	assert.False(t, syncing)
+
+	blockByHeight, err := cli.GetBlockByHeight(ctx, heightBefore)
+	assert.NoError(t, err)
+	assert.Equal(t, blockByHeight.GetHeader(), latestBlock.GetHeader())
+}
+
+func Test_Account(t *testing.T) {
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	assert.NoError(t, err)
+	cli, err := client.New(ChainID, GrpcAddress, account, client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	assert.NoError(t, err)
+	ctx := context.Background()
+
+	balance, err := cli.GetAccountBalance(ctx, account.GetAddress().String())
+	assert.NoError(t, err)
+	t.Logf("Balance: %s", balance.String())
+
+	account1, err := types.NewAccount("test2")
+	assert.NoError(t, err)
+	transfer, err := cli.Transfer(ctx, account1.GetAddress().String(), 1, nil)
+	assert.NoError(t, err)
+	t.Logf("Transfer response: %s", transfer.String())
+
+	waitForTx, err := cli.WaitForTx(ctx, transfer.TxHash)
+	assert.NoError(t, err)
+	t.Logf("Wair for tx: %s", waitForTx.String())
+
+	balance, err = cli.GetAccountBalance(ctx, account1.GetAddress().String())
+	assert.NoError(t, err)
+	t.Logf("Balance: %s", balance.String())
+	assert.True(t, balance.Amount.Equal(math.NewInt(1)))
 }

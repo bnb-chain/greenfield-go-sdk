@@ -141,9 +141,6 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, e
 	for {
 		txResponse, err := c.chainClient.TxClient.GetTx(ctx, &tx.GetTxRequest{Hash: hash})
 		if err != nil {
-			return nil, err
-		}
-		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Tx not found, wait for next block and try again
 				err := c.WaitForNextBlock(ctx)

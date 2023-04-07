@@ -1,8 +1,11 @@
 package types
 
 import (
+	"encoding/hex"
+
 	"github.com/bnb-chain/greenfield/sdk/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/tendermint/tendermint/crypto/secp256k1"
 )
 
 type Account struct {
@@ -23,6 +26,18 @@ func NewAccountFromPrivateKey(name, privKey string) (*Account, error) {
 
 func NewAccountFromMnemonic(name, mnemonic string) (*Account, error) {
 	km, err := keys.NewMnemonicKeyManager(mnemonic)
+	if err != nil {
+		return nil, err
+	}
+	return &Account{
+		name: name,
+		km:   km,
+	}, nil
+}
+
+func NewAccount(name string) (*Account, error) {
+	privKey := secp256k1.GenPrivKey()
+	km, err := keys.NewPrivateKeyManager(hex.EncodeToString(privKey.Bytes()))
 	if err != nil {
 		return nil, err
 	}
