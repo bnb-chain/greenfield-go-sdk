@@ -24,6 +24,7 @@ import (
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Client interface {
@@ -70,7 +71,7 @@ type Option struct {
 // The grpcAddress indicate the grpc address of greenfield chain.
 // The account indicate the account used for signing transactions.
 // The rpcAddress indicate the rpc address of the tendermint client.
-func New(chainID string, grpcAddress string, account *types.Account, option *Option) (Client, error) {
+func New(chainID string, grpcAddress string, account *types.Account, option Option) (Client, error) {
 	if grpcAddress == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
 	}
@@ -79,12 +80,23 @@ func New(chainID string, grpcAddress string, account *types.Account, option *Opt
 		return nil, errors.New("fail to get account info")
 	}
 
-	cc := sdkclient.NewGreenfieldClient(
-		grpcAddress,
-		chainID,
-		sdkclient.WithKeyManager(account.GetKeyManager()),
-		sdkclient.WithGrpcDialOption(option.GrpcDialOption),
-	)
+	// Must with TLS
+	var cc *sdkclient.GreenfieldClient
+	if option.GrpcDialOption == nil {
+		cc = sdkclient.NewGreenfieldClient(
+			grpcAddress,
+			chainID,
+			sdkclient.WithKeyManager(account.GetKeyManager()),
+			sdkclient.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+		)
+	} else {
+		cc = sdkclient.NewGreenfieldClient(
+			grpcAddress,
+			chainID,
+			sdkclient.WithKeyManager(account.GetKeyManager()),
+			sdkclient.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials()), option.GrpcDialOption),
+		)
+	}
 
 	c := client{
 		chainClient:    cc,
