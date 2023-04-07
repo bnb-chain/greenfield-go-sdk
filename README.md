@@ -172,21 +172,20 @@ client, err := NewGnfdClient(grpcAddr, chainId, endpoint, keyManager, false,
           WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
 ```
 
-#### Call APIs and Send Requests 
+#### Call APIs and Send Requests to use storage functions
 
 1) create bucket 
-```
+```go
 opts := CreateBucketOptions{ChargedQuota: chargeQuota, Visibility: &storageTypes.VISIBILITY_TYPE_PRIVATE}
 txnHash, err = client.CreateBucket(ctx, bucketName, primarySp, opts)
  
 // head bucket
 bucketInfo, err := client.HeadBucket(ctx, bucketName)
-
 ```
 
 2) two stages of uploading including createObject and putObject
 
-```
+```go
 // (1) create object on chain
 txnHash, err = client.CreateObject(ctx, bucketName, objectName,
            bytes.NewReader(buffer.Bytes()), CreateObjectOptions{})
@@ -194,16 +193,14 @@ txnHash, err = client.CreateObject(ctx, bucketName, objectName,
 object, err := s.gnfdClient.HeadObject(ctx, bucketName, objectName)
 
 // (2) upload payload to SP  
-
 fileReader, err := os.Open(filePath)
 err = s.gnfdClient.PutObject(ctx, bucketName, objectName, txnHash, fileSize,
         fileReader, PutObjectOption{})
-
 ```
 
 3) get Object
 
-```
+```go
 body, objectInfo, err := s.gnfdClient.GetObject(ctx, bucketName, objectName, sp.GetObjectOption{})
 objectBytes, err := io.ReadAll(body)
 ```
