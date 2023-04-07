@@ -163,29 +163,9 @@ GetNonce() (uint64, error)
 #### Support transaction types
 Please refer to [msgTypes.go](./types/msg_types.go) to see all of the supported types of `sdk.Msg`.
 
-### Use Tendermint RPC Client
-
-```go
-client := NewTendermintClient("http://0.0.0.0:26750")
-abci, err := client.TmClient.ABCIInfo(context.Background())
-```
-
-There is an option with multiple providers available. Upon interaction with the blockchain, the provider with the highest 
-block height will be chosen.
-
-```go
-gnfdClients := NewGnfdCompositClients(
-    []string{test.TEST_GRPC_ADDR, test.TEST_GRPC_ADDR2, test.TEST_GRPC_ADDR3},
-    []string{test.TEST_RPC_ADDR, test.TEST_RPC_ADDR2, test.TEST_RPC_ADDR3},
-    test.TEST_CHAIN_ID,
-    WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
-
-client, err := gnfdClients.GetClient()
-```
-
 ### Use GnfdClient
 
-The construct fuction need to pass chain grpc address, chain id , SP endpoint
+The construct fuction need to pass chain grpc address, chain id and SP endpoint
 ```go 
 client, err := NewGnfdClient(grpcAddr, chainId, endpoint, keyManager, false,
           WithKeyManager(keyManager),
@@ -201,10 +181,10 @@ txnHash, err = client.CreateBucket(ctx, bucketName, primarySp, opts)
  
 // head bucket
 bucketInfo, err := client.HeadBucket(ctx, bucketName)
-fmt.Println("bucket name:", bucketName)
+
 ```
 
-2) two stage of uploading including createObject and putObject
+2) two stages of uploading including createObject and putObject
 
 ```
 // (1) create object on chain
@@ -228,53 +208,22 @@ body, objectInfo, err := s.gnfdClient.GetObject(ctx, bucketName, objectName, sp.
 objectBytes, err := io.ReadAll(body)
 ```
 
-### Use Storage Provider Client
-
-#### Authentication Mechanism
-
-The SPclient supports two authentication types. The first type uses the local signer.Sign method, which calls the private 
-key of the key manager to sign the request message. The second type employs a metamask wallet trusted to generate an 
-authentication token.
-
-For the first type, specify the `SignType` of `AuthInfo` as `AuthV1` using the `NewAuthInfo` function,
-and pass it as a parameter to the API.
-
-```
-authInfo := NewAuthInfo(false, "")
-err = client.GetApproval(context.Background(), bucketName, "", authInfo)
-```
-
-For the second type, obtain the MetaMask sign token and specify the `SignType` of the `AuthInfo` as `AuthV2`. The MetaMask 
-sign token can be constructed like a JWT token with an expiration time. It needs to be implemented externally and passed as
-a parameter to the API.
-
-```
-authInfo := NewAuthInfo(true, "this is metamask auto token")
-err = client.GetApproval(context.Background(), bucketName, "", authInfo)
-```
-
-#### Initialize the Client
-
-If the `SPclient` uses `AuthV1`, the client should initialize it with a key manager:
-```
-// if client keep the private key in keyManager locally
-client := NewSpClientWithKeyManager("http://0.0.0.0:26750", &spClient.Option{}, keyManager)
-```
-If the `SPclient` uses `AuthV2`, the client can be initialized without a key manager:
-```
-// If the client does not manage the private key locally and use local
-client := NewSpClient("http://0.0.0.0:26750", &spClient.Option{})
-```
-
-#### Call APIs and Send Requests to the Storage Provider
+### Use Tendermint RPC Client
 
 ```go
-fileReader, err := os.Open(filePath)
+client := NewTendermintClient("http://0.0.0.0:26750")
+abci, err := client.TmClient.ABCIInfo(context.Background())
+```
 
-meta := spClient.ObjectMeta{
-    ObjectSize:  length,
-    ContentType: "application/octet-stream",
-}
+There is an option with multiple providers available. Upon interaction with the blockchain, the provider with the highest
+block height will be chosen.
 
-err = client.PutObject(ctx, bucketName, ObjectName, txnHash, fileReader, meta, NewAuthInfo(false, "")))
+```go
+gnfdClients := NewGnfdCompositClients(
+    []string{test.TEST_GRPC_ADDR, test.TEST_GRPC_ADDR2, test.TEST_GRPC_ADDR3},
+    []string{test.TEST_RPC_ADDR, test.TEST_RPC_ADDR2, test.TEST_RPC_ADDR3},
+    test.TEST_CHAIN_ID,
+    WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+
+client, err := gnfdClients.GetClient()
 ```
