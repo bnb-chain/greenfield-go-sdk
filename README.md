@@ -8,7 +8,7 @@ for any bug bounty. We advise you to be careful and experiment on the network at
 
 ## Instruction
 
-The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield. 
+The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield storage network. 
 
 ### Requirement
 
@@ -16,7 +16,7 @@ Go version above 1.18
 
 ## Getting started
 To get started working with the SDK setup your project for Go modules, and retrieve the SDK dependencies with `go get`.
-This example shows how you can use the v2 SDK to make an API request using the SDK's client.
+This example shows how you can use the greenfield go SDK to interact with the greenfield storage network,
 
 ###### Initialize Project
 
@@ -25,17 +25,22 @@ $ mkdir ~/hellogreenfield
 $ cd ~/hellogreenfield
 $ go mod init hellogreenfield
 ```
+
 ###### Add SDK Dependencies
+
 ```sh
 $ go get github.com/bnb-chain/greenfield-go-sdk
 ```
+
 replace dependencies
+
 ```go.mod
 cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
 github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.13
 github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3
 ```
+
 ###### Code
 
 In your preferred editor add the following content to `main.go`
@@ -54,11 +59,13 @@ import (
 )
 
 func main() {
+	// Generate an account from private key
 	privateKey := "9579fff0cab07a4379e845a890105004ba4c8276f8ad9d22082b2acbf02d884b"
 	account, err := types.NewAccountFromPrivateKey("test", privateKey)
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
 	}
+	
 	cli, err := client.New("greenfield_9000-121", "localhost:9090", account, &client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
@@ -92,6 +99,7 @@ func main() {
 ```
 
 ###### Compile and Execute
+
 ```sh
 $ go run .
 2023/04/06 19:49:28 nodeInfo moniker: validator0, version: go version go1.19.4 darwin/arm64
