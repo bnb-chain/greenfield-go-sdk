@@ -16,7 +16,6 @@ const (
 	HTTPHeaderPieceHash       = "X-Gnfd-Piece-Hash"
 
 	HTTPHeaderDate          = "X-Gnfd-Date"
-	HTTPHeaderEtag          = "ETag"
 	HTTPHeaderRange         = "Range"
 	HTTPHeaderUserAgent     = "User-Agent"
 	HTTPHeaderContentSHA256 = "X-Gnfd-Content-Sha256"

@@ -132,7 +132,7 @@ func CloseResponse(resp *http.Response) {
 	if resp != nil && resp.Body != nil {
 		_, err := io.Copy(io.Discard, resp.Body)
 		if err != nil {
-			log.Debug().Msg("close resp copy error" + err.Error())
+			log.Info().Msg("close resp copy error" + err.Error())
 		}
 		resp.Body.Close()
 	}
