@@ -11,6 +11,17 @@ on:
       - master
       - develop
 
+env:
+  GreenfileldTag: v0.0.10
+  GreenfileldIntegrationTestBranch: gnfd-sp
+  GOPRIVATE: github.com/bnb-chain
+  GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
+  MYSQL_USER: root
+  MYSQL_PASSWORD: root
+  MYSQL_ROOT_PASSWORD: root
+  CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+  CGO_CFLAGS_ALLOW: "-O -D__BLST_PORTABLE__"
+
 jobs:
   end-to-end-test:
     strategy:
@@ -18,11 +29,6 @@ jobs:
         go-version: [1.18.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      GOPRIVATE: github.com/bnb-chain
-      GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
-      CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
-      CGO_CFLAGS_ALLOW: "-O -D__BLST_PORTABLE__"
     steps:
       - name: Install Go
         uses: actions/setup-go@v3
@@ -47,12 +53,64 @@ jobs:
             ${{ runner.os }}-go-
       - name: Setup GitHub Token
         run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
-      - name: Localup greenfield blockchain
+
+      # Checkout Greenfield-SP
+      - name: Checkout Greenfield-SP
+        uses: actions/checkout@v3
+      # Build Greenfield-SP
+      - name: Build Greenfield-SP
         run: |
-          git clone https://github.com/bnb-chain/greenfield.git ../greenfield
-          cd ../greenfield
+          git clone git@github.com:bnb-chain/greenfield-storage-provider.git
+          cd greenfield-storage-provider
+          make install-tools
           make build
-          bash ./deployment/localup/localup.sh all 1 7
+          cd ..
+      # Build Greenfield
+      - name: Build Greenfield
+        run: |
+          git clone https://github.com/bnb-chain/greenfield.git
+          cd greenfield
+          git checkout ${{ env.GreenfileldTag }}
+          make proto-gen & make build
+          cd ..
+      # Run MySQL
+      - name: Run MySQL
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -h 127.0.0.1 -P 3306 -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e 'CREATE DATABASE sp_0; CREATE DATABASE sp_1;CREATE DATABASE sp_2; CREATE DATABASE sp_3;CREATE DATABASE sp_4; CREATE DATABASE sp_5; CREATE DATABASE sp_6;'
+      # Run Greenfield
+      - name: Run Greenfield
+        run: |
+          /bin/cp -rf greenfield-storage-provider/test/e2e/localup_env/greenfield_env greenfield/deployment/localup/.local
+          cd greenfield
+          bash ./deployment/localup/localup.sh start 1
+          cd ..
+      # Run Greenfield-SP
+      - name: Run Greenfield-SPs
+        run: |
+          cd greenfield-storage-provider
+          /bin/cp -rf test/e2e/localup_env/greenfield_sp_env deployment/localup/local_env
+          /bin/cp build/gnfd-sp deployment/localup/local_env/sp0/gnfd-sp0
+          /bin/cp build/gnfd-sp deployment/localup/local_env/sp1/gnfd-sp1
+          /bin/cp build/gnfd-sp deployment/localup/local_env/sp2/gnfd-sp2
+          /bin/cp build/gnfd-sp deployment/localup/local_env/sp3/gnfd-sp3
+          /bin/cp build/gnfd-sp deployment/localup/local_env/sp4/gnfd-sp4
+          /bin/cp build/gnfd-sp deployment/localup/local_env/sp5/gnfd-sp5
+          /bin/cp build/gnfd-sp deployment/localup/local_env/sp6/gnfd-sp6
+          bash ./deployment/localup/localup.sh --start
+          sleep 5
+          tail -n 1000 deployment/localup/local_env/sp0/gnfd-sp.log
+          ps -ef | grep gnfd-sp | wc -l
+          cd ..
+      # Run E2E Test
       - name: start e2e
         run: |
           make e2e_test
+          git clone https://github.com/bnb-chain/greenfield-integration-test.git
+          cd greenfield-integration-test
+          git checkout ${{ env.GreenfileldIntegrationTestBranch }}
+          cd ..
+          /bin/cp -rf greenfield-storage-provider/test/e2e/localup_env/integration_config/config.yml greenfield-integration-test/config/config.yml
+          cd greenfield-integration-test
+          go test tests/create_object_test.go
+          cd ..
