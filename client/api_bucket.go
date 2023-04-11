@@ -64,7 +64,7 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 		isAdminApi: true,
 	}
 
-	endpoint, err := c.getSPUrlByBucket(createBucketMsg.BucketName)
+	endpoint, err := c.getSPUrlByAddr(createBucketMsg.GetPrimarySpAddress())
 	if err != nil {
 		return nil, err
 	}
