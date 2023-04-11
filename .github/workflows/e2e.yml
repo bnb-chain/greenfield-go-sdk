@@ -66,7 +66,7 @@ jobs:
       # Build Greenfield-SP
       - name: Build Greenfield-SP
         run: |
-          git clone git@github.com:bnb-chain/greenfield-storage-provider.git
+          git clone https://github.com:bnb-chain/greenfield-storage-provider.git
           cd greenfield-storage-provider
           make install-tools
           make build
