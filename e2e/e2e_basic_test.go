@@ -265,7 +265,8 @@ func Test_Group(t *testing.T) {
 	// put group policy to another user
 	_, err = cli.PutGroupPolicy(ctx, groupName, grantUser.GetAddress(),
 		[]*permTypes.Statement{&statement}, types.PutPolicyOption{})
-
+	assert.NoError(t, err)
+	
 	t.Logf("put group policy to user %s", grantUser.GetAddress().String())
 	// verify permission should be allowed
 	time.Sleep(5 * time.Second)
