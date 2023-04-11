@@ -55,14 +55,6 @@ jobs:
       # Checkout Greenfield-SP
       - name: Checkout Greenfield-SP
         uses: actions/checkout@v3
-      # Build Greenfield-SP
-      - name: Build Greenfield-SP
-        run: |
-          git clone git@github.com:bnb-chain/greenfield-storage-provider.git
-          cd greenfield-storage-provider
-          make install-tools
-          make build
-          cd ..
       # Build Greenfield
       - name: Build Greenfield
         run: |
@@ -70,6 +62,14 @@ jobs:
           cd greenfield
           git checkout ${{ env.GreenfileldTag }}
           make proto-gen & make build
+          cd ..
+      # Build Greenfield-SP
+      - name: Build Greenfield-SP
+        run: |
+          git clone git@github.com:bnb-chain/greenfield-storage-provider.git
+          cd greenfield-storage-provider
+          make install-tools
+          make build
           cd ..
       # Run MySQL
       - name: Run MySQL
