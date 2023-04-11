@@ -27,10 +27,8 @@ import (
 
 type Object interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
-	CreateObject(ctx context.Context, bucketName, objectName string,
-		reader io.Reader, opts types.CreateObjectOptions) (string, error)
-	PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-		reader io.Reader, opt types.PutObjectOption) error
+	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
+	PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64, reader io.Reader, opt types.PutObjectOption) error
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)

@@ -84,7 +84,7 @@ func New(chainID string, grpcAddress string, account *types.Account, option Opti
 	// Must with TLS
 	var cc *sdkclient.GreenfieldClient
 	if option.GrpcDialOption == nil {
-		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS10})
+		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS12})
 		cc = sdkclient.NewGreenfieldClient(
 			grpcAddress,
 			chainID,

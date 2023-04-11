@@ -19,13 +19,27 @@ type SP interface {
 	GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
 	GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error)
-	GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (uint64, error)
+	// GetQuotaPrice
+	GetQuotaPrice(ctx context.Context, SPAddr sdk.AccAddress) (uint64, error)
+	// GetStoragePrice
+	GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (spTypes.SpStoragePrice, error)
+}
+
+func (c *client) GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.SpStoragePrice, error) {
+	resp, err := c.chainClient.QueryGetSpStoragePriceByTime(ctx, &spTypes.QueryGetSpStoragePriceByTimeRequest{
+		SpAddr:    SPAddr.String(),
+		Timestamp: 0,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &resp.SpStoragePrice, nil
 }
 
 // GetQuotaPrice return the quota price of the SP
-func (c *client) GetQuotaPrice(ctx context.Context, SPAddress sdk.AccAddress) (float64, error) {
+func (c *client) GetQuotaPrice(ctx context.Context, SPAddr sdk.AccAddress) (float64, error) {
 	resp, err := c.chainClient.QueryGetSpStoragePriceByTime(ctx, &spTypes.QueryGetSpStoragePriceByTimeRequest{
-		SpAddr:    SPAddress.String(),
+		SpAddr:    SPAddr.String(),
 		Timestamp: 0,
 	})
 	if err != nil {
