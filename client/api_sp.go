@@ -18,9 +18,9 @@ type SP interface {
 	// GetSPInfo return the sp info the sp chain address
 	GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
-	GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error)
+	GetSpAddrFromEndpoint(ctx context.Context, spEndpoint string) (sdk.AccAddress, error)
 	// GetStoragePrice returns the storage price for a particular storage provider, including update time, read price, store price and .etc.
-	GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (spTypes.SpStoragePrice, error)
+	GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.SpStoragePrice, error)
 }
 
 func (c *client) GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.SpStoragePrice, error) {
