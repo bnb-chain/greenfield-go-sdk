@@ -19,9 +19,7 @@ type SP interface {
 	GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
 	GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error)
-	// GetQuotaPrice
-	GetQuotaPrice(ctx context.Context, SPAddr sdk.AccAddress) (uint64, error)
-	// GetStoragePrice
+	// GetStoragePrice returns the storage price for a particular storage provider, including update time, read price, store price and .etc.
 	GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (spTypes.SpStoragePrice, error)
 }
 
@@ -34,24 +32,6 @@ func (c *client) GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (*s
 		return nil, err
 	}
 	return &resp.SpStoragePrice, nil
-}
-
-// GetQuotaPrice return the quota price of the SP
-func (c *client) GetQuotaPrice(ctx context.Context, SPAddr sdk.AccAddress) (float64, error) {
-	resp, err := c.chainClient.QueryGetSpStoragePriceByTime(ctx, &spTypes.QueryGetSpStoragePriceByTimeRequest{
-		SpAddr:    SPAddr.String(),
-		Timestamp: 0,
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	price, err := resp.SpStoragePrice.ReadPrice.Float64()
-	if err != nil {
-		return 0, err
-	}
-
-	return price, nil
 }
 
 // ListSP return the storage provider info on chain
