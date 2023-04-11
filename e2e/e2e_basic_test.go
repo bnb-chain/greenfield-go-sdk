@@ -2,16 +2,20 @@ package e2e
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
+	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -125,4 +129,65 @@ func Test_Account(t *testing.T) {
 	paymentAccountsByOwner, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
 	assert.NoError(t, err)
 	assert.Equal(t, len(paymentAccountsByOwner), 1)
+}
+
+func Test_Storage(t *testing.T) {
+	bucketName := "testBucket"
+	objectName := "testObject"
+
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	assert.NoError(t, err)
+	cli, err := client.New(ChainID, GrpcAddress, account,
+		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
+			Host: bucketName + ".gnfd.nodereal.com"})
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+
+	spList, err := cli.ListSP(ctx, false)
+	assert.NoError(t, err)
+	primarySp := spList[0].GetOperator()
+
+	chargedQuota := uint64(100000)
+	// CreateBucket
+	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota, Visibility: storageTypes.VISIBILITY_TYPE_PRIVATE}
+	_, err = cli.CreateBucket(ctx, bucketName, primarySp, opts)
+	assert.NoError(t, err)
+
+	time.Sleep(5 * time.Second)
+
+	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
+	assert.NoError(t, err)
+	assert.Equal(t, bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	assert.Equal(t, bucketInfo.ChargedReadQuota, chargedQuota)
+
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*100; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	txnHash, err := cli.CreateObject(ctx, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	assert.NoError(t, err)
+
+	// wait for the block generate
+	time.Sleep(5 * time.Second)
+	objectInfo, err := cli.HeadObject(ctx, bucketName, objectName)
+	assert.NoError(t, err)
+	assert.Equal(t, objectInfo.ObjectName, chargedQuota)
+
+	// put Object
+	err = cli.PutObject(ctx, bucketName, objectName, txnHash, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOption{})
+	assert.NoError(t, err)
+
+	// GetObject
+	ior, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
+	assert.NoError(t, err)
+	assert.Equal(t, info.ObjectName, objectName)
+	objectBytes, err := io.ReadAll(ior)
+	assert.NoError(t, err)
+	assert.Equal(t, objectBytes, buffer.Bytes())
 }

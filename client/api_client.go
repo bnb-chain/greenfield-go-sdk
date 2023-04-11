@@ -35,6 +35,7 @@ type Client interface {
 	Group
 	Challenge
 	Account
+	SP
 }
 
 // client represents a Greenfield SDK client that can interact with the blockchain
