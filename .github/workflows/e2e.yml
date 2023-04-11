@@ -11,16 +11,6 @@ on:
       - master
       - develop
 
-env:
-  GreenfileldTag: v0.0.10
-  GreenfileldIntegrationTestBranch: gnfd-sp
-  GOPRIVATE: github.com/bnb-chain
-  GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
-  MYSQL_USER: root
-  MYSQL_PASSWORD: root
-  MYSQL_ROOT_PASSWORD: root
-  CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
-  CGO_CFLAGS_ALLOW: "-O -D__BLST_PORTABLE__"
 
 jobs:
   end-to-end-test:
@@ -29,6 +19,16 @@ jobs:
         go-version: [1.18.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      GreenfileldTag: v0.0.10
+      GreenfileldIntegrationTestBranch: gnfd-sp
+      GOPRIVATE: github.com/bnb-chain
+      GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+      CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+      CGO_CFLAGS_ALLOW: "-O -D__BLST_PORTABLE__"
     steps:
       - name: Install Go
         uses: actions/setup-go@v3
