@@ -35,6 +35,7 @@ type Client interface {
 	Group
 	Challenge
 	Account
+	SP
 }
 
 // client represents a Greenfield SDK client that can interact with the blockchain
@@ -110,7 +111,7 @@ func New(chainID string, grpcAddress string, account *types.Account, option Opti
 	}
 
 	// fetch sp endpoints info from chain
-	spInfo, err := c.GetSPAddrInfo()
+	spInfo, err := c.getSPUrlInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +133,7 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 		return c.spEndpoints[primarySP], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.GetSPAddrInfo()
+	newSpInfo, err := c.getSPUrlInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +152,7 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 		return c.spEndpoints[address], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.GetSPAddrInfo()
+	newSpInfo, err := c.getSPUrlInfo()
 	if err != nil {
 		return nil, err
 	}

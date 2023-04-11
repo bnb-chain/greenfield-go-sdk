@@ -15,7 +15,7 @@ type SP interface {
 	// ListSP return the storage provider info on chain
 	// isInService indicates if only display the sp with STATUS_IN_SERVICE status
 	ListSP(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error)
-	// GetSPInfo return the sp info  the sp chain address
+	// GetSPInfo return the sp info the sp chain address
 	GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
 	GetSpAddrFromEndpoint(ctx context.Context) (sdk.AccAddress, error)
@@ -84,7 +84,21 @@ func (c *client) GetSpAddrFromEndpoint(ctx context.Context, spEndpoint string) (
 	return nil, errors.New("fail to get addr")
 }
 
-func (c *client) GetSPAddrInfo() (map[string]*url.URL, error) {
+// GetSPInfo return the sp info the sp chain address
+func (c *client) GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
+	request := &spTypes.QueryStorageProviderRequest{
+		SpAddress: SPAddr.String(),
+	}
+
+	gnfdRep, err := c.chainClient.StorageProvider(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return gnfdRep.StorageProvider, nil
+}
+
+func (c *client) getSPUrlInfo() (map[string]*url.URL, error) {
 	ctx := context.Background()
 	spInfo := make(map[string]*url.URL, 0)
 	request := &spTypes.QueryStorageProvidersRequest{}
