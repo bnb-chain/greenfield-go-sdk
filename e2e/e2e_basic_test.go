@@ -146,20 +146,21 @@ func Test_Storage(t *testing.T) {
 		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
 			Host: bucketName + ".gnfd.nodereal.com"})
 	assert.NoError(t, err)
-
 	ctx := context.Background()
 
 	spList, err := cli.ListSP(ctx, false)
 	assert.NoError(t, err)
 	primarySp := spList[0].GetOperator()
 
-	chargedQuota := uint64(100000)
-	// CreateBucket
-	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota, Visibility: storageTypes.VISIBILITY_TYPE_PRIVATE}
-	_, err = cli.CreateBucket(ctx, bucketName, primarySp, opts)
+	chargedQuota := uint64(100)
+
+	t.Log("---> CreateBucket and HeadBucket <---")
+	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota}
+	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp, opts)
 	assert.NoError(t, err)
 
-	time.Sleep(5 * time.Second)
+	_, err = cli.WaitForTx(ctx, bucketTx)
+	assert.NoError(t, err)
 
 	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
 	assert.NoError(t, err)
@@ -168,6 +169,25 @@ func Test_Storage(t *testing.T) {
 		assert.Equal(t, bucketInfo.ChargedReadQuota, chargedQuota)
 	}
 
+	t.Log("--->  UpdateBucket <---")
+	updateBucketTx, err := cli.UpdateBucketVisibility(ctx, bucketName,
+		storageTypes.VISIBILITY_TYPE_PUBLIC_READ, types.UpdateVisibilityOption{})
+	assert.NoError(t, err)
+	_, err = cli.WaitForTx(ctx, updateBucketTx)
+	assert.NoError(t, err)
+
+	t.Log("---> BuyQuotaForBucket <---")
+	targetQuota := uint64(300)
+	buyQuotaTx, err := cli.BuyQuotaForBucket(ctx, bucketName, targetQuota, types.BuyQuotaOption{})
+	assert.NoError(t, err)
+	_, err = cli.WaitForTx(ctx, buyQuotaTx)
+	assert.NoError(t, err)
+
+	t.Log("---> BuyQuotaForBucket <---")
+	quota, err := cli.GetBucketReadQuota(ctx, bucketName)
+	assert.NoError(t, err)
+	assert.Equal(t, quota.ReadQuotaSize, targetQuota)
+
 	var buffer bytes.Buffer
 	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890`
 	// Create 1MiB content where each line contains 1024 characters.
@@ -175,17 +195,19 @@ func Test_Storage(t *testing.T) {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
-	txnHash, err := cli.CreateObject(ctx, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	t.Log("---> CreateObject and HeadObject <---")
+	objectTx, err := cli.CreateObject(ctx, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	assert.NoError(t, err)
+	_, err = cli.WaitForTx(ctx, objectTx)
 	assert.NoError(t, err)
 
-	// wait for the block generate
-	time.Sleep(5 * time.Second)
 	objectInfo, err := cli.HeadObject(ctx, bucketName, objectName)
 	assert.NoError(t, err)
-	assert.Equal(t, objectInfo.ObjectName, chargedQuota)
+	assert.Equal(t, objectInfo.ObjectName, objectName)
 
+	t.Log("---> PutObject and GetObject <---")
 	// put Object
-	err = cli.PutObject(ctx, bucketName, objectName, txnHash, int64(buffer.Len()),
+	err = cli.PutObject(ctx, bucketName, objectName, objectTx, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOption{})
 	assert.NoError(t, err)
 
@@ -193,6 +215,7 @@ func Test_Storage(t *testing.T) {
 	ior, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
 	assert.NoError(t, err)
 	assert.Equal(t, info.ObjectName, objectName)
+	assert.Equal(t, info.Size, len(buffer.Bytes()))
 	objectBytes, err := io.ReadAll(ior)
 	assert.NoError(t, err)
 	assert.Equal(t, objectBytes, buffer.Bytes())
@@ -225,10 +248,11 @@ func Test_Group(t *testing.T) {
 	assert.NoError(t, err)
 	updateMember := addAccount.GetAddress()
 	updateMembers := []sdk.AccAddress{updateMember}
-	_, err = cli.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers, nil, types.UpdateGroupMemberOption{})
+	txnHash, err := cli.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers, nil, types.UpdateGroupMemberOption{})
 	t.Logf("add groupMember: %s", updateMember.String())
 	assert.NoError(t, err)
-	time.Sleep(5 * time.Second)
+	_, err = cli.WaitForTx(ctx, txnHash)
+	assert.NoError(t, err)
 
 	// head added member
 	exist := cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
@@ -238,10 +262,11 @@ func Test_Group(t *testing.T) {
 	}
 
 	// remove groupMember
-	_, err = cli.UpdateGroupMember(ctx, groupName, groupOwner, nil, updateMembers, types.UpdateGroupMemberOption{})
+	txnHash, err = cli.UpdateGroupMember(ctx, groupName, groupOwner, nil, updateMembers, types.UpdateGroupMemberOption{})
 	t.Logf("remove groupMember: %s", updateMember.String())
 	assert.NoError(t, err)
-	time.Sleep(5 * time.Second)
+	_, err = cli.WaitForTx(ctx, txnHash)
+	assert.NoError(t, err)
 
 	// head removed member
 	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
@@ -258,23 +283,24 @@ func Test_Group(t *testing.T) {
 		permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
 
 	// put group policy to another user
-	_, err = cli.PutGroupPolicy(ctx, groupName, grantUser.GetAddress(),
+	txnHash, err = cli.PutGroupPolicy(ctx, groupName, grantUser.GetAddress(),
 		[]*permTypes.Statement{&statement}, types.PutPolicyOption{})
 	assert.NoError(t, err)
 
 	t.Logf("put group policy to user %s", grantUser.GetAddress().String())
-	// verify permission should be allowed
-	time.Sleep(5 * time.Second)
+	_, err = cli.WaitForTx(ctx, txnHash)
+	assert.NoError(t, err)
 	// use this user to update group
 	grantClient, err := client.New(ChainID, GrpcAddress, grantUser,
 		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
 	assert.NoError(t, err)
 
-	// add back the member by grantClient
-	_, err = grantClient.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers,
+	// check permission, add back the member by grantClient
+	txnHash, err = grantClient.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers,
 		nil, types.UpdateGroupMemberOption{})
 	assert.NoError(t, err)
-	time.Sleep(5 * time.Second)
+	_, err = cli.WaitForTx(ctx, txnHash)
+	assert.NoError(t, err)
 
 	// head removed member
 	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
