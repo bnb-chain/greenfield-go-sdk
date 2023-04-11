@@ -14,6 +14,8 @@ type Account interface {
 	GetAccount(ctx context.Context, address string) (authTypes.AccountI, error)
 	GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error)
 	GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error)
+	GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccountI, error)
+	GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error)
 	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
 	Transfer(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
@@ -50,6 +52,41 @@ func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOpt
 		return nil, err
 	}
 	return tx.TxResponse, nil
+}
+
+func (c *client) GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error) {
+	response, err := c.chainClient.ModuleAccountByName(ctx, &authTypes.QueryModuleAccountByNameRequest{Name: name})
+	if err != nil {
+		return nil, err
+	}
+	// Unmarshal the raw account data from the response into a BaseAccount object.
+	moduleAccount := authTypes.ModuleAccount{}
+	err = c.chainClient.GetCodec().Unmarshal(response.Account.GetValue(), &moduleAccount)
+	if err != nil {
+		// Return an error if there was an issue unmarshalling the account data.
+		return nil, err
+	}
+
+	// Return the BaseAccount object as an AccountI interface.
+	return &moduleAccount, err
+}
+
+func (c *client) GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccountI, error) {
+	response, err := c.chainClient.ModuleAccounts(ctx, &authTypes.QueryModuleAccountsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	var accounts []authTypes.ModuleAccountI
+	for _, accValue := range response.Accounts {
+		moduleAccount := authTypes.ModuleAccount{}
+		err = c.chainClient.GetCodec().Unmarshal(accValue.Value, &moduleAccount)
+		if err != nil {
+			// Return an error if there was an issue unmarshalling the account data.
+			return nil, err
+		}
+		accounts = append(accounts, &moduleAccount)
+	}
+	return accounts, err
 }
 
 // GetAccountBalance retrieves balance information of an account for a given address.
