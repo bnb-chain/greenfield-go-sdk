@@ -2,19 +2,27 @@ package e2e
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"cosmossdk.io/math"
-	"github.com/bnb-chain/greenfield-go-sdk/client"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
+	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
+	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/bnb-chain/greenfield-go-sdk/client"
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 var (
@@ -25,7 +33,7 @@ var (
 
 // ParseValidatorMnemonic read the validator mnemonic from file
 func ParseValidatorMnemonic(i int) string {
-	return ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/validator%d/info", i))
+	return ParseMnemonicFromFile(fmt.Sprintf("../greenfield/deployment/localup/.local/validator%d/info", i))
 }
 
 func ParseMnemonicFromFile(fileName string) string {
@@ -125,4 +133,158 @@ func Test_Account(t *testing.T) {
 	paymentAccountsByOwner, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
 	assert.NoError(t, err)
 	assert.Equal(t, len(paymentAccountsByOwner), 1)
+}
+
+func Test_Storage(t *testing.T) {
+	bucketName := "testBucket"
+	objectName := "testObject"
+
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	assert.NoError(t, err)
+	cli, err := client.New(ChainID, GrpcAddress, account,
+		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
+			Host: bucketName + ".gnfd.nodereal.com"})
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+
+	spList, err := cli.ListSP(ctx, false)
+	assert.NoError(t, err)
+	primarySp := spList[0].GetOperator()
+
+	chargedQuota := uint64(100000)
+	// CreateBucket
+	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota, Visibility: storageTypes.VISIBILITY_TYPE_PRIVATE}
+	_, err = cli.CreateBucket(ctx, bucketName, primarySp, opts)
+	assert.NoError(t, err)
+
+	time.Sleep(5 * time.Second)
+
+	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
+	assert.NoError(t, err)
+	assert.Equal(t, bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	assert.Equal(t, bucketInfo.ChargedReadQuota, chargedQuota)
+
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*100; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	txnHash, err := cli.CreateObject(ctx, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	assert.NoError(t, err)
+
+	// wait for the block generate
+	time.Sleep(5 * time.Second)
+	objectInfo, err := cli.HeadObject(ctx, bucketName, objectName)
+	assert.NoError(t, err)
+	assert.Equal(t, objectInfo.ObjectName, chargedQuota)
+
+	// put Object
+	err = cli.PutObject(ctx, bucketName, objectName, txnHash, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOption{})
+	assert.NoError(t, err)
+
+	// GetObject
+	ior, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
+	assert.NoError(t, err)
+	assert.Equal(t, info.ObjectName, objectName)
+	objectBytes, err := io.ReadAll(ior)
+	assert.NoError(t, err)
+	assert.Equal(t, objectBytes, buffer.Bytes())
+}
+
+func Test_Group(t *testing.T) {
+	groupName := "testGroup"
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	assert.NoError(t, err)
+	cli, err := client.New(ChainID, GrpcAddress, account,
+		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	assert.NoError(t, err)
+	ctx := context.Background()
+
+	groupOwner := account.GetAddress()
+	// CreateGroup
+	_, err = cli.CreateGroup(ctx, groupName, types.CreateGroupOptions{})
+	assert.NoError(t, err)
+	t.Logf("create GroupName: %s", groupName)
+
+	time.Sleep(5 * time.Second)
+	headResult, err := cli.HeadGroup(ctx, groupName, groupOwner)
+	assert.NoError(t, err)
+	assert.Equal(t, groupName, headResult.GroupName)
+
+	// add groupMember
+	mnemonic = ParseValidatorMnemonic(1)
+	addAccount, err := types.NewAccountFromMnemonic("test1", mnemonic)
+	assert.NoError(t, err)
+	updateMember := addAccount.GetAddress()
+	updateMembers := []sdk.AccAddress{updateMember}
+	_, err = cli.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers, nil, types.UpdateGroupMemberOption{})
+	t.Logf("add groupMember: %s", updateMember.String())
+	assert.NoError(t, err)
+	time.Sleep(5 * time.Second)
+
+	// head added member
+	exist := cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
+	assert.Equal(t, true, exist)
+	if exist {
+		t.Logf("header groupMember: %s , exist", updateMember.String())
+	}
+
+	// remove groupMember
+	_, err = cli.UpdateGroupMember(ctx, groupName, groupOwner, nil, updateMembers, types.UpdateGroupMemberOption{})
+	t.Logf("remove groupMember: %s", updateMember.String())
+	assert.NoError(t, err)
+	time.Sleep(5 * time.Second)
+
+	// head removed member
+	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
+	assert.Equal(t, false, exist)
+	if !exist {
+		t.Logf("header groupMember: %s , not exist", updateMember.String())
+	}
+
+	time.Sleep(5 * time.Second)
+	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
+	assert.Equal(t, false, exist)
+	if exist {
+		t.Logf("header groupMember: %s , exist", updateMember.String())
+	}
+
+	// set group permission
+	mnemonic = ParseValidatorMnemonic(2)
+	grantUser, err := types.NewAccountFromMnemonic("test2", mnemonic)
+	assert.NoError(t, err)
+	statement := utils.NewStatement([]permTypes.ActionType{permTypes.ACTION_UPDATE_GROUP_MEMBER},
+		permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
+
+	// put group policy to another user
+	_, err = cli.PutGroupPolicy(ctx, groupName, grantUser.GetAddress(),
+		[]*permTypes.Statement{&statement}, types.PutPolicyOption{})
+
+	t.Logf("put group policy to user %s", grantUser.GetAddress().String())
+	// verify permission should be allowed
+	time.Sleep(5 * time.Second)
+	// use this user to update group
+	grantClient, err := client.New(ChainID, GrpcAddress, grantUser,
+		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	assert.NoError(t, err)
+
+	// add back the member by grantClient
+	_, err = grantClient.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers,
+		nil, types.UpdateGroupMemberOption{})
+	assert.NoError(t, err)
+	time.Sleep(5 * time.Second)
+
+	// head removed member
+	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
+	assert.Equal(t, true, exist)
+	if exist {
+		t.Logf("header groupMember: %s , exist", updateMember.String())
+	}
+
 }
