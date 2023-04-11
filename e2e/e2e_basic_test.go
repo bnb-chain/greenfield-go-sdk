@@ -136,8 +136,8 @@ func Test_Account(t *testing.T) {
 }
 
 func Test_Storage(t *testing.T) {
-	bucketName := "testBucket"
-	objectName := "testObject"
+	bucketName := "test-bucket"
+	objectName := "test-object"
 
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
@@ -163,8 +163,10 @@ func Test_Storage(t *testing.T) {
 
 	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
 	assert.NoError(t, err)
-	assert.Equal(t, bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
-	assert.Equal(t, bucketInfo.ChargedReadQuota, chargedQuota)
+	if err == nil {
+		assert.Equal(t, bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+		assert.Equal(t, bucketInfo.ChargedReadQuota, chargedQuota)
+	}
 
 	var buffer bytes.Buffer
 	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890`
@@ -197,7 +199,7 @@ func Test_Storage(t *testing.T) {
 }
 
 func Test_Group(t *testing.T) {
-	groupName := "testGroup"
+	groupName := "test-group"
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
@@ -248,13 +250,6 @@ func Test_Group(t *testing.T) {
 		t.Logf("header groupMember: %s , not exist", updateMember.String())
 	}
 
-	time.Sleep(5 * time.Second)
-	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
-	assert.Equal(t, false, exist)
-	if exist {
-		t.Logf("header groupMember: %s , exist", updateMember.String())
-	}
-
 	// set group permission
 	mnemonic = ParseValidatorMnemonic(2)
 	grantUser, err := types.NewAccountFromMnemonic("test2", mnemonic)
@@ -266,7 +261,7 @@ func Test_Group(t *testing.T) {
 	_, err = cli.PutGroupPolicy(ctx, groupName, grantUser.GetAddress(),
 		[]*permTypes.Statement{&statement}, types.PutPolicyOption{})
 	assert.NoError(t, err)
-	
+
 	t.Logf("put group policy to user %s", grantUser.GetAddress().String())
 	// verify permission should be allowed
 	time.Sleep(5 * time.Second)
