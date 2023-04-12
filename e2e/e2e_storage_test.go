@@ -27,9 +27,11 @@ func Test_Storage(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, account,
-		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
-			Host: bucketName + ".gnfd.nodereal.com"})
+	cli, err := client.New(ChainID, GrpcAddress, client.Option{
+		DefaultAccount: account,
+		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
+		Host:           bucketName + ".gnfd.nodereal.com",
+	})
 	assert.NoError(t, err)
 	ctx := context.Background()
 
@@ -117,8 +119,10 @@ func Test_Group(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, account,
-		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	cli, err := client.New(ChainID, GrpcAddress, client.Option{
+		DefaultAccount: account,
+		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
+	})
 	assert.NoError(t, err)
 	ctx := context.Background()
 
@@ -182,8 +186,10 @@ func Test_Group(t *testing.T) {
 	_, err = cli.WaitForTx(ctx, txnHash)
 	assert.NoError(t, err)
 	// use this user to update group
-	grantClient, err := client.New(ChainID, GrpcAddress, grantUser,
-		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	grantClient, err := client.New(ChainID, GrpcAddress, client.Option{
+		DefaultAccount: grantUser,
+		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
+	})
 	assert.NoError(t, err)
 
 	// check permission, add back the member by grantClient

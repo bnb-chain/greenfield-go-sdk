@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
 	}
-	cli, err := client.New("greenfield_9000-121", "localhost:9090", account, client.Option{})
+	cli, err := client.New("greenfield_9000-121", "localhost:9090", client.Option{DefaultAccount: account})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
