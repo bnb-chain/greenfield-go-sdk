@@ -26,7 +26,7 @@ var (
 
 // ParseValidatorMnemonic read the validator mnemonic from file
 func ParseValidatorMnemonic(i int) string {
-	return ParseMnemonicFromFile(fmt.Sprintf("../greenfield/deployment/localup/.local/validator%d/info", i))
+	return ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/validator%d/info", i))
 }
 
 func ParseMnemonicFromFile(fileName string) string {
