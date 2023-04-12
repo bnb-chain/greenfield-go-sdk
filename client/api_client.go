@@ -65,7 +65,7 @@ type Option struct {
 	// GrpcDialOption is the list of gRPC dial options used to configure the connection to the blockchain node.
 	GrpcDialOption grpc.DialOption
 	// account used to set the default account of client
-	Account *types.Account
+	DefaultAccount *types.Account
 	// Secure is a flag that specifies whether the client should use HTTPS or not.
 	Secure bool
 	// Transport is the HTTP transport used to send requests to the storage provider endpoint.
@@ -100,15 +100,15 @@ func New(chainID string, grpcAddress string, option Option) (Client, error) {
 		)
 	}
 
-	if option.Account != nil {
-		cc.SetKeyManager(option.Account.GetKeyManager())
+	if option.DefaultAccount != nil {
+		cc.SetKeyManager(option.DefaultAccount.GetKeyManager())
 	}
 
 	c := client{
 		chainClient:    cc,
 		httpClient:     &http.Client{Transport: option.Transport},
 		userAgent:      types.UserAgent,
-		defaultAccount: option.Account,
+		defaultAccount: option.DefaultAccount,
 		secure:         option.Secure,
 		host:           option.Host,
 	}

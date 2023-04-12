@@ -58,7 +58,7 @@ func Test_Basic(t *testing.T) {
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
 	cli, err := client.New(ChainID, GrpcAddress, client.Option{
-		Account:        account,
+		DefaultAccount: account,
 		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
 	)
 	assert.NoError(t, err)
@@ -91,7 +91,7 @@ func Test_Account(t *testing.T) {
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
 	cli, err := client.New(ChainID, GrpcAddress, client.Option{
-		Account:        account,
+		DefaultAccount: account,
 		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
 	)
 	assert.NoError(t, err)
