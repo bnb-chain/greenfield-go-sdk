@@ -21,6 +21,8 @@ type Basic interface {
 	SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, error)
+	WaitForNBlocks(ctx context.Context, n int64) error
+	WaitForNextBlock(ctx context.Context) error
 	GetLatestBlockHeight(ctx context.Context) (int64, error)
 	GetLatestBlock(ctx context.Context) (*tmservice.Block, error)
 	SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
