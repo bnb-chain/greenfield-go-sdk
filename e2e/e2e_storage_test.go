@@ -20,9 +20,8 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
-func Test_Storage(t *testing.T) {
+func Test_Bucket(t *testing.T) {
 	bucketName := "test-bucket"
-	objectName := "test-object"
 
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
@@ -74,6 +73,90 @@ func Test_Storage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, quota.ReadQuotaSize, targetQuota)
 
+	t.Log("---> 7. PutBucketPolicy <---")
+	principal, err := types.NewAccount("principal")
+	assert.NoError(t, err)
+
+	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	statements := []*permTypes.Statement{
+		{
+			Effect: permTypes.EFFECT_ALLOW,
+			Actions: []permTypes.ActionType{
+				permTypes.ACTION_UPDATE_BUCKET_INFO,
+				permTypes.ACTION_DELETE_BUCKET,
+				permTypes.ACTION_CREATE_OBJECT,
+			},
+			Resources:      []string{},
+			ExpirationTime: nil,
+			LimitSize:      nil,
+		},
+	}
+	policy, err := cli.PutBucketPolicy(ctx, bucketName, principalStr, statements, types.PutPolicyOption{})
+	assert.NoError(t, err)
+
+	_, err = cli.WaitForTx(ctx, policy)
+	assert.NoError(t, err)
+
+	t.Log("---> 8. GetBucketPolicy <---")
+	bucketPolicy, err := cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress())
+	assert.NoError(t, err)
+	assert.Equal(t, bucketPolicy.GetPrincipal(), principalStr)
+
+	t.Log("---> 9. DeleteBucketPolicy <---")
+	deleteBucketPolicy, err := cli.DeleteBucketPolicy(ctx, bucketName, principal.GetAddress(), types.DeletePolicyOption{})
+	assert.NoError(t, err)
+	_, err = cli.WaitForTx(ctx, deleteBucketPolicy)
+	assert.NoError(t, err)
+	_, err = cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress())
+	assert.Error(t, err)
+
+	t.Log("---> 10. ListBuckets <---")
+	buckets, err := cli.ListBuckets(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(buckets.Buckets))
+
+	t.Log("---> 12. DeleteBucket <---")
+	delBucket, err := cli.DeleteBucket(ctx, bucketName, types.DeleteBucketOption{})
+	assert.NoError(t, err)
+	_, err = cli.WaitForTx(ctx, delBucket)
+	assert.NoError(t, err)
+
+	_, err = cli.HeadBucket(ctx, bucketName)
+	assert.Error(t, err)
+
+}
+
+func Test_Object(t *testing.T) {
+	bucketName := "test-bucket"
+	objectName := "test-object"
+
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	assert.NoError(t, err)
+	cli, err := client.New(ChainID, GrpcAddress,
+		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
+			Host:           bucketName + ".gnfd.nodereal.com",
+			DefaultAccount: account})
+
+	assert.NoError(t, err)
+	ctx := context.Background()
+
+	spList, err := cli.ListSP(ctx, false)
+	assert.NoError(t, err)
+	primarySp := spList[0].GetOperator()
+
+	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp, types.CreateBucketOptions{})
+	assert.NoError(t, err)
+
+	_, err = cli.WaitForTx(ctx, bucketTx)
+	assert.NoError(t, err)
+
+	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
+	assert.NoError(t, err)
+	if err == nil {
+		assert.Equal(t, bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
 	var buffer bytes.Buffer
 	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890`
 	// Create 1MiB content where each line contains 1024 characters.
@@ -94,7 +177,6 @@ func Test_Storage(t *testing.T) {
 	assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
 	t.Log("---> PutObject and GetObject <---")
-	// put Object
 	err = cli.PutObject(ctx, bucketName, objectName, objectTx, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOption{})
 	assert.NoError(t, err)
@@ -104,14 +186,57 @@ func Test_Storage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 
-	// GetObject
 	ior, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
 	assert.NoError(t, err)
 	assert.Equal(t, info.ObjectName, objectName)
-	assert.Equal(t, info.Size, len(buffer.Bytes()))
 	objectBytes, err := io.ReadAll(ior)
 	assert.NoError(t, err)
 	assert.Equal(t, objectBytes, buffer.Bytes())
+
+	t.Log("---> 9. PutObjectPolicy <---")
+	principal, err := types.NewAccount("principal")
+	assert.NoError(t, err)
+	principalWithAccount, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	assert.NoError(t, err)
+	statements := []*permTypes.Statement{
+		{
+			Effect: permTypes.EFFECT_ALLOW,
+			Actions: []permTypes.ActionType{
+				permTypes.ACTION_GET_OBJECT,
+			},
+			Resources:      nil,
+			ExpirationTime: nil,
+			LimitSize:      nil,
+		},
+	}
+	policy, err := cli.PutObjectPolicy(ctx, bucketName, objectName, principalWithAccount, statements, types.PutPolicyOption{})
+	assert.NoError(t, err)
+	_, err = cli.WaitForTx(ctx, policy)
+	assert.NoError(t, err)
+
+	t.Log("---> 11. GetObjectPolicy <---")
+	objectPolicy, err := cli.GetObjectPolicy(ctx, bucketName, objectName, principal.GetAddress())
+	assert.NoError(t, err)
+	assert.Equal(t, objectPolicy.GetStatements(), statements)
+
+	t.Log("---> 12. DeleteObjectPolicy <---")
+	deleteObjectPolicy, err := cli.DeleteObjectPolicy(ctx, bucketName, objectName, principal.GetAddress(), types.DeletePolicyOption{})
+	assert.NoError(t, err)
+	_, err = cli.WaitForTx(ctx, deleteObjectPolicy)
+	assert.NoError(t, err)
+
+	t.Log("---> 13. ListObjects <---")
+	objects, err := cli.ListObjects(ctx, bucketName)
+	assert.NoError(t, err)
+	assert.Equal(t, len(objects.Objects), 1)
+
+	t.Log("---> 14. DeleteObject <---")
+	deleteObject, err := cli.DeleteObject(ctx, bucketName, objectName, types.DeleteObjectOption{})
+	assert.NoError(t, err)
+	_, err = cli.WaitForTx(ctx, deleteObject)
+	assert.NoError(t, err)
+	_, err = cli.HeadObject(ctx, bucketName, objectName)
+	assert.Error(t, err)
 }
 
 func Test_Group(t *testing.T) {

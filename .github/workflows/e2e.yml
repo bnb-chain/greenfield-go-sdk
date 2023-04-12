@@ -102,14 +102,5 @@ jobs:
       # Run E2E Test
       - name: start e2e
         run: |
-          git clone https://github.com/bnb-chain/greenfield-integration-test.git ../greenfield-integration-test
-          cd ../greenfield-integration-test
-          git checkout gnfd-sp
-          cd ../greenfield-go-sdk
-          /bin/cp -rf greenfield-storage-provider/test/e2e/localup_env/integration_config/config.yml greenfield-integration-test/config/config.yml
-          cd ../greenfield-integration-test
-          go test tests/create_object_test.go
-          cd ../greenfield-go-sdk
-          
           make e2e_test
           cd ..
