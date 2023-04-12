@@ -36,6 +36,9 @@ type Client interface {
 	Challenge
 	Account
 	SP
+
+	GetDefaultAccount() *types.Account
+	SetDefaultAccount(account *types.Account)
 }
 
 // client represents a Greenfield SDK client that can interact with the blockchain
@@ -61,6 +64,8 @@ type client struct {
 type Option struct {
 	// GrpcDialOption is the list of gRPC dial options used to configure the connection to the blockchain node.
 	GrpcDialOption grpc.DialOption
+	// account used to set the default account of client
+	Account *types.Account
 	// Secure is a flag that specifies whether the client should use HTTPS or not.
 	Secure bool
 	// Transport is the HTTP transport used to send requests to the storage provider endpoint.
@@ -73,39 +78,37 @@ type Option struct {
 // The grpcAddress indicate the grpc address of greenfield chain.
 // The account indicate the account used for signing transactions.
 // The rpcAddress indicate the rpc address of the tendermint client.
-func New(chainID string, grpcAddress string, account *types.Account, option Option) (Client, error) {
+func New(chainID string, grpcAddress string, option Option) (Client, error) {
 	if grpcAddress == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
 	}
 
-	if account == nil {
-		return nil, errors.New("fail to get account info")
-	}
-
-	// Must with TLS
+	// with TLS by default
 	var cc *sdkclient.GreenfieldClient
 	if option.GrpcDialOption == nil {
 		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS12})
 		cc = sdkclient.NewGreenfieldClient(
 			grpcAddress,
 			chainID,
-			sdkclient.WithKeyManager(account.GetKeyManager()),
 			sdkclient.WithGrpcDialOption(grpc.WithTransportCredentials(creds)),
 		)
 	} else {
 		cc = sdkclient.NewGreenfieldClient(
 			grpcAddress,
 			chainID,
-			sdkclient.WithKeyManager(account.GetKeyManager()),
 			sdkclient.WithGrpcDialOption(option.GrpcDialOption),
 		)
+	}
+
+	if option.Account != nil {
+		cc.SetKeyManager(option.Account.GetKeyManager())
 	}
 
 	c := client{
 		chainClient:    cc,
 		httpClient:     &http.Client{Transport: option.Transport},
 		userAgent:      types.UserAgent,
-		defaultAccount: account,
+		defaultAccount: option.Account,
 		secure:         option.Secure,
 		host:           option.Host,
 	}
@@ -511,4 +514,15 @@ func (c *client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxO
 		return "", err
 	}
 	return resp.TxResponse.TxHash, err
+}
+
+// GetDefaultAccount returns the account address of default account in client
+func (c *client) GetDefaultAccount() *types.Account {
+	return c.defaultAccount
+}
+
+// SetDefaultAccount will set the default account
+func (c *client) SetDefaultAccount(account *types.Account) {
+	c.defaultAccount = account
+	c.chainClient.SetKeyManager(account.GetKeyManager())
 }

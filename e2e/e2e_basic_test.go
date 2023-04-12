@@ -57,7 +57,10 @@ func Test_Basic(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, account, client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	cli, err := client.New(ChainID, GrpcAddress, client.Option{
+		Account:        account,
+		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
+	)
 	assert.NoError(t, err)
 	ctx := context.Background()
 	_, _, err = cli.GetNodeInfo(ctx)
@@ -87,7 +90,10 @@ func Test_Account(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, account, client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	cli, err := client.New(ChainID, GrpcAddress, client.Option{
+		Account:        account,
+		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
+	)
 	assert.NoError(t, err)
 	ctx := context.Background()
 
