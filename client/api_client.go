@@ -164,7 +164,7 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 		c.spEndpoints = newSpInfo
 		return newSpInfo[address], nil
 	} else {
-		return nil, errors.New("fail to locate endpoint from bucket")
+		return nil, errors.New("fail to locate endpoint from address")
 	}
 }
 
