@@ -78,6 +78,7 @@ func Test_Bucket(t *testing.T) {
 	assert.NoError(t, err)
 
 	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	assert.NoError(t, err)
 	statements := []*permTypes.Statement{
 		{
 			Effect: permTypes.EFFECT_ALLOW,
