@@ -39,13 +39,13 @@ type Group interface {
 // CreateGroup create a new group on greenfield chain
 // the group members can be initialized  or not
 func (c *client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
-	createGroupMsg := storageTypes.NewMsgCreateGroup(c.defaultAccount.GetAddress(), groupName, opt.InitGroupMember)
+	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.InitGroupMember)
 	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
 }
 
 // DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
 func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error) {
-	deleteGroupMsg := storageTypes.NewMsgDeleteGroup(c.defaultAccount.GetAddress(), groupName)
+	deleteGroupMsg := storageTypes.NewMsgDeleteGroup(c.MustGetDefaultAccount().GetAddress(), groupName)
 	return c.sendTxn(ctx, deleteGroupMsg, opt.TxOpts)
 }
 
@@ -59,13 +59,13 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 	if len(addMembers) == 0 && len(removeMembers) == 0 {
 		return "", errors.New("no update member")
 	}
-	updateGroupMsg := storageTypes.NewMsgUpdateGroupMember(c.defaultAccount.GetAddress(), groupOwner, groupName, addMembers, removeMembers)
+	updateGroupMsg := storageTypes.NewMsgUpdateGroupMember(c.MustGetDefaultAccount().GetAddress(), groupOwner, groupName, addMembers, removeMembers)
 
 	return c.sendTxn(ctx, updateGroupMsg, opts.TxOpts)
 }
 
 func (c *client) LeaveGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress, opt types.LeaveGroupOption) (string, error) {
-	leaveGroupMsg := storageTypes.NewMsgLeaveGroup(c.defaultAccount.GetAddress(), groupOwner, groupName)
+	leaveGroupMsg := storageTypes.NewMsgLeaveGroup(c.MustGetDefaultAccount().GetAddress(), groupOwner, groupName)
 	return c.sendTxn(ctx, leaveGroupMsg, opt.TxOpts)
 }
 
@@ -100,7 +100,7 @@ func (c *client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 // PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
 func (c *client) PutGroupPolicy(ctx context.Context, groupName string, principalAddr sdk.AccAddress,
 	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
-	sender := c.defaultAccount.GetAddress()
+	sender := c.MustGetDefaultAccount().GetAddress()
 
 	resource := gnfdTypes.NewGroupGRN(sender, groupName)
 	putPolicyMsg := storageTypes.NewMsgPutPolicy(sender, resource.String(),
@@ -146,7 +146,7 @@ func (c *client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectN
 
 // DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
 func (c *client) DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
-	sender := c.defaultAccount.GetAddress()
+	sender := c.MustGetDefaultAccount().GetAddress()
 	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 

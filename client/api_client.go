@@ -37,7 +37,7 @@ type Client interface {
 	Account
 	SP
 
-	GetDefaultAccount() *types.Account
+	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
 }
 
@@ -445,7 +445,7 @@ func (c *client) signRequest(req *http.Request) error {
 	unsignedMsg := httplib.GetMsgToSign(req)
 
 	// sign the request header info, generate the signature
-	signature, err := c.defaultAccount.Sign(unsignedMsg)
+	signature, err := c.MustGetDefaultAccount().Sign(unsignedMsg)
 	if err != nil {
 		return err
 	}
@@ -517,12 +517,22 @@ func (c *client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxO
 }
 
 // GetDefaultAccount returns the account address of default account in client
-func (c *client) GetDefaultAccount() *types.Account {
-	return c.defaultAccount
+func (c *client) GetDefaultAccount() (*types.Account, error) {
+	if c.MustGetDefaultAccount() == nil {
+		return nil, types.ErrorDefaultAccountNotExist
+	}
+	return c.MustGetDefaultAccount(), nil
 }
 
 // SetDefaultAccount will set the default account
 func (c *client) SetDefaultAccount(account *types.Account) {
 	c.defaultAccount = account
 	c.chainClient.SetKeyManager(account.GetKeyManager())
+}
+
+func (c *client) MustGetDefaultAccount() *types.Account {
+	if c.defaultAccount == nil {
+		panic("Default account not exist, Use SetDefaultAccount to set ")
+	}
+	return c.defaultAccount
 }

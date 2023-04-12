@@ -106,7 +106,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		visibility = opts.Visibility
 	}
 
-	createObjectMsg := storageTypes.NewMsgCreateObject(c.defaultAccount.GetAddress(), bucketName, objectName,
+	createObjectMsg := storageTypes.NewMsgCreateObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName,
 		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
@@ -135,7 +135,7 @@ func (c *client) DeleteObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	delObjectMsg := storageTypes.NewMsgDeleteObject(c.defaultAccount.GetAddress(), bucketName, objectName)
+	delObjectMsg := storageTypes.NewMsgDeleteObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName)
 	return c.sendTxn(ctx, delObjectMsg, opt.TxOpts)
 }
 
@@ -149,7 +149,7 @@ func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName 
 		return "", err
 	}
 
-	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(c.defaultAccount.GetAddress(), bucketName, objectName)
+	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName)
 	return c.sendTxn(ctx, cancelCreateMsg, opt.TxOpts)
 }
 
@@ -364,7 +364,7 @@ func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName str
 		return "", err
 	}
 
-	putPolicyMsg := storageTypes.NewMsgPutPolicy(c.defaultAccount.GetAddress(), resource.String(),
+	putPolicyMsg := storageTypes.NewMsgPutPolicy(c.MustGetDefaultAccount().GetAddress(), resource.String(),
 		principal, statements, opt.PolicyExpireTime)
 
 	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)
@@ -373,7 +373,7 @@ func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName str
 func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
-	return c.sendDelPolicyTxn(ctx, c.defaultAccount.GetAddress(), resource.String(), principal, opt.TxOpts)
+	return c.sendDelPolicyTxn(ctx, c.MustGetDefaultAccount().GetAddress(), resource.String(), principal, opt.TxOpts)
 }
 
 // IsObjectPermissionAllowed check if the permission of the object is allowed to the user

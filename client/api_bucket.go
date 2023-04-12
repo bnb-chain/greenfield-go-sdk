@@ -100,7 +100,7 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		visibility = opts.Visibility
 	}
 
-	createBucketMsg := storageTypes.NewMsgCreateBucket(c.defaultAccount.GetAddress(), bucketName,
+	createBucketMsg := storageTypes.NewMsgCreateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName,
 		visibility, primaryAddr, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
 
 	err := createBucketMsg.ValidateBasic()
@@ -125,7 +125,7 @@ func (c *client) DeleteBucket(ctx context.Context, bucketName string, opt types.
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
-	delBucketMsg := storageTypes.NewMsgDeleteBucket(c.defaultAccount.GetAddress(), bucketName)
+	delBucketMsg := storageTypes.NewMsgDeleteBucket(c.MustGetDefaultAccount().GetAddress(), bucketName)
 	return c.sendTxn(ctx, delBucketMsg, opt.TxOpts)
 }
 
@@ -142,7 +142,7 @@ func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 		return "", err
 	}
 
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.MustGetDefaultAccount().GetAddress(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, visibility)
 	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
 }
 
@@ -154,7 +154,7 @@ func (c *client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 		return "", err
 	}
 
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, bucketInfo.Visibility)
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.MustGetDefaultAccount().GetAddress(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, bucketInfo.Visibility)
 	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
 }
 
@@ -194,7 +194,7 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 		chargedReadQuota = bucketInfo.ChargedReadQuota
 	}
 
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName,
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.MustGetDefaultAccount().GetAddress(), bucketName,
 		&chargedReadQuota, paymentAddr, visibility)
 	return c.sendTxn(ctx, updateBucketMsg, opts.TxOpts)
 }
@@ -237,7 +237,7 @@ func (c *client) PutBucketPolicy(ctx context.Context, bucketName string, princip
 		return "", err
 	}
 
-	putPolicyMsg := storageTypes.NewMsgPutPolicy(c.defaultAccount.GetAddress(), resource.String(),
+	putPolicyMsg := storageTypes.NewMsgPutPolicy(c.MustGetDefaultAccount().GetAddress(), resource.String(),
 		principal, statements, opt.PolicyExpireTime)
 
 	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)
@@ -248,7 +248,7 @@ func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, prin
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 	principal := permTypes.NewPrincipalWithAccount(principalAddr)
 
-	return c.sendDelPolicyTxn(ctx, c.defaultAccount.GetAddress(), resource, principal, opt.TxOpts)
+	return c.sendDelPolicyTxn(ctx, c.MustGetDefaultAccount().GetAddress(), resource, principal, opt.TxOpts)
 }
 
 // IsBucketPermissionAllowed check if the permission of bucket is allowed to the user
@@ -465,7 +465,7 @@ func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 	if err != nil {
 		return "", err
 	}
-	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.defaultAccount.GetAddress(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
+	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.MustGetDefaultAccount().GetAddress(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
 
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {

@@ -151,7 +151,7 @@ func (c *client) Transfer(ctx context.Context, toAddress string, amount int64, t
 	if err != nil {
 		return nil, err
 	}
-	msgSend := types3.NewMsgSend(c.defaultAccount.GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: sdk.NewInt(amount)}})
+	msgSend := types3.NewMsgSend(c.MustGetDefaultAccount().GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: sdk.NewInt(amount)}})
 	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, txOption)
 	if err != nil {
 		return nil, err
