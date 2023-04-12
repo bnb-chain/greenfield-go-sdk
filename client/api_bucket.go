@@ -286,15 +286,11 @@ func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, princip
 }
 
 // ListBuckets list buckets for the owner
-func (c *client) ListBuckets(ctx context.Context, userInfo types.UserInfo) (types.ListBucketsResult, error) {
-	if userInfo.Address == "" {
-		return types.ListBucketsResult{}, errors.New("fail to get user address")
-	}
-
+func (c *client) ListBuckets(ctx context.Context) (types.ListBucketsResult, error) {
 	reqMeta := requestMeta{
 		contentSHA256: types.EmptyStringSHA256,
 		userInfo: types.UserInfo{
-			Address: userInfo.Address,
+			Address: c.MustGetDefaultAccount().GetAddress().String(),
 		},
 	}
 

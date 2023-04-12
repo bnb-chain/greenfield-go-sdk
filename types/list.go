@@ -41,10 +41,6 @@ type GetObjectResult struct {
 	Size        int64
 }
 
-type UserInfo struct {
-	Address string
-}
-
 type ListObjectsResult struct {
 	// objects defines the list of object
 	Objects []*ObjectMeta `json:"objects"`
