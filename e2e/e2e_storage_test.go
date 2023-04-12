@@ -38,7 +38,6 @@ func Test_Storage(t *testing.T) {
 	primarySp := spList[0].GetOperator()
 
 	chargedQuota := uint64(100)
-
 	t.Log("---> CreateBucket and HeadBucket <---")
 	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota}
 	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp, opts)
@@ -86,17 +85,22 @@ func Test_Storage(t *testing.T) {
 	_, err = cli.WaitForTx(ctx, objectTx)
 	assert.NoError(t, err)
 
+	time.Sleep(5 * time.Second)
 	objectInfo, err := cli.HeadObject(ctx, bucketName, objectName)
 	assert.NoError(t, err)
 	assert.Equal(t, objectInfo.ObjectName, objectName)
-
-	t.Logf("head object status: %s\n", objectInfo.GetObjectStatus().String())
+	assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
 	t.Log("---> PutObject and GetObject <---")
 	// put Object
 	err = cli.PutObject(ctx, bucketName, objectName, objectTx, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOption{})
 	assert.NoError(t, err)
+
+	time.Sleep(10 * time.Second)
+	objectInfo, err = cli.HeadObject(ctx, bucketName, objectName)
+	assert.NoError(t, err)
+	assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 
 	// GetObject
 	ior, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
