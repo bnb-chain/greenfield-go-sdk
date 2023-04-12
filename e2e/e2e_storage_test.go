@@ -312,19 +312,12 @@ func Test_Group(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check permission, add back the member by grantClient
-	txnHash, err = grantClient.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers,
+	updateHash, err := grantClient.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers,
 		[]sdk.AccAddress{}, types.UpdateGroupMemberOption{})
 	assert.NoError(t, err)
 
-	for i := 0; i < 10; i++ {
-		err = grantClient.WaitForNextBlock(ctx)
-		if err != nil {
-			t.Log("wait block error")
-		}
-		t.Log("new block generate")
-	}
-	//_, err = cli.WaitForTx(ctx, txnHash)
-	//assert.NoError(t, err)
+	_, err = grantClient.WaitForTx(ctx, updateHash)
+	assert.NoError(t, err)
 
 	// head removed member
 	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
