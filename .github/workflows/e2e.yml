@@ -58,19 +58,19 @@ jobs:
       # Build Greenfield
       - name: Build Greenfield
         run: |
-          git clone https://github.com/bnb-chain/greenfield.git
-          cd greenfield
+          git clone https://github.com/bnb-chain/greenfield.git ../greenfield
+          cd ../greenfield
           git checkout ${{ env.GreenfileldTag }}
           make proto-gen & make build
           cd ..
       # Build Greenfield-SP
       - name: Build Greenfield-SP
         run: |
-          git clone https://github.com/bnb-chain/greenfield-storage-provider.git
-          cd greenfield-storage-provider
+          git clone https://github.com/bnb-chain/greenfield-storage-provider.git ../greenfield-storage-provider
+          cd ../greenfield-storage-provider
           make install-tools
           make build
-          cd ..
+          cd ../greenfield-go-sdk
       # Run MySQL
       - name: Run MySQL
         run: |
@@ -79,14 +79,14 @@ jobs:
       # Run Greenfield
       - name: Run Greenfield
         run: |
-          /bin/cp -rf greenfield-storage-provider/test/e2e/localup_env/greenfield_env greenfield/deployment/localup/.local
-          cd greenfield
-          bash ./deployment/localup/localup.sh start 1
-          cd ..
+          /bin/cp -rf ../greenfield-storage-provider/test/e2e/localup_env/greenfield_env ../greenfield/deployment/localup/.local
+          cd ../greenfield
+          bash ./deployment/localup/localup.sh start 1 7
+          cd ../greenfield-go-sdk
       # Run Greenfield-SP
       - name: Run Greenfield-SPs
         run: |
-          cd greenfield-storage-provider
+          cd ../greenfield-storage-provider
           /bin/cp -rf test/e2e/localup_env/greenfield_sp_env deployment/localup/local_env
           /bin/cp build/gnfd-sp deployment/localup/local_env/sp0/gnfd-sp0
           /bin/cp build/gnfd-sp deployment/localup/local_env/sp1/gnfd-sp1
@@ -98,18 +98,18 @@ jobs:
           bash ./deployment/localup/localup.sh --start
           sleep 10
           ps -ef | grep gnfd-sp | wc -l
-          cd ..
+          cd ../greenfield-go-sdk
       # Run E2E Test
       - name: start e2e
         run: |
-          git clone https://github.com/bnb-chain/greenfield-integration-test.git
-          cd greenfield-integration-test
+          git clone https://github.com/bnb-chain/greenfield-integration-test.git ../greenfield-integration-test
+          cd ../greenfield-integration-test
           git checkout gnfd-sp
-          cd ..
+          cd ../greenfield-go-sdk
           /bin/cp -rf greenfield-storage-provider/test/e2e/localup_env/integration_config/config.yml greenfield-integration-test/config/config.yml
-          cd greenfield-integration-test
+          cd ../greenfield-integration-test
           go test tests/create_object_test.go
-          cd ..
+          cd ../greenfield-go-sdk
           
           make e2e_test
           cd ..
