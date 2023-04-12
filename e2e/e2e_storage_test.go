@@ -253,8 +253,7 @@ func Test_Group(t *testing.T) {
 	assert.Equal(t, groupName, headResult.GroupName)
 
 	t.Log("---> Update GroupMember <---")
-	mnemonic = ParseValidatorMnemonic(1)
-	addAccount, err := types.NewAccountFromMnemonic("test1", mnemonic)
+	addAccount, err := types.NewAccount("member1")
 	assert.NoError(t, err)
 	updateMember := addAccount.GetAddress()
 	updateMembers := []sdk.AccAddress{updateMember}
@@ -286,9 +285,13 @@ func Test_Group(t *testing.T) {
 	}
 
 	t.Log("---> Set Group Permission<---")
-	mnemonic = ParseValidatorMnemonic(2)
-	grantUser, err := types.NewAccountFromMnemonic("test2", mnemonic)
+	grantUser, err := types.NewAccount("member2")
 	assert.NoError(t, err)
+
+	resp, err := cli.Transfer(ctx, grantUser.GetAddress().String(), 100, nil)
+	_, err = cli.WaitForTx(ctx, resp.TxHash)
+	assert.NoError(t, err)
+
 	statement := utils.NewStatement([]permTypes.ActionType{permTypes.ACTION_UPDATE_GROUP_MEMBER},
 		permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
 
