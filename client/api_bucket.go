@@ -303,7 +303,7 @@ func (c *client) ListBuckets(ctx context.Context, userInfo types.UserInfo) (type
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlByAddr(userInfo.Address)
+	endpoint, err := c.getInServiceSP()
 	if err != nil {
 		return types.ListBucketsResult{}, err
 	}

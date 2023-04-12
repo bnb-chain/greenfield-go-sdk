@@ -165,6 +165,26 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 	}
 }
 
+// getInServiceSP return an SP endpoint which is in service
+func (c *client) getInServiceSP() (*url.URL, error) {
+	ctx := context.Background()
+	spList, err := c.ListSP(ctx, true)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(spList) == 0 {
+		return nil, errors.New("fail to get SP endpoint")
+	}
+
+	urlInfo, urlErr := utils.GetEndpointURL(spList[0].Endpoint, c.secure)
+	if urlErr != nil {
+		return nil, urlErr
+	}
+
+	return urlInfo, nil
+}
+
 // requestMeta - contains the metadata to construct the http request.
 type requestMeta struct {
 	bucketName       string

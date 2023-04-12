@@ -11,11 +11,10 @@ import (
 
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
 type CreateBucketOptions struct {
-	Visibility       storageTypes.VisibilityType
-	TxOpts           *gnfdsdktypes.TxOption
-	PaymentAddress   sdk.AccAddress
-	PrimarySPAddress sdk.AccAddress
-	ChargedQuota     uint64
+	Visibility     storageTypes.VisibilityType
+	TxOpts         *gnfdsdktypes.TxOption
+	PaymentAddress sdk.AccAddress
+	ChargedQuota   uint64
 }
 
 type DeleteBucketOption struct {
