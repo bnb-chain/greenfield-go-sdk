@@ -11,6 +11,7 @@ import (
 )
 
 type Account interface {
+	GetDefaultAccountAddress() sdk.AccAddress
 	GetAccount(ctx context.Context, address string) (authTypes.AccountI, error)
 	GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error)
 	GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error)
@@ -19,6 +20,11 @@ type Account interface {
 	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
 	Transfer(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+}
+
+// GetDefaultAccountAddress returns the account address of default account in client
+func (c *client) GetDefaultAccountAddress() sdk.AccAddress {
+	return c.defaultAccount.GetAddress()
 }
 
 // GetAccount retrieves account information for a given address.
