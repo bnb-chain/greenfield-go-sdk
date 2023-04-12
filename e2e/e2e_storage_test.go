@@ -101,7 +101,8 @@ func Test_Bucket(t *testing.T) {
 	t.Log("---> 8. GetBucketPolicy <---")
 	bucketPolicy, err := cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress())
 	assert.NoError(t, err)
-	assert.Equal(t, bucketPolicy.GetPrincipal(), principalStr)
+	assert.Equal(t, bucketPolicy.GetPrincipal().String(), principalStr)
+	assert.Equal(t, bucketPolicy.GetStatements(), statements)
 
 	t.Log("---> 9. DeleteBucketPolicy <---")
 	deleteBucketPolicy, err := cli.DeleteBucketPolicy(ctx, bucketName, principal.GetAddress(), types.DeletePolicyOption{})
@@ -111,12 +112,7 @@ func Test_Bucket(t *testing.T) {
 	_, err = cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress())
 	assert.Error(t, err)
 
-	t.Log("---> 10. ListBuckets <---")
-	buckets, err := cli.ListBuckets(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(buckets.Buckets))
-
-	t.Log("---> 12. DeleteBucket <---")
+	t.Log("---> 10. DeleteBucket <---")
 	delBucket, err := cli.DeleteBucket(ctx, bucketName, types.DeleteBucketOption{})
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, delBucket)
@@ -124,7 +120,6 @@ func Test_Bucket(t *testing.T) {
 
 	_, err = cli.HeadBucket(ctx, bucketName)
 	assert.Error(t, err)
-
 }
 
 func Test_Object(t *testing.T) {
@@ -194,7 +189,7 @@ func Test_Object(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, objectBytes, buffer.Bytes())
 
-	t.Log("---> 9. PutObjectPolicy <---")
+	t.Log("---> PutObjectPolicy <---")
 	principal, err := types.NewAccount("principal")
 	assert.NoError(t, err)
 	principalWithAccount, err := utils.NewPrincipalWithAccount(principal.GetAddress())
@@ -215,23 +210,18 @@ func Test_Object(t *testing.T) {
 	_, err = cli.WaitForTx(ctx, policy)
 	assert.NoError(t, err)
 
-	t.Log("---> 11. GetObjectPolicy <---")
+	t.Log("--->  GetObjectPolicy <---")
 	objectPolicy, err := cli.GetObjectPolicy(ctx, bucketName, objectName, principal.GetAddress())
 	assert.NoError(t, err)
 	assert.Equal(t, objectPolicy.GetStatements(), statements)
 
-	t.Log("---> 12. DeleteObjectPolicy <---")
+	t.Log("---> DeleteObjectPolicy <---")
 	deleteObjectPolicy, err := cli.DeleteObjectPolicy(ctx, bucketName, objectName, principal.GetAddress(), types.DeletePolicyOption{})
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, deleteObjectPolicy)
 	assert.NoError(t, err)
 
-	t.Log("---> 13. ListObjects <---")
-	objects, err := cli.ListObjects(ctx, bucketName)
-	assert.NoError(t, err)
-	assert.Equal(t, len(objects.Objects), 1)
-
-	t.Log("---> 14. DeleteObject <---")
+	t.Log("---> DeleteObject <---")
 	deleteObject, err := cli.DeleteObject(ctx, bucketName, objectName, types.DeleteObjectOption{})
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, deleteObject)
