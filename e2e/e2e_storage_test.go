@@ -289,6 +289,7 @@ func Test_Group(t *testing.T) {
 	assert.NoError(t, err)
 
 	resp, err := cli.Transfer(ctx, grantUser.GetAddress().String(), 100, nil)
+	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, resp.TxHash)
 	assert.NoError(t, err)
 
@@ -314,6 +315,7 @@ func Test_Group(t *testing.T) {
 	txnHash, err = grantClient.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers,
 		nil, types.UpdateGroupMemberOption{})
 	assert.NoError(t, err)
+
 	_, err = cli.WaitForTx(ctx, txnHash)
 	assert.NoError(t, err)
 
