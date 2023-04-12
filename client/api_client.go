@@ -201,7 +201,7 @@ type requestMeta struct {
 	contentMD5Base64 string // base64 encoded md5sum
 	contentSHA256    string // hex encoded sha256sum
 	challengeInfo    types.ChallengeInfo
-	userInfo         types.UserInfo
+	userAddress      string
 }
 
 // SendOptions -  options to use to send the http message
@@ -313,9 +313,8 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 		}
 	}
 
-	if meta.userInfo.Address != "" {
-		info := meta.userInfo
-		req.Header.Set(types.HTTPHeaderUserAddress, info.Address)
+	if meta.userAddress != "" {
+		req.Header.Set(types.HTTPHeaderUserAddress, meta.userAddress)
 	}
 
 	// set date header

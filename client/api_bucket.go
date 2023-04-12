@@ -39,7 +39,7 @@ type Bucket interface {
 	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-	ListBuckets(ctx context.Context, userInfo types.UserInfo) (types.ListBucketsResult, error)
+	ListBuckets(ctx context.Context) (types.ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error)
 }
@@ -289,9 +289,7 @@ func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, princip
 func (c *client) ListBuckets(ctx context.Context) (types.ListBucketsResult, error) {
 	reqMeta := requestMeta{
 		contentSHA256: types.EmptyStringSHA256,
-		userInfo: types.UserInfo{
-			Address: c.MustGetDefaultAccount().GetAddress().String(),
-		},
+		userAddress:   c.MustGetDefaultAccount().GetAddress().String(),
 	}
 
 	sendOpt := sendOptions{
