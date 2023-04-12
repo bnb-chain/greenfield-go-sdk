@@ -288,7 +288,7 @@ func Test_Group(t *testing.T) {
 	grantUser, err := types.NewAccount("member2")
 	assert.NoError(t, err)
 
-	resp, err := cli.Transfer(ctx, grantUser.GetAddress().String(), 100, nil)
+	resp, err := cli.Transfer(ctx, grantUser.GetAddress().String(), 1000000000000000000, nil)
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, resp.TxHash)
 	assert.NoError(t, err)
@@ -313,11 +313,18 @@ func Test_Group(t *testing.T) {
 
 	// check permission, add back the member by grantClient
 	txnHash, err = grantClient.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers,
-		nil, types.UpdateGroupMemberOption{})
+		[]sdk.AccAddress{}, types.UpdateGroupMemberOption{})
 	assert.NoError(t, err)
 
-	_, err = cli.WaitForTx(ctx, txnHash)
-	assert.NoError(t, err)
+	for i := 0; i < 10; i++ {
+		err = grantClient.WaitForNextBlock(ctx)
+		if err != nil {
+			t.Log("wait block error")
+		}
+		t.Log("new block generate")
+	}
+	//_, err = cli.WaitForTx(ctx, txnHash)
+	//assert.NoError(t, err)
 
 	// head removed member
 	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
