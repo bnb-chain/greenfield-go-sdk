@@ -11,11 +11,12 @@ import (
 )
 
 type Challenge interface {
-	ChallengeSP(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error)
+	GetChallengeInfo(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error)
 }
 
-// ChallengeSP sends request to challenge and get challenge result info
-func (c *client) ChallengeSP(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error) {
+// GetChallengeInfo  sends request to challenge and get challenge result info
+// The challenge info includes the piece data, piece hash roots and integrity hash corresponding to the accessed SP
+func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error) {
 	if info.ObjectId == "" {
 		return types.ChallengeResult{}, errors.New("fail to get objectId")
 	}

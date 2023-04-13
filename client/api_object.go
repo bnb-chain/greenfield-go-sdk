@@ -32,6 +32,7 @@ type Object interface {
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
+	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
 	HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error)
@@ -45,6 +46,8 @@ type Object interface {
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
 	ListObjects(ctx context.Context, bucketName string) (types.ListObjectsResult, error)
+	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
+	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -60,14 +63,16 @@ func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 	return params.GetRedundantDataChunkNum(), params.GetRedundantParityChunkNum(), params.GetMaxSegmentSize(), nil
 }
 
-// ComputeHashRoots return the hash roots list and content size
+// ComputeHashRoots return the integrity hash, content size and the redundancy type of the file
 func (c *client) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error) {
 	dataBlocks, parityBlocks, segSize, err := c.GetRedundancyParams()
+	if reader == nil {
+		return nil, 0, storageTypes.REDUNDANCY_EC_TYPE, errors.New("fail to compute hash, reader is nil")
+	}
 	if err != nil {
 		return nil, 0, storageTypes.REDUNDANCY_EC_TYPE, err
 	}
 
-	// get hash and objectSize from reader
 	return hashlib.ComputeIntegrityHash(reader, int64(segSize), int(dataBlocks), int(parityBlocks))
 }
 
