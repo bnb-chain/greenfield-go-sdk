@@ -89,6 +89,10 @@ type ListReadRecordOptions struct {
 	MaxRecords     int
 }
 
+type ListObjectsOptions struct {
+	ShowRemovedObject bool
+}
+
 type PutPolicyOption struct {
 	TxOpts           *gnfdsdktypes.TxOption
 	PolicyExpireTime *time.Time

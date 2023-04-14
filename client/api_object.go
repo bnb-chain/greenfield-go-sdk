@@ -419,7 +419,7 @@ func (c *client) GetObjectPolicy(ctx context.Context, bucketName, objectName str
 }
 
 // ListObjects return object list of the specific bucket
-func (c *client) ListObjects(ctx context.Context, bucketName string) (types.ListObjectsResult, error) {
+func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.ListObjectsResult{}, err
 	}
@@ -462,7 +462,21 @@ func (c *client) ListObjects(ctx context.Context, bucketName string) (types.List
 		return types.ListObjectsResult{}, err
 	}
 
-	return listObjectsResult, nil
+	if opts.ShowRemovedObject {
+		return listObjectsResult, nil
+	}
+
+	// default only return the object that has not been removed
+	objectMetaList := make([]*types.ObjectMeta, 0)
+	for _, objectInfo := range listObjectsResult.Objects {
+		if objectInfo.Removed == true {
+			continue
+		}
+
+		objectMetaList = append(objectMetaList, objectInfo)
+	}
+
+	return types.ListObjectsResult{Objects: objectMetaList}, nil
 }
 
 // GetCreateObjectApproval returns the signature info for the approval of preCreating resources
