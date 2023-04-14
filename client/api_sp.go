@@ -192,6 +192,9 @@ func (c *client) GrantDepositForStorageProvider(ctx context.Context, spOperatorA
 		opts.expiration = &expiration
 	}
 	msgGrant, err := authz.NewMsgGrant(granter.GetAddress(), govModuleAddress.GetAddress(), authorization, opts.expiration)
+	if err != nil {
+		return "", err
+	}
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, &opts.TxOption)
 	if err != nil {
 		return "", err

@@ -77,7 +77,7 @@ func Test_CreateStorageProvider(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(createTx.Logs.String())
 
-	for true {
+	for {
 		p, err := cli.GetProposal(ctx, proposalID)
 		t.Logf("Proposal: %d, %s, %s, %s", p.Id, p.Status, p.VotingEndTime.String(), p.FinalTallyResult.String())
 		assert.NoError(t, err)
@@ -95,7 +95,7 @@ func Test_CreateStorageProvider(t *testing.T) {
 	assert.NoError(t, err)
 	t.Logf("VoteTx: %s", tx.TxHash)
 
-	for true {
+	for {
 		p, err := cli.GetProposal(ctx, proposalID)
 		t.Logf("Proposal: %d, %s, %s, %s", p.Id, p.Status, p.VotingEndTime.String(), p.FinalTallyResult.String())
 		assert.NoError(t, err)

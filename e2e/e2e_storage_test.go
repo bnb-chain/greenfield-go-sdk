@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
+	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -74,7 +76,7 @@ func Test_Bucket(t *testing.T) {
 	assert.Equal(t, quota.ReadQuotaSize, targetQuota)
 
 	t.Log("---> 7. PutBucketPolicy <---")
-	principal, err := types.NewAccount("principal")
+	principal, _, err := types.NewAccount("principal")
 	assert.NoError(t, err)
 
 	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
@@ -189,7 +191,7 @@ func Test_Object(t *testing.T) {
 	assert.Equal(t, objectBytes, buffer.Bytes())
 
 	t.Log("---> PutObjectPolicy <---")
-	principal, err := types.NewAccount("principal")
+	principal, _, err := types.NewAccount("principal")
 	assert.NoError(t, err)
 	principalWithAccount, err := utils.NewPrincipalWithAccount(principal.GetAddress())
 	assert.NoError(t, err)
@@ -253,7 +255,7 @@ func Test_Group(t *testing.T) {
 	assert.Equal(t, groupName, headResult.GroupName)
 
 	t.Log("---> Update GroupMember <---")
-	addAccount, err := types.NewAccount("member1")
+	addAccount, _, err := types.NewAccount("member1")
 	assert.NoError(t, err)
 	updateMember := addAccount.GetAddress()
 	updateMembers := []sdk.AccAddress{updateMember}
@@ -285,12 +287,12 @@ func Test_Group(t *testing.T) {
 	}
 
 	t.Log("---> Set Group Permission<---")
-	grantUser, err := types.NewAccount("member2")
+	grantUser, _, err := types.NewAccount("member2")
 	assert.NoError(t, err)
 
-	resp, err := cli.Transfer(ctx, grantUser.GetAddress().String(), 1000000000000000000, nil)
+	resp, err := cli.Transfer(ctx, grantUser.GetAddress().String(), math.NewIntWithDecimal(1, types2.DecimalBNB), types2.TxOption{})
 	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, resp.TxHash)
+	_, err = cli.WaitForTx(ctx, resp)
 	assert.NoError(t, err)
 
 	statement := utils.NewStatement([]permTypes.ActionType{permTypes.ACTION_UPDATE_GROUP_MEMBER},
