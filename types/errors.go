@@ -30,8 +30,8 @@ type ErrResponse struct {
 
 // Error returns the error msg
 func (r ErrResponse) Error() string {
-	return fmt.Sprintf("statusCode %v : code : %s  (Message: %s)",
-		r.StatusCode, r.Code, r.Message)
+	return fmt.Sprintf("statusCode %v : code : %s  request-id %s (Message: %s)",
+		r.StatusCode, r.Code, r.RequestId, r.Message)
 }
 
 // ConstructErrResponse  checks the response is an error response
