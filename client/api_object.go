@@ -470,7 +470,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 	// default only return the object that has not been removed
 	objectMetaList := make([]*types.ObjectMeta, 0)
 	for _, objectInfo := range listObjectsResult.Objects {
-		if objectInfo.Removed == true {
+		if objectInfo.Removed {
 			continue
 		}
 
