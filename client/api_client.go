@@ -77,13 +77,11 @@ type Option struct {
 // The grpcAddress indicate the grpc address of greenfield chain.
 // The account indicate the account used for signing transactions.
 // The rpcAddress indicate the rpc address of the tendermint client.
-func New(chainID string, rpcAddress string, option Option) (Client, error) {
-	if rpcAddress == "" || chainID == "" {
+func New(chainID string, endpoint string, option Option) (Client, error) {
+	if endpoint == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
 	}
-
-	// with TLS by default
-	cc, err := sdkclient.NewGreenfieldClient(rpcAddress, chainID)
+	cc, err := sdkclient.NewGreenfieldClient(endpoint, chainID)
 	if err != nil {
 		return nil, err
 	}
