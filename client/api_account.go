@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	"cosmossdk.io/math"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	paymentTypes "github.com/bnb-chain/greenfield/x/payment/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -16,9 +17,9 @@ type Account interface {
 	GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error)
 	GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccountI, error)
 	GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error)
-	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
-	Transfer(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
 }
 
 // GetAccount retrieves account information for a given address.
@@ -45,13 +46,13 @@ func (c *client) GetAccount(ctx context.Context, address string) (authTypes.Acco
 
 // CreatePaymentAccount creates a new payment account on the blockchain using the provided address.
 // It returns a TxResponse containing information about the transaction, or an error if the transaction failed.
-func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error) {
 	msgCreatePaymentAccount := paymentTypes.NewMsgCreatePaymentAccount(address)
 	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgCreatePaymentAccount}, txOption)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return tx.TxResponse, nil
+	return tx.TxResponse.TxHash, nil
 }
 
 func (c *client) GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error) {
@@ -138,7 +139,7 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 	return paymentAccounts, nil
 }
 
-// Transfer function takes a context, a toAddress string, an amount of type int64, and a txOption of
+// Transfer function takes a context, a toAddress string, an amount of type math.Int, and a txOption of
 // type gnfdSdkTypes.TxOption as parameters and returns a pointer to an sdk.TxResponse struct and an error.
 // This function first parses the toAddress parameter into an sdk.AccAddress object, and if there is an error,
 // it returns nil and the error.
@@ -146,15 +147,15 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 // transaction to the chain by calling the BroadcastTx method of the chainClient field of the client struct.
 // If there is an error during the broadcasting, the function returns nil and the error. If there is no error,
 // the function returns a pointer to the TxResponse struct and nil
-func (c *client) Transfer(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
 	toAddr, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	msgSend := types3.NewMsgSend(c.MustGetDefaultAccount().GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: sdk.NewInt(amount)}})
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, txOption)
+	msgSend := types3.NewMsgSend(c.MustGetDefaultAccount().GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: amount}})
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, &txOption)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return tx.TxResponse, nil
+	return tx.TxResponse.TxHash, nil
 }

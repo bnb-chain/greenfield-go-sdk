@@ -36,6 +36,7 @@ type Client interface {
 	Challenge
 	Account
 	SP
+	Proposal
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
@@ -108,7 +109,7 @@ func New(chainID string, grpcAddress string, option Option) (Client, error) {
 		chainClient:    cc,
 		httpClient:     &http.Client{Transport: option.Transport},
 		userAgent:      types.UserAgent,
-		defaultAccount: option.DefaultAccount,
+		defaultAccount: option.DefaultAccount, // it allows to be nil
 		secure:         option.Secure,
 		host:           option.Host,
 	}

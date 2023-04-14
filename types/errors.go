@@ -16,6 +16,7 @@ var (
 	ErrorUrlNotProvided         = errors.New("Url address not provided yet ")
 	ErrorUrlsMismatch           = errors.New("Number of RPC and GRPC Urls does not match ")
 	ErrorDefaultAccountNotExist = errors.New("Default account of client is not exist ")
+	ErrorProposalIDNotFound     = errors.New("Proposal ID not found ")
 )
 
 // ErrResponse define the information of the error response

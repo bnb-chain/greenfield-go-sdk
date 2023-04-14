@@ -101,13 +101,13 @@ func Test_Account(t *testing.T) {
 	assert.NoError(t, err)
 	t.Logf("Balance: %s", balance.String())
 
-	account1, err := types.NewAccount("test2")
+	account1, _, err := types.NewAccount("test2")
 	assert.NoError(t, err)
-	transfer, err := cli.Transfer(ctx, account1.GetAddress().String(), 1, nil)
+	transferTxHash, err := cli.Transfer(ctx, account1.GetAddress().String(), math.NewIntFromUint64(1), types2.TxOption{})
 	assert.NoError(t, err)
-	t.Logf("Transfer response: %s", transfer.String())
+	t.Logf("Transfer response: %s", transferTxHash)
 
-	waitForTx, err := cli.WaitForTx(ctx, transfer.TxHash)
+	waitForTx, err := cli.WaitForTx(ctx, transferTxHash)
 	assert.NoError(t, err)
 	t.Logf("Wair for tx: %s", waitForTx.String())
 
@@ -122,10 +122,10 @@ func Test_Account(t *testing.T) {
 	assert.Equal(t, acc.GetAddress(), account1.GetAddress())
 	assert.Equal(t, acc.GetSequence(), uint64(0))
 
-	txResp, err := cli.CreatePaymentAccount(ctx, account.GetAddress().String(), &types2.TxOption{})
+	txHash, err := cli.CreatePaymentAccount(ctx, account.GetAddress().String(), &types2.TxOption{})
 	assert.NoError(t, err)
-	t.Logf("Acc: %s", txResp.String())
-	waitForTx, err = cli.WaitForTx(ctx, txResp.TxHash)
+	t.Logf("Acc: %s", txHash)
+	waitForTx, err = cli.WaitForTx(ctx, txHash)
 	assert.NoError(t, err)
 	t.Logf("Wair for tx: %s", waitForTx.String())
 

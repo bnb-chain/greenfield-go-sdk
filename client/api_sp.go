@@ -5,10 +5,15 @@ import (
 	"errors"
 	"net/url"
 	"strings"
+	"time"
 
+	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/authz"
+	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 )
 
 type SP interface {
@@ -21,6 +26,10 @@ type SP interface {
 	GetSpAddrFromEndpoint(ctx context.Context, spEndpoint string) (sdk.AccAddress, error)
 	// GetStoragePrice returns the storage price for a particular storage provider, including update time, read price, store price and .etc.
 	GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.SpStoragePrice, error)
+	// GrantDepositForStorageProvider submit a grant transaction to allow gov module account to deduct the specified number of tokens
+	GrantDepositForStorageProvider(ctx context.Context, spOperatorAddr sdk.AccAddress, depositAmount math.Int, opts GrantDepositForStorageProviderOptions) (string, error)
+	// CreateStorageProvider submits a proposal to create a storage provider to the greenfield blockchain, and it returns a proposal ID
+	CreateStorageProvider(ctx context.Context, fundingAddress, sealAddress, approvalAddress sdk.AccAddress, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error)
 }
 
 func (c *client) GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.SpStoragePrice, error) {
@@ -117,4 +126,75 @@ func (c *client) getSPUrlInfo() (map[string]*url.URL, error) {
 	}
 
 	return spInfo, nil
+}
+
+type CreateStorageProviderOptions struct {
+	ReadPrice             sdk.Dec
+	FreeReadQuota         uint64
+	StorePrice            sdk.Dec
+	ProposalDepositAmount math.Int // wei BNB
+	ProposalMetaData      string
+	TxOption              gnfdSdkTypes.TxOption
+}
+
+func (c *client) CreateStorageProvider(ctx context.Context, fundingAddress, sealAddress, approvalAddress sdk.AccAddress, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error) {
+	defaultAccount := c.MustGetDefaultAccount()
+	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
+	if err != nil {
+		return 0, "", err
+	}
+	if opts.ProposalDepositAmount.IsNil() {
+		opts.ProposalDepositAmount = math.NewIntWithDecimal(1, gnfdSdkTypes.DecimalBNB)
+	}
+	if opts.ReadPrice.IsNil() {
+		opts.ReadPrice = sdk.NewDec(1)
+	}
+	if opts.StorePrice.IsNil() {
+		opts.StorePrice = sdk.NewDec(1)
+	}
+	msgCreateStorageProvider, err := spTypes.NewMsgCreateStorageProvider(
+		govModuleAddress.GetAddress(),
+		defaultAccount.GetAddress(),
+		fundingAddress, sealAddress, approvalAddress, description,
+		endpoint,
+		sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount),
+		opts.ReadPrice,
+		opts.FreeReadQuota,
+		opts.StorePrice,
+	)
+	if err != nil {
+		return 0, "", err
+	}
+	err = msgCreateStorageProvider.ValidateBasic()
+	if err != nil {
+		return 0, "", err
+	}
+
+	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOption})
+}
+
+type GrantDepositForStorageProviderOptions struct {
+	expiration *time.Time
+	TxOption   gnfdSdkTypes.TxOption
+}
+
+func (c *client) GrantDepositForStorageProvider(ctx context.Context, spOperatorAddr sdk.AccAddress, depositAmount math.Int, opts GrantDepositForStorageProviderOptions) (string, error) {
+	granter := c.MustGetDefaultAccount()
+	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
+	if err != nil {
+		return "", err
+	}
+	coin := sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)
+	authorization := spTypes.NewDepositAuthorization(spOperatorAddr, &coin)
+
+	if opts.expiration == nil {
+		expiration := time.Now().Add(24 * time.Hour)
+		opts.expiration = &expiration
+	}
+	msgGrant, err := authz.NewMsgGrant(granter.GetAddress(), govModuleAddress.GetAddress(), authorization, opts.expiration)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, &opts.TxOption)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, nil
 }

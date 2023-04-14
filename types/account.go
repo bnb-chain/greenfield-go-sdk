@@ -35,16 +35,16 @@ func NewAccountFromMnemonic(name, mnemonic string) (*Account, error) {
 	}, nil
 }
 
-func NewAccount(name string) (*Account, error) {
+func NewAccount(name string) (*Account, string, error) {
 	privKey := secp256k1.GenPrivKey()
 	km, err := keys.NewPrivateKeyManager(hex.EncodeToString(privKey.Bytes()))
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	return &Account{
 		name: name,
 		km:   km,
-	}, nil
+	}, hex.EncodeToString(privKey.Bytes()), nil
 }
 
 func (a *Account) GetKeyManager() keys.KeyManager {
