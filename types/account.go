@@ -37,6 +37,8 @@ func NewAccountFromMnemonic(name, mnemonic string) (*Account, error) {
 	}, nil
 }
 
+// TODO: return mnemonic to user
+
 func NewAccount(name string) (*Account, string, error) {
 	privKey := secp256k1.GenPrivKey()
 	km, err := keys.NewPrivateKeyManager(hex.EncodeToString(privKey.Bytes()))
