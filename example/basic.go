@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	privateKey := "9579fff0cab07a4379e845a890105004ba4c8276f8ad9d22082b2acbf02d884b"
+	privateKey := "<Your own private key>"
 	account, err := types.NewAccountFromPrivateKey("test", privateKey)
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
