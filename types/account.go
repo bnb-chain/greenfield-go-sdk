@@ -8,6 +8,8 @@ import (
 	"github.com/tendermint/tendermint/crypto/secp256k1"
 )
 
+// TODO: Will add an AccountRegister struct to manage multi account.
+
 type Account struct {
 	name string
 	km   keys.KeyManager
