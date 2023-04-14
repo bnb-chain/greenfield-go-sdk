@@ -37,6 +37,7 @@ type Bucket interface {
 	PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
 	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
+	IsBucketPermissionAllowed(ctx context.Context, user sdk.AccAddress, bucketName string, action permTypes.ActionType) (permTypes.Effect, error)
 
 	ListBuckets(ctx context.Context) (types.ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)

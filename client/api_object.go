@@ -47,8 +47,9 @@ type Object interface {
 	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
+	IsObjectPermissionAllowed(ctx context.Context, user sdk.AccAddress, bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error)
 
-	ListObjects(ctx context.Context, bucketName string) (types.ListObjectsResult, error)
+	ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
 	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
 }
