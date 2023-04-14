@@ -30,18 +30,19 @@ type Bucket interface {
 	CreateBucket(ctx context.Context, bucketName string, primaryAddr sdk.AccAddress, opts types.CreateBucketOptions) (string, error)
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
-	GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error)
+
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
-	// PutBucketPolicy apply bucket policy to the principal, return the txn hash
+
 	PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
-	// DeleteBucketPolicy delete the bucket policy of the principal
 	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
-	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
+
 	ListBuckets(ctx context.Context) (types.ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)
+
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error)
+	GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources

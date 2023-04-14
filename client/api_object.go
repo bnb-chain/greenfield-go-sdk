@@ -33,18 +33,21 @@ type Object interface {
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
 	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
+
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
 	HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error)
 	// HeadObjectByID query the objectInfo on chain by object id, return the object info if exists
 	// return err info if object not exist
 	HeadObjectByID(ctx context.Context, objID string) (*storageTypes.ObjectInfo, error)
+
 	// PutObjectPolicy apply object policy to the principal, return the txn hash
 	PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 		statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
 	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
+
 	ListObjects(ctx context.Context, bucketName string) (types.ListObjectsResult, error)
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
 	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)

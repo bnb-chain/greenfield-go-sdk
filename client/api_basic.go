@@ -17,19 +17,21 @@ import (
 
 type Basic interface {
 	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error)
-	BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error)
-	SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
+	GetLatestBlockHeight(ctx context.Context) (int64, error)
+	GetLatestBlock(ctx context.Context) (*tmservice.Block, error)
+	GetSyncing(ctx context.Context) (bool, error)
+	GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error)
+	GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error)
+
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, error)
 	WaitForNBlocks(ctx context.Context, n int64) error
 	WaitForNextBlock(ctx context.Context) error
-	GetLatestBlockHeight(ctx context.Context) (int64, error)
-	GetLatestBlock(ctx context.Context) (*tmservice.Block, error)
+
 	SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
+	SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
-	GetSyncing(ctx context.Context) (bool, error)
-	GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error)
-	GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error)
+	BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error)
 }
 
 // GetNodeInfo returns the current node info of the greenfield that the client is connected to.

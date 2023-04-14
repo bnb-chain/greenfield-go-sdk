@@ -17,8 +17,9 @@ type Account interface {
 	GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error)
 	GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccountI, error)
 	GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error)
-	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
+
+	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error)
 	Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
 }
 
