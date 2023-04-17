@@ -53,9 +53,6 @@ jobs:
       - name: Setup GitHub Token
         run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
 
-      # Checkout Greenfield-SP
-      - name: Checkout Greenfield-SP
-        uses: actions/checkout@v3
       # Build Greenfield
       - name: Build Greenfield
         run: |
