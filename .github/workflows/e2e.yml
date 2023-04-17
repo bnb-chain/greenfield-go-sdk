@@ -86,7 +86,7 @@ jobs:
       - name: Run Greenfield-SPs
         run: |
           cd ../greenfield-storage-provider
-          /bin/cp -rf test/e2e/localup_env/greenfield_sp_env deployment/localup/local_env
+          /bin/cp -rf test/e2e/localup_env/greenfield_sp_env/* deployment/localup/local_env
           /bin/cp build/gnfd-sp deployment/localup/local_env/sp0/gnfd-sp0
           /bin/cp build/gnfd-sp deployment/localup/local_env/sp1/gnfd-sp1
           /bin/cp build/gnfd-sp deployment/localup/local_env/sp2/gnfd-sp2
