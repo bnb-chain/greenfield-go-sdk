@@ -2,24 +2,51 @@ package client
 
 import (
 	"context"
+	"cosmossdk.io/math"
 	sdkmath "cosmossdk.io/math"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
 	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
+	oracletypes "github.com/cosmos/cosmos-sdk/x/oracle/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type CrossChain interface {
-	TransferOut(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
-	MirrorGroup(ctx context.Context, id sdkmath.Uint)
+	// TransferOut makes a transfer from Greenfield to BSC
+	TransferOut(ctx context.Context, toAddress string, amount math.Int, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	Claims(ctx context.Context, fromAddr string, srcShainId, destChainId uint32, sequence uint64, timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	MirrorGroup(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	MirrorBucket(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	MirrorObject(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 }
 
-func (c *client) TransferOut(ctx context.Context, toAddress string, amount int64, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+func (c *client) TransferOut(ctx context.Context, toAddress string, amount math.Int, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	msgTransferOut := bridgetypes.NewMsgTransferOut(c.MustGetDefaultAccount().GetAddress().String(),
 		toAddress,
-		&sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: sdk.NewInt(amount)},
+		&sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: amount},
 	)
 	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgTransferOut}, txOption)
+	if err != nil {
+		return nil, err
+	}
+	return txResp.TxResponse, nil
+}
+
+func (c *client) Claims(ctx context.Context, fromAddr string, srcShainId, destChainId uint32, sequence uint64,
+	timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+
+	msg := oracletypes.NewMsgClaim(
+		fromAddr,
+		srcShainId,
+		destChainId,
+		sequence,
+		timestamp,
+		payload,
+		voteAddrSet,
+		aggSignature)
+
+	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
 	if err != nil {
 		return nil, err
 	}

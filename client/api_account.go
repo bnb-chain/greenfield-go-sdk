@@ -2,13 +2,14 @@ package client
 
 import (
 	"context"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 
 	"cosmossdk.io/math"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	paymentTypes "github.com/bnb-chain/greenfield/x/payment/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	types3 "github.com/cosmos/cosmos-sdk/x/bank/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 type Account interface {
@@ -21,6 +22,7 @@ type Account interface {
 
 	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error)
 	Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
+	MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error)
 }
 
 // GetAccount retrieves account information for a given address.
@@ -94,7 +96,7 @@ func (c *client) GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccou
 // GetAccountBalance retrieves balance information of an account for a given address.
 // It takes a context and an address as input and returns an sdk.Coin interface and an error (if any).
 func (c *client) GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error) {
-	response, err := c.chainClient.BankQueryClient.Balance(ctx, &types3.QueryBalanceRequest{Address: address, Denom: gnfdSdkTypes.Denom})
+	response, err := c.chainClient.BankQueryClient.Balance(ctx, &banktypes.QueryBalanceRequest{Address: address, Denom: gnfdSdkTypes.Denom})
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +155,34 @@ func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int
 	if err != nil {
 		return "", err
 	}
-	msgSend := types3.NewMsgSend(c.MustGetDefaultAccount().GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: amount}})
+	msgSend := banktypes.NewMsgSend(c.MustGetDefaultAccount().GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: amount}})
 	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, &txOption)
+	if err != nil {
+		return "", err
+	}
+	return tx.TxResponse.TxHash, nil
+}
+
+func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error) {
+	var outputs []banktypes.Output
+	denom := gnfdSdkTypes.Denom
+	sum := math.NewInt(0)
+	for i := 0; i < len(details); i++ {
+		outputs = append(outputs, banktypes.Output{
+			Address: details[i].ToAddress,
+			Coins:   []sdk.Coin{{Denom: denom, Amount: details[i].Amount}},
+		})
+		sum = sum.Add(details[i].Amount)
+	}
+	in := banktypes.Input{
+		Address: c.MustGetDefaultAccount().GetAddress().String(),
+		Coins:   []sdk.Coin{{Denom: denom, Amount: sum}},
+	}
+	msg := &banktypes.MsgMultiSend{
+		Inputs:  []banktypes.Input{in},
+		Outputs: outputs,
+	}
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}

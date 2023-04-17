@@ -35,6 +35,8 @@ type Client interface {
 	Account
 	SP
 	Proposal
+	Staking
+	CrossChain
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)

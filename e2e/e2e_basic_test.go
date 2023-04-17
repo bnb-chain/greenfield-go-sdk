@@ -3,19 +3,16 @@ package e2e
 import (
 	"bufio"
 	"context"
+	"cosmossdk.io/math"
 	"fmt"
+	"github.com/bnb-chain/greenfield-go-sdk/client"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
+	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
+	types2 "github.com/bnb-chain/greenfield/sdk/types"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"cosmossdk.io/math"
-	types2 "github.com/bnb-chain/greenfield/sdk/types"
-	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
-	"github.com/bnb-chain/greenfield-go-sdk/client"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 var (
@@ -91,7 +88,7 @@ func Test_Account(t *testing.T) {
 	assert.NoError(t, err)
 	cli, err := client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
-		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
+	},
 	)
 	assert.NoError(t, err)
 	ctx := context.Background()
@@ -131,4 +128,68 @@ func Test_Account(t *testing.T) {
 	paymentAccountsByOwner, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
 	assert.NoError(t, err)
 	assert.Equal(t, len(paymentAccountsByOwner), 1)
+}
+
+func Test_MultiTransfer(t *testing.T) {
+	mnemonic := ParseValidatorMnemonic(0)
+	sender, err := types.NewAccountFromMnemonic("sender", mnemonic)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	cli, err := client.New(ChainID, Endpoint, client.Option{
+		DefaultAccount: sender,
+	})
+	cli.SetDefaultAccount(sender)
+
+	transferDetails := make([]types.TransferDetail, 0)
+	totalSendAmount := math.NewInt(0)
+
+	receiver1, _, err := types.NewAccount("receiver1")
+	assert.NoError(t, err)
+	receiver1Amount := math.NewInt(1000)
+	totalSendAmount = totalSendAmount.Add(receiver1Amount)
+	transferDetails = append(transferDetails, types.TransferDetail{
+		ToAddress: receiver1.GetAddress().String(),
+		Amount:    receiver1Amount,
+	})
+
+	receiver2, _, err := types.NewAccount("receiver2")
+	assert.NoError(t, err)
+	receiver2Amount := math.NewInt(1000)
+	totalSendAmount = totalSendAmount.Add(receiver2Amount)
+	transferDetails = append(transferDetails, types.TransferDetail{
+		ToAddress: receiver2.GetAddress().String(),
+		Amount:    receiver2Amount,
+	})
+
+	receiver3, _, err := types.NewAccount("receiver3")
+	assert.NoError(t, err)
+	receiver3Amount := math.NewInt(1000)
+	totalSendAmount = totalSendAmount.Add(receiver3Amount)
+	transferDetails = append(transferDetails, types.TransferDetail{
+		ToAddress: receiver3.GetAddress().String(),
+		Amount:    receiver3Amount,
+	})
+
+	t.Logf("totally sending %s", totalSendAmount.String())
+
+	txHash, err := cli.MultiTransfer(ctx, transferDetails, gnfdsdktypes.TxOption{})
+	assert.NoError(t, err)
+	t.Log(txHash)
+
+	_, err = cli.WaitForTx(ctx, txHash)
+	assert.NoError(t, err)
+
+	balance1, err := cli.GetAccountBalance(ctx, receiver1.GetAddress().String())
+	assert.NoError(t, err)
+	assert.Equal(t, receiver1Amount, balance1.Amount)
+
+	balance2, err := cli.GetAccountBalance(ctx, receiver2.GetAddress().String())
+	assert.NoError(t, err)
+	assert.Equal(t, receiver2Amount, balance2.Amount)
+
+	balance3, err := cli.GetAccountBalance(ctx, receiver3.GetAddress().String())
+	assert.NoError(t, err)
+	assert.Equal(t, receiver3Amount, balance3.Amount)
+
 }

@@ -9,17 +9,14 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
+	"github.com/bnb-chain/greenfield-go-sdk/client"
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
-	"github.com/bnb-chain/greenfield-go-sdk/client"
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 func Test_Bucket(t *testing.T) {
@@ -30,7 +27,6 @@ func Test_Bucket(t *testing.T) {
 	assert.NoError(t, err)
 	cli, err := client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
-		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
 		Host:           bucketName + ".gnfd.nodereal.com",
 	})
 	assert.NoError(t, err)
@@ -131,7 +127,7 @@ func Test_Object(t *testing.T) {
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
 	cli, err := client.New(ChainID, Endpoint,
-		client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
+		client.Option{
 			Host:           bucketName + ".gnfd.nodereal.com",
 			DefaultAccount: account})
 
@@ -236,10 +232,7 @@ func Test_Group(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount: account,
-		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
-	})
+	cli, err := client.New(ChainID, Endpoint, client.Option{DefaultAccount: account})
 	assert.NoError(t, err)
 	ctx := context.Background()
 
@@ -309,7 +302,6 @@ func Test_Group(t *testing.T) {
 	// use this user to update group
 	grantClient, err := client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: grantUser,
-		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials()),
 	})
 	assert.NoError(t, err)
 

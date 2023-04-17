@@ -12,8 +12,6 @@ import (
 	types3 "github.com/bnb-chain/greenfield/x/sp/types"
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func Test_CreateStorageProvider(t *testing.T) {
@@ -30,10 +28,7 @@ func Test_CreateStorageProvider(t *testing.T) {
 
 	assert.NoError(t, err)
 	ctx := context.Background()
-	cli, err := client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount: validatorAccount,
-		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
-	)
+	cli, err := client.New(ChainID, Endpoint, client.Option{DefaultAccount: validatorAccount})
 	assert.NoError(t, err)
 
 	txHash, err := cli.Transfer(ctx, fundingAcc.GetAddress().String(), math.NewIntWithDecimal(10001, types2.DecimalBNB), types2.TxOption{})
