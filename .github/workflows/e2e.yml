@@ -12,8 +12,9 @@ on:
       - develop
 
 env:
-  GreenfileldTag: 91d2e1d1d43c4ada622c44490e7a3cf758489aad
-  GreenfileldIntegrationTestBranch: gnfd-sp
+  GreenfieldTag: 91d2e1d1d43c4ada622c44490e7a3cf758489aad
+  GreenfieldStorageProviderTag: fynn/adapt_to_greenfield_v0.0.13
+  GreenfieldIntegrationTestBranch: gnfd-sp
   GOPRIVATE: github.com/bnb-chain
   GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
   MYSQL_USER: root
@@ -60,7 +61,7 @@ jobs:
         run: |
           git clone https://github.com/bnb-chain/greenfield.git ../greenfield
           cd ../greenfield
-          git checkout ${{ env.GreenfileldTag }}
+          git checkout ${{ env.GreenfieldTag }}
           make proto-gen & make build
           cd ..
       # Build Greenfield-SP
@@ -68,6 +69,7 @@ jobs:
         run: |
           git clone https://github.com/bnb-chain/greenfield-storage-provider.git ../greenfield-storage-provider
           cd ../greenfield-storage-provider
+          git checkout ${{ env.GreenfieldStorageProviderTag }}
           make install-tools
           make build
           cd ../greenfield-go-sdk
