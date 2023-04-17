@@ -19,9 +19,9 @@ import (
 )
 
 var (
-	// GrpcAddress = "gnfd-testnet-fullnode-cosmos-us.nodereal.io:443"
-	GrpcAddress = "localhost:9090"
-	ChainID     = "greenfield_9000-121"
+	// Endpoint = "gnfd-testnet-fullnode-cosmos-us.nodereal.io:443"
+	Endpoint = "http://localhost:26750"
+	ChainID  = "greenfield_9000-121"
 )
 
 // ParseValidatorMnemonic read the validator mnemonic from file
@@ -57,10 +57,9 @@ func Test_Basic(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, client.Option{
+	cli, err := client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
-		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
-	)
+	})
 	assert.NoError(t, err)
 	ctx := context.Background()
 	_, _, err = cli.GetNodeInfo(ctx)
@@ -90,7 +89,7 @@ func Test_Account(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
-	cli, err := client.New(ChainID, GrpcAddress, client.Option{
+	cli, err := client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
 		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
 	)

@@ -30,7 +30,7 @@ func Test_CreateStorageProvider(t *testing.T) {
 
 	assert.NoError(t, err)
 	ctx := context.Background()
-	cli, err := client.New(ChainID, GrpcAddress, client.Option{
+	cli, err := client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: validatorAccount,
 		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
 	)
