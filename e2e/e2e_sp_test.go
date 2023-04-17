@@ -61,13 +61,13 @@ func Test_CreateStorageProvider(t *testing.T) {
 	t.Logf("operator validatorAccount balance: %s", operatorBalance.String())
 
 	cli.SetDefaultAccount(fundingAcc)
-	txHash, err = cli.GrantDepositForStorageProvider(ctx, operatorAcc.GetAddress(), math.NewIntWithDecimal(10000, types2.DecimalBNB), client.GrantDepositForStorageProviderOptions{})
+	txHash, err = cli.GrantDepositForStorageProvider(ctx, operatorAcc.GetAddress().String(), math.NewIntWithDecimal(10000, types2.DecimalBNB), client.GrantDepositForStorageProviderOptions{})
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, txHash)
 	assert.NoError(t, err)
 
 	cli.SetDefaultAccount(operatorAcc)
-	proposalID, txHash, err := cli.CreateStorageProvider(ctx, fundingAcc.GetAddress(), sealAcc.GetAddress(), approvalAcc.GetAddress(), gcAcc.GetAddress(),
+	proposalID, txHash, err := cli.CreateStorageProvider(ctx, fundingAcc.GetAddress().String(), sealAcc.GetAddress().String(), approvalAcc.GetAddress().String(), gcAcc.GetAddress().String(),
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
 		types3.Description{Moniker: "test"},

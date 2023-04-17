@@ -26,8 +26,12 @@ type Account interface {
 // GetAccount retrieves account information for a given address.
 // It takes a context and an address as input and returns an AccountI interface and an error (if any).
 func (c *client) GetAccount(ctx context.Context, address string) (authTypes.AccountI, error) {
+	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
+	if err != nil {
+		return nil, err
+	}
 	// Call the DefaultAccount method of the chain client with a QueryAccountRequest containing the address.
-	response, err := c.chainClient.Account(ctx, &authTypes.QueryAccountRequest{Address: address})
+	response, err := c.chainClient.Account(ctx, &authTypes.QueryAccountRequest{Address: accAddress.String()})
 	if err != nil {
 		// Return an error if there was an issue retrieving the account.
 		return nil, err
@@ -48,7 +52,11 @@ func (c *client) GetAccount(ctx context.Context, address string) (authTypes.Acco
 // CreatePaymentAccount creates a new payment account on the blockchain using the provided address.
 // It returns a TxResponse containing information about the transaction, or an error if the transaction failed.
 func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error) {
-	msgCreatePaymentAccount := paymentTypes.NewMsgCreatePaymentAccount(address)
+	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
+	if err != nil {
+		return "", err
+	}
+	msgCreatePaymentAccount := paymentTypes.NewMsgCreatePaymentAccount(accAddress.String())
 	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgCreatePaymentAccount}, txOption)
 	if err != nil {
 		return "", err
@@ -94,7 +102,11 @@ func (c *client) GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccou
 // GetAccountBalance retrieves balance information of an account for a given address.
 // It takes a context and an address as input and returns an sdk.Coin interface and an error (if any).
 func (c *client) GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error) {
-	response, err := c.chainClient.BankQueryClient.Balance(ctx, &types3.QueryBalanceRequest{Address: address, Denom: gnfdSdkTypes.Denom})
+	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
+	if err != nil {
+		return nil, err
+	}
+	response, err := c.chainClient.BankQueryClient.Balance(ctx, &types3.QueryBalanceRequest{Address: accAddress.String(), Denom: gnfdSdkTypes.Denom})
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +118,11 @@ func (c *client) GetAccountBalance(ctx context.Context, address string) (*sdk.Co
 // This function uses the PaymentAccount method of the chainClient field of the client struct to query the payment account associated with the given address.
 // If there is an error, the function returns nil and the error. If there is no error, the function returns a pointer to the PaymentAccount struct and nil.
 func (c *client) GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error) {
-	pa, err := c.chainClient.PaymentAccount(ctx, &paymentTypes.QueryGetPaymentAccountRequest{Addr: address})
+	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
+	if err != nil {
+		return nil, err
+	}
+	pa, err := c.chainClient.PaymentAccount(ctx, &paymentTypes.QueryGetPaymentAccountRequest{Addr: accAddress.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +132,12 @@ func (c *client) GetPaymentAccount(ctx context.Context, address string) (*paymen
 // GetPaymentAccountsByOwner retrieves all payment accounts owned by the given address
 // and returns a slice of PaymentAccount pointers and an error (if any).
 func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error) {
+	ownerAcc, err := sdk.AccAddressFromHexUnsafe(owner)
+	if err != nil {
+		return nil, err
+	}
 	// Call the GetPaymentAccountsByOwner method of the chain client with a QueryGetPaymentAccountsByOwnerRequest containing the owner address.
-	accountsByOwnerResponse, err := c.chainClient.GetPaymentAccountsByOwner(ctx, &paymentTypes.QueryGetPaymentAccountsByOwnerRequest{Owner: owner})
+	accountsByOwnerResponse, err := c.chainClient.GetPaymentAccountsByOwner(ctx, &paymentTypes.QueryGetPaymentAccountsByOwnerRequest{Owner: ownerAcc.String()})
 	if err != nil {
 		return nil, err
 	}
