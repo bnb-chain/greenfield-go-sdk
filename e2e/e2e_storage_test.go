@@ -33,7 +33,7 @@ func Test_Bucket(t *testing.T) {
 	assert.NoError(t, err)
 	ctx := context.Background()
 
-	spList, err := cli.ListSP(ctx, false)
+	spList, err := cli.ListStorageProviders(ctx, false)
 	assert.NoError(t, err)
 	primarySp := spList[0].GetOperator()
 
@@ -135,7 +135,7 @@ func Test_Object(t *testing.T) {
 	assert.NoError(t, err)
 	ctx := context.Background()
 
-	spList, err := cli.ListSP(ctx, false)
+	spList, err := cli.ListStorageProviders(ctx, false)
 	assert.NoError(t, err)
 	primarySp := spList[0].GetOperator()
 
@@ -172,7 +172,7 @@ func Test_Object(t *testing.T) {
 
 	t.Log("---> PutObject and GetObject <---")
 	err = cli.PutObject(ctx, bucketName, objectName, objectTx, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOption{})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	assert.NoError(t, err)
 
 	time.Sleep(10 * time.Second)

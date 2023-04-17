@@ -117,8 +117,9 @@ type ApproveObjectOptions struct {
 	SecondarySPAccs []sdk.AccAddress
 }
 
-type PutObjectOption struct {
+type PutObjectOptions struct {
 	ContentType string
+	TxnHash     string
 }
 
 // GetObjectOption contains the options of getObject

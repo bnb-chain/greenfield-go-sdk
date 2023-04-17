@@ -99,7 +99,7 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	}
 
 	// fetch sp endpoints info from chain
-	spInfo, err := c.getSPUrlInfo()
+	spInfo, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 		return c.spEndpoints[primarySP], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.getSPUrlInfo()
+	newSpInfo, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 		return c.spEndpoints[address], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.getSPUrlInfo()
+	newSpInfo, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
@@ -153,10 +153,10 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 	}
 }
 
-// getInServiceSP return an SP endpoint which is in service
+// getInServiceSP return the first SP endpoint which is in service in SP list
 func (c *client) getInServiceSP() (*url.URL, error) {
 	ctx := context.Background()
-	spList, err := c.ListSP(ctx, true)
+	spList, err := c.ListStorageProviders(ctx, true)
 	if err != nil {
 		return nil, err
 	}

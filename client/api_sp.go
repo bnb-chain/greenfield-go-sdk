@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/url"
-	"strings"
 	"time"
 
 	"cosmossdk.io/math"
@@ -17,13 +16,11 @@ import (
 )
 
 type SP interface {
-	// ListSP return the storage provider info on chain
+	// ListStorageProviders return the storage provider info on chain
 	// isInService indicates if only display the sp with STATUS_IN_SERVICE status
-	ListSP(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error)
-	// GetSPInfo return the sp info the sp chain address
-	GetSPInfo(ctx context.Context, spAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
-	// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
-	GetSpAddrFromEndpoint(ctx context.Context, spEndpoint string) (sdk.AccAddress, error)
+	ListStorageProviders(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error)
+	// GetStorageProviderInfo return the sp info the sp chain address
+	GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetStoragePrice returns the storage price for a particular storage provider, including update time, read price, store price and .etc.
 	GetStoragePrice(ctx context.Context, SPAddr string) (*spTypes.SpStoragePrice, error)
 	// GrantDepositForStorageProvider submit a grant transaction to allow gov module account to deduct the specified number of tokens
@@ -47,9 +44,9 @@ func (c *client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.S
 	return &resp.SpStoragePrice, nil
 }
 
-// ListSP return the storage provider info on chain
+// ListStorageProviders return the storage provider info on chain
 // isInService indicates if only display the sp with STATUS_IN_SERVICE status
-func (c *client) ListSP(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error) {
+func (c *client) ListStorageProviders(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error) {
 	request := &spTypes.QueryStorageProvidersRequest{}
 	gnfdRep, err := c.chainClient.StorageProviders(ctx, request)
 	if err != nil {
@@ -68,37 +65,8 @@ func (c *client) ListSP(ctx context.Context, isInService bool) ([]spTypes.Storag
 	return spInfoList, nil
 }
 
-// GetSpAddrFromEndpoint return the chain addr according to the SP endpoint
-func (c *client) GetSpAddrFromEndpoint(ctx context.Context, spEndpoint string) (sdk.AccAddress, error) {
-	spList, err := c.ListSP(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	if strings.Contains(spEndpoint, "http") {
-		s := strings.Split(spEndpoint, "//")
-		spEndpoint = s[1]
-	}
-
-	for _, spInfo := range spList {
-		endpoint := spInfo.GetEndpoint()
-		if strings.Contains(endpoint, "http") {
-			s := strings.Split(endpoint, "//")
-			endpoint = s[1]
-		}
-		if endpoint == spEndpoint {
-			addr := spInfo.GetOperatorAddress()
-			if addr == "" {
-				return nil, errors.New("fail to get addr")
-			}
-			return sdk.MustAccAddressFromHex(spInfo.GetOperatorAddress()), nil
-		}
-	}
-	return nil, errors.New("fail to get addr")
-}
-
-// GetSPInfo return the sp info the sp chain address
-func (c *client) GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
+// GetStorageProviderInfo return the sp info the sp chain address
+func (c *client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
 	request := &spTypes.QueryStorageProviderRequest{
 		SpAddress: SPAddr.String(),
 	}
@@ -111,7 +79,7 @@ func (c *client) GetSPInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes
 	return gnfdRep.StorageProvider, nil
 }
 
-func (c *client) getSPUrlInfo() (map[string]*url.URL, error) {
+func (c *client) getSPUrlList() (map[string]*url.URL, error) {
 	ctx := context.Background()
 	spInfo := make(map[string]*url.URL, 0)
 	request := &spTypes.QueryStorageProvidersRequest{}
@@ -123,7 +91,7 @@ func (c *client) getSPUrlInfo() (map[string]*url.URL, error) {
 	if len(spList) == 0 {
 		return nil, errors.New("no SP found on chain")
 	}
-	
+
 	for _, info := range spList {
 		endpoint := info.Endpoint
 		urlInfo, urlErr := utils.GetEndpointURL(endpoint, c.secure)

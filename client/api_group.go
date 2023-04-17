@@ -21,7 +21,7 @@ type Group interface {
 	UpdateGroupMember(ctx context.Context, groupName string, groupOwner sdk.AccAddress, addMembers, removeMembers []sdk.AccAddress, opts types.UpdateGroupMemberOption) (string, error)
 	LeaveGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress, opt types.LeaveGroupOption) (string, error)
 	// HeadGroup query the groupInfo on chain, return the group info if exists return err info if group not exist
-	HeadGroup(ctx context.Context, groupName string, groupOwner sdk.AccAddress) (*storageTypes.GroupInfo, error)
+	HeadGroup(ctx context.Context, groupName string, groupOwnerAddr sdk.AccAddress) (*storageTypes.GroupInfo, error)
 	// HeadGroupMember query the group member info on chain, return true if the member exists in group
 	HeadGroupMember(ctx context.Context, groupName string, groupOwner, headMember sdk.AccAddress) bool
 	// PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group

@@ -28,7 +28,8 @@ import (
 type Object interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
-	PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64, reader io.Reader, opt types.PutObjectOption) error
+	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
@@ -164,20 +165,16 @@ func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName 
 
 // PutObject supports the second stage of uploading the object to bucket.
 // txnHash should be the str which hex.encoding from txn hash bytes
-func (c *client) PutObject(ctx context.Context, bucketName, objectName, txnHash string, objectSize int64,
-	reader io.Reader, opt types.PutObjectOption,
+func (c *client) PutObject(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
-	if txnHash == "" {
-		return errors.New("txn hash empty")
-	}
-
 	if objectSize <= 0 {
-		return errors.New("object size not set")
+		return errors.New("object size should be more than 0")
 	}
 
 	var contentType string
-	if opt.ContentType != "" {
-		contentType = opt.ContentType
+	if opts.ContentType != "" {
+		contentType = opts.ContentType
 	} else {
 		contentType = types.ContentDefault
 	}
@@ -190,10 +187,18 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName, txnHash 
 		contentType:   contentType,
 	}
 
-	sendOpt := sendOptions{
-		method:  http.MethodPut,
-		body:    reader,
-		txnHash: txnHash,
+	var sendOpt sendOptions
+	if opts.TxnHash != "" {
+		sendOpt = sendOptions{
+			method:  http.MethodPut,
+			body:    reader,
+			txnHash: opts.TxnHash,
+		}
+	} else {
+		sendOpt = sendOptions{
+			method: http.MethodPut,
+			body:   reader,
+		}
 	}
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
@@ -210,8 +215,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName, txnHash 
 }
 
 // FPutObject supports uploading object from local file
-func (c *client) FPutObject(ctx context.Context, bucketName, objectName,
-	filePath, txnHash, contentType string) (err error) {
+func (c *client) FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error) {
 	fReader, err := os.Open(filePath)
 	// If any error fail quickly here.
 	if err != nil {
@@ -225,7 +229,7 @@ func (c *client) FPutObject(ctx context.Context, bucketName, objectName,
 		return err
 	}
 
-	return c.PutObject(ctx, bucketName, objectName, txnHash, stat.Size(), fReader, types.PutObjectOption{ContentType: contentType})
+	return c.PutObject(ctx, bucketName, objectName, stat.Size(), fReader, opts)
 }
 
 // GetObject download s3 object payload and return the related object info
