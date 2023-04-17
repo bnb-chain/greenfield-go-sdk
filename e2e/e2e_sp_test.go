@@ -2,6 +2,8 @@ package e2e
 
 import (
 	"context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"testing"
 	"time"
 
@@ -28,7 +30,10 @@ func Test_CreateStorageProvider(t *testing.T) {
 
 	assert.NoError(t, err)
 	ctx := context.Background()
-	cli, err := client.New(ChainID, Endpoint, client.Option{DefaultAccount: validatorAccount})
+	cli, err := client.New(ChainID, Endpoint, client.Option{
+		DefaultAccount: validatorAccount,
+		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
+	)
 	assert.NoError(t, err)
 
 	txHash, err := cli.Transfer(ctx, fundingAcc.GetAddress().String(), math.NewIntWithDecimal(10001, types2.DecimalBNB), types2.TxOption{})

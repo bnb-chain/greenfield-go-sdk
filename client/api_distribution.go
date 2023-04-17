@@ -8,6 +8,13 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
+type Distribution interface {
+	SetWithdrawAddress(ctx context.Context, delAddr, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error)
+	WithdrawValidatorCommission(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
+	WithdrawDelegatorReward(ctx context.Context, delAddr, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
+	FundCommunityPool(ctx context.Context, amount math.Int, depositorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
+}
+
 func (c *client) SetWithdrawAddress(ctx context.Context, delAddr, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
 	del, err := sdk.AccAddressFromHexUnsafe(delAddr)
 	if err != nil {

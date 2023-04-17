@@ -37,6 +37,7 @@ type Client interface {
 	Proposal
 	Staking
 	CrossChain
+	Distribution
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)

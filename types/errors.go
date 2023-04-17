@@ -14,7 +14,6 @@ const unknownErr = "unknown error"
 var (
 	ErrorKeyManagerNotInit      = errors.New("Key manager is not initialized yet ")
 	ErrorUrlNotProvided         = errors.New("Url address not provided yet ")
-	ErrorUrlsMismatch           = errors.New("Number of RPC and GRPC Urls does not match ")
 	ErrorDefaultAccountNotExist = errors.New("Default account of client is not exist ")
 	ErrorProposalIDNotFound     = errors.New("Proposal ID not found ")
 	ErrorGrantDelegationFail    = errors.New("Fail to grant delegation ")

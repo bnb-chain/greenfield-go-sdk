@@ -73,6 +73,9 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 	if err != nil {
 		return 0, "", err
 	}
+	if err = msg.ValidateBasic(); err != nil {
+		return 0, "", err
+	}
 	return c.SubmitProposal(ctx, []sdk.Msg{msg}, proposalDepositAmount, SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
 }
 
