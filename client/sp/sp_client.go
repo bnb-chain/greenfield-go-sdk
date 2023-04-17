@@ -111,7 +111,7 @@ func (c *SPClient) SetKeyManager(keyManager keys.KeyManager) error {
 		return errors.New("keyManager can not be nil")
 	}
 
-	if keyManager.GetPrivKey() == nil {
+	if keyManager.PubKey() == nil {
 		return errors.New("private key must be set")
 	}
 
@@ -475,7 +475,8 @@ func (c *SPClient) SignRequest(req *http.Request, info AuthInfo) error {
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
 // It is used for generate meta of object on the chain
 func (c *SPClient) GetPieceHashRoots(reader io.Reader, segSize int64,
-	dataShards, parityShards int) ([]byte, [][]byte, int64, storageTypes.RedundancyType, error) {
+	dataShards, parityShards int,
+) ([]byte, [][]byte, int64, storageTypes.RedundancyType, error) {
 	pieceHashRoots, size, redundancyType, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards)
 	if err != nil {
 		return nil, nil, 0, storageTypes.REDUNDANCY_EC_TYPE, err

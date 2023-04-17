@@ -1,8 +1,6 @@
 package keys
 
 import (
-	"fmt"
-
 	"github.com/bnb-chain/greenfield-go-sdk/keys"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -24,19 +22,12 @@ func NewMsgSigner(key keys.KeyManager) *MsgSigner {
 
 // Sign signs the message using the underlying private key
 func (m MsgSigner) Sign(msg []byte) ([]byte, cryptotypes.PubKey, error) {
-	privKey := m.keyManager.GetPrivKey()
-	if privKey.Type() != ethsecp256k1.KeyType {
-		return nil, nil, fmt.Errorf(
-			"invalid private key type, expected %s, got %s", ethsecp256k1.KeyType, privKey.Type(),
-		)
-	}
-
-	sig, err := privKey.Sign(msg)
+	sig, err := m.keyManager.Sign(msg)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return sig, privKey.PubKey(), nil
+	return sig, m.keyManager.PubKey(), nil
 }
 
 // RecoverAddr recovers the sender address from msg and signature

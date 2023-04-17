@@ -214,9 +214,11 @@ func TestChallenge(t *testing.T) {
 	fmt.Println("get hash result", res.PiecesHash)
 }
 
-const errCode = "InternalError"
-const errMsg = "test message"
-const errStatusCode = 403
+const (
+	errCode       = "InternalError"
+	errMsg        = "test message"
+	errStatusCode = 403
+)
 
 func TestErrResponse(t *testing.T) {
 	setup()
@@ -236,7 +238,7 @@ func TestErrResponse(t *testing.T) {
 			err     error
 		)
 
-		var xmlInfo = struct {
+		xmlInfo := struct {
 			XMLName   xml.Name `xml:"Error"`
 			Code      string   `xml:"Code"`
 			Message   string   `xml:"Message"`
@@ -259,5 +261,4 @@ func TestErrResponse(t *testing.T) {
 	if !strings.Contains(errInfo, errMsg) || !strings.Contains(errInfo, errCode) || !strings.Contains(errInfo, strconv.Itoa(errStatusCode)) {
 		t.Errorf("err content not right")
 	}
-
 }

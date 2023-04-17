@@ -4,9 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
 	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -14,9 +11,9 @@ import (
 )
 
 func TestStakingValidator(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryValidatorRequest{
 		ValidatorAddr: test.TEST_VAL_ADDR,
@@ -27,9 +24,9 @@ func TestStakingValidator(t *testing.T) {
 }
 
 func TestStakingValidators(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryValidatorsRequest{
 		Status: "",
@@ -40,9 +37,9 @@ func TestStakingValidators(t *testing.T) {
 }
 
 func TestStakingDelagatorValidator(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryDelegatorValidatorRequest{
 		DelegatorAddr: test.TEST_ADDR,
@@ -55,9 +52,9 @@ func TestStakingDelagatorValidator(t *testing.T) {
 }
 
 func TestStakingDelagatorValidators(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryDelegatorValidatorsRequest{
 		DelegatorAddr: test.TEST_ADDR,
@@ -69,9 +66,9 @@ func TestStakingDelagatorValidators(t *testing.T) {
 }
 
 func TestStakingUnbondingDelagation(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryUnbondingDelegationRequest{
 		DelegatorAddr: test.TEST_ADDR,
@@ -84,9 +81,9 @@ func TestStakingUnbondingDelagation(t *testing.T) {
 }
 
 func TestStakingDelagatorDelegations(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryDelegatorDelegationsRequest{
 		DelegatorAddr: test.TEST_VAL_ADDR,
@@ -98,9 +95,9 @@ func TestStakingDelagatorDelegations(t *testing.T) {
 }
 
 func TestStakingValidatorDelegations(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryValidatorDelegationsRequest{
 		ValidatorAddr: test.TEST_VAL_ADDR,
@@ -112,9 +109,9 @@ func TestStakingValidatorDelegations(t *testing.T) {
 }
 
 func TestStakingDelegatorUnbondingDelagation(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryDelegatorUnbondingDelegationsRequest{
 		DelegatorAddr: test.TEST_VAL_ADDR,
@@ -126,9 +123,9 @@ func TestStakingDelegatorUnbondingDelagation(t *testing.T) {
 }
 
 func TestStaking(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryRedelegationsRequest{
 		DelegatorAddr: test.TEST_VAL_ADDR,
@@ -140,9 +137,9 @@ func TestStaking(t *testing.T) {
 }
 
 func TestStakingParams(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryParamsRequest{}
 	res, err := client.StakingQueryClient.Params(context.Background(), &query)
@@ -152,9 +149,9 @@ func TestStakingParams(t *testing.T) {
 }
 
 func TestStakingPool(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryPoolRequest{}
 	res, err := client.StakingQueryClient.Pool(context.Background(), &query)
@@ -164,9 +161,9 @@ func TestStakingPool(t *testing.T) {
 }
 
 func TestStakingHistoricalInfo(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := stakingtypes.QueryHistoricalInfoRequest{
 		Height: 1,

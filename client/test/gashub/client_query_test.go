@@ -8,14 +8,12 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	gashubtypes "github.com/cosmos/cosmos-sdk/x/gashub/types"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestGashubParams(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := gashubtypes.QueryParamsRequest{}
 	res, err := client.GashubQueryClient.Params(context.Background(), &query)

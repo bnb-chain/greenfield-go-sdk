@@ -148,7 +148,7 @@ func (c *GnfdClient) CreateBucket(ctx context.Context, bucketName string, primar
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedMsg}, opts.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(ctx, []sdk.Msg{signedMsg}, opts.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -167,7 +167,7 @@ func (c *GnfdClient) DeleteBucket(bucketName string, opt DeleteBucketOption) (st
 	}
 	delBucketMsg := storageTypes.NewMsgDeleteBucket(km.GetAddr(), bucketName)
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{delBucketMsg}, opt.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{delBucketMsg}, opt.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -201,7 +201,8 @@ func (c *GnfdClient) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storag
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
 func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName string,
-	reader io.Reader, opts CreateObjectOptions) (string, error) {
+	reader io.Reader, opts CreateObjectOptions,
+) (string, error) {
 	if reader == nil {
 		return "", errors.New("fail to compute hash of payload, reader is nil")
 	}
@@ -250,7 +251,7 @@ func (c *GnfdClient) CreateObject(ctx context.Context, bucketName, objectName st
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -273,7 +274,7 @@ func (c *GnfdClient) DeleteObject(bucketName, objectName string, opt DeleteObjec
 	}
 	delObjectMsg := storageTypes.NewMsgDeleteObject(km.GetAddr(), bucketName, objectName)
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{delObjectMsg}, opt.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{delObjectMsg}, opt.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -298,7 +299,7 @@ func (c *GnfdClient) CancelCreateObject(bucketName, objectName string, opt Cance
 
 	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(km.GetAddr(), bucketName, objectName)
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{cancelCreateMsg}, opt.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{cancelCreateMsg}, opt.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -341,7 +342,7 @@ func (c *GnfdClient) BuyQuotaForBucket(ctx context.Context, bucketName string, t
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -351,7 +352,8 @@ func (c *GnfdClient) BuyQuotaForBucket(ctx context.Context, bucketName string, t
 
 // UpdateBucketVisibility update the visibilityType of bucket
 func (c *GnfdClient) UpdateBucketVisibility(ctx context.Context, bucketName string,
-	visibility storageTypes.VisibilityType, opt UpdateVisibilityOption) (string, error) {
+	visibility storageTypes.VisibilityType, opt UpdateVisibilityOption,
+) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -372,7 +374,7 @@ func (c *GnfdClient) UpdateBucketVisibility(ctx context.Context, bucketName stri
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -382,7 +384,8 @@ func (c *GnfdClient) UpdateBucketVisibility(ctx context.Context, bucketName stri
 
 // UpdateBucketPaymentAddr  update the payment addr of bucket
 func (c *GnfdClient) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
-	paymentAddr sdk.AccAddress, opt UpdatePaymentOption) (string, error) {
+	paymentAddr sdk.AccAddress, opt UpdatePaymentOption,
+) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -398,7 +401,7 @@ func (c *GnfdClient) UpdateBucketPaymentAddr(ctx context.Context, bucketName str
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -455,7 +458,7 @@ func (c *GnfdClient) UpdateBucketInfo(ctx context.Context, bucketName string, op
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateBucketMsg}, opts.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opts.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -617,7 +620,7 @@ func (c *GnfdClient) CreateGroup(groupName string, opt CreateGroupOptions) (stri
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{createGroupMsg}, opt.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{createGroupMsg}, opt.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -637,7 +640,7 @@ func (c *GnfdClient) DeleteGroup(groupName string, txOpts types.TxOption) (strin
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{deleteGroupMsg}, &txOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{deleteGroupMsg}, &txOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -647,7 +650,8 @@ func (c *GnfdClient) DeleteGroup(groupName string, txOpts types.TxOption) (strin
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
 func (c *GnfdClient) UpdateGroupMember(groupName string, groupOwner sdk.AccAddress,
-	addMembers, removeMembers []sdk.AccAddress, opts UpdateGroupMemberOption) (string, error) {
+	addMembers, removeMembers []sdk.AccAddress, opts UpdateGroupMemberOption,
+) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -665,7 +669,7 @@ func (c *GnfdClient) UpdateGroupMember(groupName string, groupOwner sdk.AccAddre
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{updateGroupMsg}, opts.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{updateGroupMsg}, opts.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -684,7 +688,7 @@ func (c *GnfdClient) LeaveGroup(groupName string, groupOwner sdk.AccAddress, opt
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{leaveGroupMsg}, opt.TxOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{leaveGroupMsg}, opt.TxOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -722,7 +726,8 @@ func (c *GnfdClient) HeadGroupMember(ctx context.Context, groupName string, grou
 
 // NewStatement return the statement of permission module
 func NewStatement(actions []permTypes.ActionType, effect permTypes.Effect,
-	resource []string, opts NewStatementOptions) permTypes.Statement {
+	resource []string, opts NewStatementOptions,
+) permTypes.Statement {
 	statement := permTypes.Statement{
 		Actions:        actions,
 		Effect:         effect,
@@ -757,7 +762,8 @@ func NewPrincipalWithGroupId(groupId uint64) (Principal, error) {
 
 // PutBucketPolicy apply bucket policy to the principal, return the txn hash
 func (c *GnfdClient) PutBucketPolicy(bucketName string, principalStr Principal,
-	statements []*permTypes.Statement, opt PutPolicyOption) (string, error) {
+	statements []*permTypes.Statement, opt PutPolicyOption,
+) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -777,7 +783,8 @@ func (c *GnfdClient) PutBucketPolicy(bucketName string, principalStr Principal,
 
 // PutObjectPolicy apply object policy to the principal, return the txn hash
 func (c *GnfdClient) PutObjectPolicy(bucketName, objectName string, principalStr Principal,
-	statements []*permTypes.Statement, opt PutPolicyOption) (string, error) {
+	statements []*permTypes.Statement, opt PutPolicyOption,
+) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -798,7 +805,8 @@ func (c *GnfdClient) PutObjectPolicy(bucketName, objectName string, principalStr
 
 // PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
 func (c *GnfdClient) PutGroupPolicy(groupName string, principalAddr sdk.AccAddress,
-	statements []*permTypes.Statement, opt PutPolicyOption) (string, error) {
+	statements []*permTypes.Statement, opt PutPolicyOption,
+) (string, error) {
 	km, err := c.ChainClient.GetKeyManager()
 	if err != nil {
 		return "", errors.New("key manager is nil")
@@ -818,7 +826,7 @@ func (c *GnfdClient) sendPutPolicyTxn(msg *storageTypes.MsgPutPolicy, txOpts *ty
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{msg}, txOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{msg}, txOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -871,7 +879,7 @@ func (c *GnfdClient) sendDelPolicyTxn(operator sdk.AccAddress, resource string, 
 		return "", err
 	}
 
-	resp, err := c.ChainClient.BroadcastTx([]sdk.Msg{delPolicyMsg}, txOpts)
+	resp, err := c.ChainClient.BroadcastTx(context.Background(), []sdk.Msg{delPolicyMsg}, txOpts, nil)
 	if err != nil {
 		return "", err
 	}
@@ -881,7 +889,8 @@ func (c *GnfdClient) sendDelPolicyTxn(operator sdk.AccAddress, resource string, 
 
 // IsBucketPermissionAllowed check if the permission of bucket is allowed to the user
 func (c *GnfdClient) IsBucketPermissionAllowed(ctx context.Context, user sdk.AccAddress,
-	bucketName string, action permTypes.ActionType) (permTypes.Effect, error) {
+	bucketName string, action permTypes.ActionType,
+) (permTypes.Effect, error) {
 	verifyReq := storageTypes.QueryVerifyPermissionRequest{
 		Operator:   user.String(),
 		BucketName: bucketName,
@@ -898,7 +907,8 @@ func (c *GnfdClient) IsBucketPermissionAllowed(ctx context.Context, user sdk.Acc
 
 // IsObjectPermissionAllowed check if the permission of the object is allowed to the user
 func (c *GnfdClient) IsObjectPermissionAllowed(ctx context.Context, user sdk.AccAddress,
-	bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error) {
+	bucketName, objectName string, action permTypes.ActionType,
+) (permTypes.Effect, error) {
 	verifyReq := storageTypes.QueryVerifyPermissionRequest{
 		Operator:   user.String(),
 		BucketName: bucketName,

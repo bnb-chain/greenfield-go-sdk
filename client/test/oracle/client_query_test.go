@@ -4,9 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
 	client "github.com/bnb-chain/greenfield-go-sdk/client/chain"
 	"github.com/bnb-chain/greenfield-go-sdk/client/test"
 	oracletypes "github.com/cosmos/cosmos-sdk/x/oracle/types"
@@ -14,9 +11,9 @@ import (
 )
 
 func TestOracleParams(t *testing.T) {
-	client := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
-		test.TEST_CHAIN_ID,
-		client.WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	client, err := client.NewGreenfieldClient(test.TEST_GRPC_ADDR,
+		test.TEST_CHAIN_ID)
+	assert.NoError(t, err)
 
 	query := oracletypes.QueryParamsRequest{}
 	res, err := client.OracleQueryClient.Params(context.Background(), &query)

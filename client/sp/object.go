@@ -113,7 +113,8 @@ func (o *GetObjectOption) SetRange(start, end int64) error {
 
 // GetObject download s3 object payload and return the related object info
 func (c *SPClient) GetObject(ctx context.Context, bucketName, objectName string,
-	opts GetObjectOption, authInfo AuthInfo) (io.ReadCloser, ObjectInfo, error) {
+	opts GetObjectOption, authInfo AuthInfo,
+) (io.ReadCloser, ObjectInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, ObjectInfo{}, err
 	}

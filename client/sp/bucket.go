@@ -95,7 +95,8 @@ func (c *SPClient) GetBucketReadQuota(ctx context.Context, bucketName string, au
 // ListBucketReadRecord returns the read record of this month, the return items should be no more than maxRecords
 // ListReadRecordOption indicates the start timestamp of return read records
 func (c *SPClient) ListBucketReadRecord(ctx context.Context, bucketName string,
-	maxRecords int, opt ListReadRecordOption, authInfo AuthInfo) (QuotaRecordInfo, error) {
+	maxRecords int, opt ListReadRecordOption, authInfo AuthInfo,
+) (QuotaRecordInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return QuotaRecordInfo{}, err
 	}

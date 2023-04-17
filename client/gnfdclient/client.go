@@ -21,7 +21,10 @@ type GnfdClient struct {
 // NewGnfdClient returns GnfdClient from chain info and sp info
 // km pass a keyManager for SP client to sign http request
 func NewGnfdClient(grpcAddrs string, chainId string, spEndpoint string, km keys.KeyManager, secure bool, gnfdopts ...GreenfieldClientOption) (*GnfdClient, error) {
-	chainClient := chain.NewGreenfieldClient(grpcAddrs, chainId, gnfdopts...)
+	chainClient, err := chain.NewGreenfieldClient(grpcAddrs, chainId, gnfdopts...)
+	if err != nil {
+		return nil, err
+	}
 
 	spClient, err := sp.NewSpClient(spEndpoint, sp.WithKeyManager(km), sp.WithSecure(secure))
 	if err != nil {

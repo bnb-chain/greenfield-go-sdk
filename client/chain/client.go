@@ -17,7 +17,6 @@ type (
 
 var (
 	WithKeyManager      = client.WithKeyManager
-	WithGrpcDialOption  = client.WithGrpcDialOption
 	NewGreenfieldClient = client.NewGreenfieldClient
 )
 
@@ -64,8 +63,12 @@ func NewGnfdCompositClients(grpcAddrs, rpcAddrs []string, chainId string, opts .
 
 	for i := 0; i < len(grpcAddrs); i++ {
 		tmClient := NewTendermintClient(rpcAddrs[i])
+		gnfdClient, err := NewGreenfieldClient(grpcAddrs[i], chainId, opts...)
+		if err != nil {
+			panic(err)
+		}
 		clients = append(clients, &GnfdCompositeClient{
-			NewGreenfieldClient(grpcAddrs[i], chainId, opts...),
+			gnfdClient,
 			tmClient,
 			0,
 		})

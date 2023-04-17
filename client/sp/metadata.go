@@ -64,7 +64,7 @@ func (c *SPClient) ListObjects(ctx context.Context, bucketName string, authInfo 
 
 	bufStr := buf.String()
 	err = json.Unmarshal([]byte(bufStr), &ListObjectsResult)
-	//TODO(annie) remove tolerance for unmarshal err after structs got stabilized
+	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil && ListObjectsResult.Objects == nil {
 		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
 		return ListObjectsResponse{}, err
@@ -99,7 +99,7 @@ func (c *SPClient) ListBuckets(ctx context.Context, userInfo UserInfo, authInfo 
 	defer utils.CloseResponse(resp)
 
 	listBucketsResult := ListBucketsResponse{}
-	//unmarshal the json content from response body
+	// unmarshal the json content from response body
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
@@ -110,7 +110,7 @@ func (c *SPClient) ListBuckets(ctx context.Context, userInfo UserInfo, authInfo 
 	bufStr := buf.String()
 	err = json.Unmarshal([]byte(bufStr), &listBucketsResult)
 
-	//TODO(annie) remove tolerance for unmarshal err after structs got stabilized
+	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil && listBucketsResult.Buckets == nil {
 		return ListBucketsResponse{}, err
 	}

@@ -3,9 +3,10 @@ package sp
 import (
 	"context"
 	"encoding/json"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"net/http"
 	"testing"
+
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,6 @@ func TestListObjects(t *testing.T) {
 	expectedRes = spClient.ListObjectsResponse{Objects: objects}
 
 	out, err := json.Marshal(expectedRes)
-
 	if err != nil {
 		log.Error().Msg("the marshal of expectedRes failed: " + err.Error())
 	}
@@ -53,7 +53,6 @@ func TestListObjects(t *testing.T) {
 	if body.Objects[0].ObjectInfo.Owner != expectedRes.Objects[0].ObjectInfo.Owner {
 		t.Errorf("TestListObjects content not same")
 	}
-
 }
 
 func TestListBuckets(t *testing.T) {
@@ -91,5 +90,4 @@ func TestListBuckets(t *testing.T) {
 	if body.Buckets[0].BucketInfo.Owner != expectedRes.Buckets[0].BucketInfo.Owner {
 		t.Errorf("TestListBuckets content not same")
 	}
-
 }
