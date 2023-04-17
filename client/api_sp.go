@@ -29,7 +29,7 @@ type SP interface {
 	// GrantDepositForStorageProvider submit a grant transaction to allow gov module account to deduct the specified number of tokens
 	GrantDepositForStorageProvider(ctx context.Context, spOperatorAddr sdk.AccAddress, depositAmount math.Int, opts GrantDepositForStorageProviderOptions) (string, error)
 	// CreateStorageProvider submits a proposal to create a storage provider to the greenfield blockchain, and it returns a proposal ID
-	CreateStorageProvider(ctx context.Context, fundingAddress, sealAddress, approvalAddress sdk.AccAddress, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error)
+	CreateStorageProvider(ctx context.Context, fundingAddress, sealAddress, approvalAddress, gcAddress sdk.AccAddress, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error)
 }
 
 func (c *client) GetStoragePrice(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.SpStoragePrice, error) {
@@ -137,7 +137,7 @@ type CreateStorageProviderOptions struct {
 	TxOption              gnfdSdkTypes.TxOption
 }
 
-func (c *client) CreateStorageProvider(ctx context.Context, fundingAddress, sealAddress, approvalAddress sdk.AccAddress, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error) {
+func (c *client) CreateStorageProvider(ctx context.Context, fundingAddress, sealAddress, approvalAddress, gcAddress sdk.AccAddress, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error) {
 	defaultAccount := c.MustGetDefaultAccount()
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
@@ -155,7 +155,7 @@ func (c *client) CreateStorageProvider(ctx context.Context, fundingAddress, seal
 	msgCreateStorageProvider, err := spTypes.NewMsgCreateStorageProvider(
 		govModuleAddress.GetAddress(),
 		defaultAccount.GetAddress(),
-		fundingAddress, sealAddress, approvalAddress, description,
+		fundingAddress, sealAddress, approvalAddress, gcAddress, description,
 		endpoint,
 		sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount),
 		opts.ReadPrice,

@@ -24,6 +24,7 @@ func Test_CreateStorageProvider(t *testing.T) {
 	fundingAcc, _, _ := types.NewAccount("funding")
 	sealAcc, _, _ := types.NewAccount("seal")
 	approvalAcc, _, _ := types.NewAccount("approval")
+	gcAcc, _, _ := types.NewAccount("gc")
 
 	t.Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatpr: %s", fundingAcc.GetAddress().String(), sealAcc.GetAddress().String(), approvalAcc.GetAddress().String(), operatorAcc.GetAddress().String())
 
@@ -66,7 +67,7 @@ func Test_CreateStorageProvider(t *testing.T) {
 	assert.NoError(t, err)
 
 	cli.SetDefaultAccount(operatorAcc)
-	proposalID, txHash, err := cli.CreateStorageProvider(ctx, fundingAcc.GetAddress(), sealAcc.GetAddress(), approvalAcc.GetAddress(),
+	proposalID, txHash, err := cli.CreateStorageProvider(ctx, fundingAcc.GetAddress(), sealAcc.GetAddress(), approvalAcc.GetAddress(), gcAcc.GetAddress(),
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
 		types3.Description{Moniker: "test"},
