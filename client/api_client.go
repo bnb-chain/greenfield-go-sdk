@@ -201,8 +201,11 @@ type sendOptions struct {
 // newRequest constructs the http request, set url, body and headers
 func (c *client) newRequest(ctx context.Context, method string, meta requestMeta,
 	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL) (req *http.Request, err error) {
+
+	isVirtualHost := c.isVirtualHostStyleUrl(*endpoint, meta.bucketName)
 	// construct the target url
-	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath, meta.urlValues, isAdminAPi, endpoint)
+	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath,
+		meta.urlValues, isAdminAPi, endpoint, isVirtualHost)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +381,7 @@ func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOpt
 
 // generateURL constructs the target request url based on the parameters
 func (c *client) generateURL(bucketName string, objectName string, relativePath string,
-	queryValues url.Values, isAdminApi bool, endpoint *url.URL) (*url.URL, error) {
+	queryValues url.Values, isAdminApi bool, endpoint *url.URL, isVirtualHost bool) (*url.URL, error) {
 	host := endpoint.Host
 	scheme := endpoint.Scheme
 
@@ -397,15 +400,22 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 		prefix := types.AdminURLPrefix + types.AdminURLVersion
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
-		// generate s3 virtual hosted style url, consider case where ListBuckets not having a bucket name
-		if utils.IsDomainNameValid(host) && bucketName != "" {
-			urlStr = scheme + "://" + bucketName + "." + host + "/"
-		} else {
-			urlStr = scheme + "://" + host + "/"
-		}
+		urlStr = scheme + "://" + host + "/"
+		if bucketName != "" {
+			if isVirtualHost {
+				urlStr = scheme + "://" + bucketName + "." + host + "/"
 
-		if objectName != "" {
-			urlStr += utils.EncodePath(objectName)
+				if objectName != "" {
+					urlStr += utils.EncodePath(objectName)
+				}
+			} else {
+				// set path style
+				urlStr = urlStr + bucketName + "/"
+			}
+
+			if objectName != "" {
+				urlStr += utils.EncodePath(objectName)
+			}
 		}
 	}
 
@@ -444,6 +454,23 @@ func (c *client) signRequest(req *http.Request) error {
 	req.Header.Set(types.HTTPHeaderAuthorization, strings.Join(authStr, ", "))
 
 	return nil
+}
+
+// returns true if virtual hosted style requests are to be used.
+func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
+	if bucketName == "" {
+		return false
+	}
+	// if the url is not a valid domain, need to set path-style
+	if !utils.IsDomainNameValid(url.Host) {
+		return false
+	}
+
+	if url.Scheme == "https" && strings.Contains(bucketName, ".") {
+		return false
+	}
+
+	return true
 }
 
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
