@@ -97,6 +97,7 @@ jobs:
           bash ./deployment/localup/localup.sh --start
           sleep 10
           ps -ef | grep gnfd-sp | wc -l
+          tail -n 1000 deployment/localup/local_env/sp0/gnfd-sp.log
           cd ../greenfield-go-sdk
       # Run E2E Test
       - name: start e2e
