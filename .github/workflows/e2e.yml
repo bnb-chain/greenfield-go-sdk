@@ -102,6 +102,6 @@ jobs:
       # Run E2E Test
       - name: start e2e
         run: |
-          tail -n 300 greenfield-go-sdk/deployment/localup/local_env/sp0/gnfd-sp.log
+          tail -n 500 ../greenfield-storage-provider/deployment/localup/local_env/sp0/gnfd-sp.log
           make e2e_test
           cd ..
