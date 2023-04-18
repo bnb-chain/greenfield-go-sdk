@@ -54,19 +54,15 @@ import (
 
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
-	// Generate an account from private key
-	privateKey := ""<Your own private key>""
+	privateKey := "<Your own private key>"
 	account, err := types.NewAccountFromPrivateKey("test", privateKey)
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
 	}
-	
-	cli, err := client.New("greenfield_9000-121", "localhost:9090", account, &client.Option{GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())})
+	cli, err := client.New("greenfield_9000-121", "http://localhost:26750", client.Option{DefaultAccount: account})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
