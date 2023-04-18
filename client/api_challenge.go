@@ -104,8 +104,7 @@ func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOpera
 }
 
 func (c *client) Attest(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint,
-	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte,
-	txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
+	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
 
 	submitter, err := sdk.AccAddressFromHexUnsafe(submitterAddress)
 	if err != nil {

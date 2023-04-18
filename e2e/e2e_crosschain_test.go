@@ -8,7 +8,6 @@ import (
 
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
-	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 )
 
 func Test_CrossChain_Transfer(t *testing.T) {
@@ -21,7 +20,7 @@ func Test_CrossChain_Transfer(t *testing.T) {
 	assert.NoError(t, err)
 	ctx := context.Background()
 
-	resp, err := cli.TransferOut(ctx, "0xA4A2957E858529FFABBBb483D1D704378a9fca6b", math.NewInt(1000), &gnfdsdktypes.TxOption{})
+	resp, err := cli.TransferOut(ctx, "0xA4A2957E858529FFABBBb483D1D704378a9fca6b", math.NewInt(1000), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, resp.Code, uint32(0))
 }
