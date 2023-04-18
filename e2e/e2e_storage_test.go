@@ -27,7 +27,6 @@ func Test_Bucket(t *testing.T) {
 	assert.NoError(t, err)
 	cli, err := client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
-		Host:           bucketName + ".gnfd.test-sp.com",
 	})
 	assert.NoError(t, err)
 	ctx := context.Background()
@@ -127,7 +126,6 @@ func Test_Object(t *testing.T) {
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
 	cli, err := client.New(ChainID, Endpoint, client.Option{
-		Host:           bucketName + ".gnfd.test-sp.com",
 		DefaultAccount: account,
 	})
 
