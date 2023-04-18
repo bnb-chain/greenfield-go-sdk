@@ -120,6 +120,10 @@ func (c *client) getSPUrlInfo() (map[string]*url.URL, error) {
 		return nil, err
 	}
 	spList := gnfdRep.GetSps()
+	if len(spList) == 0 {
+		return nil, errors.New("no SP found on chain")
+	}
+	
 	for _, info := range spList {
 		endpoint := info.Endpoint
 		urlInfo, urlErr := utils.GetEndpointURL(endpoint, c.secure)
