@@ -16,7 +16,6 @@ var (
 	ErrorUrlNotProvided         = errors.New("Url address not provided yet ")
 	ErrorDefaultAccountNotExist = errors.New("Default account of client is not exist ")
 	ErrorProposalIDNotFound     = errors.New("Proposal ID not found ")
-	ErrorGrantDelegationFail    = errors.New("Fail to grant delegation ")
 )
 
 // ErrResponse define the information of the error response

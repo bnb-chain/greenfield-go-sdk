@@ -2,16 +2,22 @@ package client
 
 import (
 	"context"
+	"cosmossdk.io/math"
 	"errors"
+	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"net/http"
 	"strings"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	types "github.com/bnb-chain/greenfield-go-sdk/types"
+	challengetypes "github.com/bnb-chain/greenfield/x/challenge/types"
 )
 
 type Challenge interface {
 	GetChallengeInfo(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error)
+	SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
+	Attest(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint, voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
 }
 
 // GetChallengeInfo  sends request to challenge and get challenge result info
@@ -77,6 +83,47 @@ func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo)
 		IntegrityHash: integrityHash,
 		PiecesHash:    hashList,
 	}
-
 	return result, nil
+}
+
+func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
+	challenger, err := sdk.AccAddressFromHexUnsafe(challengerAddress)
+	if err != nil {
+		return nil, err
+	}
+	spOperator, err := sdk.AccAddressFromHexUnsafe(spOperatorAddress)
+	if err != nil {
+		return nil, err
+	}
+	msg := challengetypes.NewMsgSubmit(challenger, spOperator, bucketName, objectName, randomIndex, segmentIndex)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
+	if err != nil {
+		return nil, err
+	}
+	return resp.TxResponse, nil
+}
+
+func (c *client) Attest(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint,
+	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte,
+	txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
+
+	submitter, err := sdk.AccAddressFromHexUnsafe(submitterAddress)
+	if err != nil {
+		return nil, err
+	}
+	_, err = sdk.AccAddressFromHexUnsafe(challengerAddress)
+	if err != nil {
+		return nil, err
+	}
+	_, err = sdk.AccAddressFromHexUnsafe(spOperatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	msg := challengetypes.NewMsgAttest(submitter, challengeId, objectId, spOperatorAddress, voteResult, challengerAddress, voteValidatorSet, VoteAggSignature)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
+	if err != nil {
+		return nil, err
+	}
+	return resp.TxResponse, nil
 }

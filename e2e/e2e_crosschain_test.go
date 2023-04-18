@@ -11,7 +11,7 @@ import (
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 )
 
-func Test_CrossChian_Transfer(t *testing.T) {
+func Test_CrossChain_Transfer(t *testing.T) {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)

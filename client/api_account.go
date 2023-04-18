@@ -164,7 +164,7 @@ func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int
 }
 
 func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error) {
-	var outputs []banktypes.Output
+	outputs := make([]banktypes.Output, 0)
 	denom := gnfdSdkTypes.Denom
 	sum := math.NewInt(0)
 	for i := 0; i < len(details); i++ {

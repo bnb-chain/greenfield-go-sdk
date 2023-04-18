@@ -22,6 +22,7 @@ type Proposal interface {
 	SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts SubmitProposalOptions) (uint64, string, error)
 	VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts VoteProposalOptions) (string, error)
 	GetProposal(ctx context.Context, proposalID uint64) (*govTypesV1.Proposal, error)
+	DepositProposal(ctx context.Context, proposalID uint64, depositAmount math.Int, txOption *gnfdSdkTypes.TxOption) (string, error)
 }
 
 func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts SubmitProposalOptions) (uint64, string, error) {
@@ -81,5 +82,13 @@ func (c *client) GetProposal(ctx context.Context, proposalID uint64) (*govTypesV
 		return nil, nil
 	}
 	return resp.Proposal, nil
+}
 
+func (c *client) DepositProposal(ctx context.Context, proposalID uint64, depositAmount math.Int, txOption *gnfdSdkTypes.TxOption) (string, error) {
+	msg := govTypesV1.NewMsgDeposit(c.MustGetDefaultAccount().GetAddress(), proposalID, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)))
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, nil
 }

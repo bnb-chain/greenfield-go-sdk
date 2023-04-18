@@ -4,7 +4,6 @@ import (
 	"context"
 	"cosmossdk.io/math"
 	"encoding/hex"
-	sdktypes "github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -13,11 +12,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 type Staking interface {
-	// ListValidators lists all validators (if status is empty string) or validators filtered by status
+	// ListValidators lists all validators (if status is empty string) or validators filtered by status.
 	// status:
 	//  "BOND_STATUS_UNSPECIFIED",
 	//  "BOND_STATUS_UNBONDED",
@@ -29,13 +29,16 @@ type Staking interface {
 		selfDelegation math.Int, validatorAddress string, pubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
 		proposalDepositAmount math.Int, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error)
 	EditValidator(ctx context.Context, validatorAddress string, description stakingtypes.Description, newRate *sdk.Dec,
-		newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption) (string, error)
-	DelegateValidator(ctx context.Context, delegatorAddr, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
-	BeginRedelegate(ctx context.Context, delegatorAddr, validatorSrcAddr, validatorDestAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
-	Undelegate(ctx context.Context, delegatorAddr, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
-	CancelUnbondingDelegation(ctx context.Context, delegatorAddr, validatorAddr string, creationHeight int64, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
+		newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption *gnfdsdktypes.TxOption) (string, error)
+	DelegateValidator(ctx context.Context, delegatorAddr, validatorAddr string, amount math.Int, txOption *gnfdsdktypes.TxOption) (string, error)
+	BeginRedelegate(ctx context.Context, delegatorAddr, validatorSrcAddr, validatorDestAddr string, amount math.Int, txOption *gnfdsdktypes.TxOption) (string, error)
+	Undelegate(ctx context.Context, delegatorAddr, validatorAddr string, amount math.Int, txOption *gnfdsdktypes.TxOption) (string, error)
+	CancelUnbondingDelegation(ctx context.Context, delegatorAddr, validatorAddr string, creationHeight int64, amount math.Int, txOption *gnfdsdktypes.TxOption) (string, error)
 	// GrantDelegationForValidator grant the gov module for proposal execution
-	GrantDelegationForValidator(ctx context.Context, delegationAmount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
+	GrantDelegationForValidator(ctx context.Context, delegationAmount math.Int, txOption *gnfdsdktypes.TxOption) (string, error)
+
+	UnJailValidator(ctx context.Context, validatorAddr string, txOption *gnfdsdktypes.TxOption) (string, error)
+	ImpeachValidator(ctx context.Context, validatorAddr string, txOption *gnfdsdktypes.TxOption) (string, error)
 }
 
 func (c *client) ListValidators(ctx context.Context, status string) (*stakingtypes.QueryValidatorsResponse, error) {
@@ -80,7 +83,7 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 }
 
 func (c *client) EditValidator(ctx context.Context, validatorAddress string, description stakingtypes.Description,
-	newRate *sdk.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption) (string, error) {
+	newRate *sdk.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption *gnfdsdktypes.TxOption) (string, error) {
 	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddress)
 	if err != nil {
 		return "", err
@@ -94,14 +97,14 @@ func (c *client) EditValidator(ctx context.Context, validatorAddress string, des
 		return "", err
 	}
 	msg := stakingtypes.NewMsgEditValidator(validator, description, newRate, newMinSelfDelegation, relayer, challenger, newBlsKey)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
 	if err != nil {
 		return "", err
 	}
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) DelegateValidator(ctx context.Context, delegatorAddr, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *client) DelegateValidator(ctx context.Context, delegatorAddr, validatorAddr string, amount math.Int, txOption *gnfdsdktypes.TxOption) (string, error) {
 	delegator, err := sdk.AccAddressFromHexUnsafe(delegatorAddr)
 	if err != nil {
 		return "", err
@@ -111,14 +114,14 @@ func (c *client) DelegateValidator(ctx context.Context, delegatorAddr, validator
 		return "", err
 	}
 	msg := stakingtypes.NewMsgDelegate(delegator, validator, types.NewCoin(gnfdsdktypes.Denom, amount))
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
 	if err != nil {
 		return "", err
 	}
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) BeginRedelegate(ctx context.Context, delegatorAddr, validatorSrcAddr, validatorDestAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *client) BeginRedelegate(ctx context.Context, delegatorAddr, validatorSrcAddr, validatorDestAddr string, amount math.Int, txOption *gnfdsdktypes.TxOption) (string, error) {
 	delegator, err := sdk.AccAddressFromHexUnsafe(delegatorAddr)
 	if err != nil {
 		return "", err
@@ -132,14 +135,14 @@ func (c *client) BeginRedelegate(ctx context.Context, delegatorAddr, validatorSr
 		return "", err
 	}
 	msg := stakingtypes.NewMsgBeginRedelegate(delegator, validatorSrc, validatorDest, types.NewCoin(gnfdsdktypes.Denom, amount))
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
 	if err != nil {
 		return "", err
 	}
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) Undelegate(ctx context.Context, delegatorAddr, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *client) Undelegate(ctx context.Context, delegatorAddr, validatorAddr string, amount math.Int, txOption *gnfdsdktypes.TxOption) (string, error) {
 	delegator, err := sdk.AccAddressFromHexUnsafe(delegatorAddr)
 	if err != nil {
 		return "", err
@@ -149,14 +152,14 @@ func (c *client) Undelegate(ctx context.Context, delegatorAddr, validatorAddr st
 		return "", err
 	}
 	msg := stakingtypes.NewMsgUndelegate(delegator, validator, types.NewCoin(gnfdsdktypes.Denom, amount))
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
 	if err != nil {
 		return "", err
 	}
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) CancelUnbondingDelegation(ctx context.Context, delegatorAddr, validatorAddr string, creationHeight int64, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *client) CancelUnbondingDelegation(ctx context.Context, delegatorAddr, validatorAddr string, creationHeight int64, amount math.Int, txOption *gnfdsdktypes.TxOption) (string, error) {
 	delegator, err := sdk.AccAddressFromHexUnsafe(delegatorAddr)
 	if err != nil {
 		return "", err
@@ -166,14 +169,14 @@ func (c *client) CancelUnbondingDelegation(ctx context.Context, delegatorAddr, v
 		return "", err
 	}
 	msg := stakingtypes.NewMsgCancelUnbondingDelegation(delegator, validator, creationHeight, types.NewCoin(gnfdsdktypes.Denom, amount))
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
 	if err != nil {
 		return "", err
 	}
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) GrantDelegationForValidator(ctx context.Context, delegationAmount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *client) GrantDelegationForValidator(ctx context.Context, delegationAmount math.Int, txOption *gnfdsdktypes.TxOption) (string, error) {
 	govModule, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
 		return "", err
@@ -187,12 +190,35 @@ func (c *client) GrantDelegationForValidator(ctx context.Context, delegationAmou
 		govModule.GetAddress(),
 		authorization, nil)
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, &txOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, txOption)
 	if err != nil {
 		return "", err
 	}
-	if resp.TxResponse.Code != 0 {
-		return "", sdktypes.ErrorGrantDelegationFail
+	return resp.TxResponse.TxHash, nil
+}
+
+func (c *client) UnJailValidator(ctx context.Context, validatorAddr string, txOption *gnfdsdktypes.TxOption) (string, error) {
+	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddr)
+	if err != nil {
+		return "", err
+	}
+	msg := slashingtypes.NewMsgUnjail(validator)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, nil
+}
+
+func (c *client) ImpeachValidator(ctx context.Context, validatorAddr string, txOption *gnfdsdktypes.TxOption) (string, error) {
+	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddr)
+	if err != nil {
+		return "", err
+	}
+	msg := slashingtypes.NewMsgImpeach(validator, c.MustGetDefaultAccount().GetAddress())
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
+	if err != nil {
+		return "", err
 	}
 	return resp.TxResponse.TxHash, nil
 }
