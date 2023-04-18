@@ -178,14 +178,18 @@ func Test_Object(t *testing.T) {
 	time.Sleep(10 * time.Second)
 	objectInfo, err = cli.HeadObject(ctx, bucketName, objectName)
 	assert.NoError(t, err)
-	assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	if err == nil {
+		assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	}
 
 	ior, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
 	assert.NoError(t, err)
-	assert.Equal(t, info.ObjectName, objectName)
-	objectBytes, err := io.ReadAll(ior)
-	assert.NoError(t, err)
-	assert.Equal(t, objectBytes, buffer.Bytes())
+	if err == nil {
+		assert.Equal(t, info.ObjectName, objectName)
+		objectBytes, err := io.ReadAll(ior)
+		assert.NoError(t, err)
+		assert.Equal(t, objectBytes, buffer.Bytes())
+	}
 
 	t.Log("---> PutObjectPolicy <---")
 	principal, _, err := types.NewAccount("principal")
