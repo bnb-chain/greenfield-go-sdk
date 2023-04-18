@@ -259,7 +259,7 @@ func Test_Group(t *testing.T) {
 	updateMember := addAccount.GetAddress().String()
 	updateMembers := []string{updateMember}
 	txnHash, err := cli.UpdateGroupMember(ctx, groupName, groupOwner.String(), updateMembers, nil, types.UpdateGroupMemberOption{})
-	t.Logf("add groupMember: %s", updateMember[0])
+	t.Logf("add groupMember: %s", updateMembers[0])
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, txnHash)
 	assert.NoError(t, err)
@@ -273,7 +273,7 @@ func Test_Group(t *testing.T) {
 
 	// remove groupMember
 	txnHash, err = cli.UpdateGroupMember(ctx, groupName, groupOwner.String(), nil, updateMembers, types.UpdateGroupMemberOption{})
-	t.Logf("remove groupMember: %s", updateMember[0])
+	t.Logf("remove groupMember: %s", updateMembers[0])
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, txnHash)
 	assert.NoError(t, err)
@@ -282,7 +282,7 @@ func Test_Group(t *testing.T) {
 	exist = cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
 	assert.Equal(t, false, exist)
 	if !exist {
-		t.Logf("header groupMember: %s , not exist", updateMember[0])
+		t.Logf("header groupMember: %s , not exist", updateMembers[0])
 	}
 
 	t.Log("---> Set Group Permission<---")
@@ -323,7 +323,7 @@ func Test_Group(t *testing.T) {
 	exist = cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
 	assert.Equal(t, true, exist)
 	if exist {
-		t.Logf("header groupMember: %s , exist", updateMember[0])
+		t.Logf("header groupMember: %s , exist", updateMembers[0])
 	}
 
 }
