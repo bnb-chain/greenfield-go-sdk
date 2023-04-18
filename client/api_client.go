@@ -23,7 +23,6 @@ import (
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 
@@ -114,7 +113,6 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	ctx := context.Background()
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
-		log.Info().Msg("head bucket fail:" + err.Error())
 		return nil, err
 	}
 
@@ -130,10 +128,8 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 
 	if _, ok := newSpInfo[primarySP]; ok {
 		c.spEndpoints = newSpInfo
-		log.Info().Msg("route bucket succ:" + err.Error())
 		return newSpInfo[primarySP], nil
 	} else {
-		log.Info().Msg("route bucket fail:")
 		return nil, errors.New("fail to locate endpoint from bucket")
 	}
 }

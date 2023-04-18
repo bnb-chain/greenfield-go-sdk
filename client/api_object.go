@@ -198,13 +198,11 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName, txnHash 
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
-		fmt.Println("route url fail:", err.Error())
 		return err
 	}
 
 	_, err = c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
-		fmt.Println("send request fail:", err.Error())
 		return err
 	}
 
