@@ -16,7 +16,6 @@ import (
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +39,7 @@ func Test_Bucket(t *testing.T) {
 	chargedQuota := uint64(100)
 	t.Log("---> CreateBucket and HeadBucket <---")
 	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota}
-	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp, opts)
+	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp.String(), opts)
 	assert.NoError(t, err)
 
 	_, err = cli.WaitForTx(ctx, bucketTx)
@@ -67,12 +66,12 @@ func Test_Bucket(t *testing.T) {
 	_, err = cli.WaitForTx(ctx, buyQuotaTx)
 	assert.NoError(t, err)
 
-	t.Log("---> BuyQuotaForBucket <---")
+	t.Log("---> Query Quota info <---")
 	quota, err := cli.GetBucketReadQuota(ctx, bucketName)
 	assert.NoError(t, err)
 	assert.Equal(t, quota.ReadQuotaSize, targetQuota)
 
-	t.Log("---> 7. PutBucketPolicy <---")
+	t.Log("---> PutBucketPolicy <---")
 	principal, _, err := types.NewAccount("principal")
 	assert.NoError(t, err)
 
@@ -97,20 +96,20 @@ func Test_Bucket(t *testing.T) {
 	_, err = cli.WaitForTx(ctx, policy)
 	assert.NoError(t, err)
 
-	t.Log("---> 8. GetBucketPolicy <---")
-	bucketPolicy, err := cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress())
+	t.Log("---> GetBucketPolicy <---")
+	bucketPolicy, err := cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress().String())
 	assert.NoError(t, err)
 	t.Logf("get bucket policy:%s\n", bucketPolicy.String())
 
-	t.Log("---> 9. DeleteBucketPolicy <---")
-	deleteBucketPolicy, err := cli.DeleteBucketPolicy(ctx, bucketName, principal.GetAddress(), types.DeletePolicyOption{})
+	t.Log("---> DeleteBucketPolicy <---")
+	deleteBucketPolicy, err := cli.DeleteBucketPolicy(ctx, bucketName, principal.GetAddress().String(), types.DeletePolicyOption{})
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, deleteBucketPolicy)
 	assert.NoError(t, err)
-	_, err = cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress())
+	_, err = cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress().String())
 	assert.Error(t, err)
 
-	t.Log("---> 10. DeleteBucket <---")
+	t.Log("--->  DeleteBucket <---")
 	delBucket, err := cli.DeleteBucket(ctx, bucketName, types.DeleteBucketOption{})
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, delBucket)
@@ -139,7 +138,7 @@ func Test_Object(t *testing.T) {
 	assert.NoError(t, err)
 	primarySp := spList[0].GetOperator()
 
-	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp, types.CreateBucketOptions{})
+	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp.String(), types.CreateBucketOptions{})
 	assert.NoError(t, err)
 
 	_, err = cli.WaitForTx(ctx, bucketTx)
@@ -171,7 +170,7 @@ func Test_Object(t *testing.T) {
 	assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
 	t.Log("---> PutObject and GetObject <---")
-	err = cli.PutObject(ctx, bucketName, objectName, objectTx, int64(buffer.Len()),
+	err = cli.PutObject(ctx, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	assert.NoError(t, err)
 
@@ -213,12 +212,12 @@ func Test_Object(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Log("--->  GetObjectPolicy <---")
-	objectPolicy, err := cli.GetObjectPolicy(ctx, bucketName, objectName, principal.GetAddress())
+	objectPolicy, err := cli.GetObjectPolicy(ctx, bucketName, objectName, principal.GetAddress().String())
 	assert.NoError(t, err)
 	t.Logf("get object policy:%s\n", objectPolicy.String())
 
 	t.Log("---> DeleteObjectPolicy <---")
-	deleteObjectPolicy, err := cli.DeleteObjectPolicy(ctx, bucketName, objectName, principal.GetAddress(), types.DeletePolicyOption{})
+	deleteObjectPolicy, err := cli.DeleteObjectPolicy(ctx, bucketName, objectName, principal.GetAddress().String(), types.DeletePolicyOption{})
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, deleteObjectPolicy)
 	assert.NoError(t, err)
@@ -250,40 +249,40 @@ func Test_Group(t *testing.T) {
 	t.Logf("create GroupName: %s", groupName)
 
 	time.Sleep(5 * time.Second)
-	headResult, err := cli.HeadGroup(ctx, groupName, groupOwner)
+	headResult, err := cli.HeadGroup(ctx, groupName, groupOwner.String())
 	assert.NoError(t, err)
 	assert.Equal(t, groupName, headResult.GroupName)
 
 	t.Log("---> Update GroupMember <---")
 	addAccount, _, err := types.NewAccount("member1")
 	assert.NoError(t, err)
-	updateMember := addAccount.GetAddress()
-	updateMembers := []sdk.AccAddress{updateMember}
-	txnHash, err := cli.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers, nil, types.UpdateGroupMemberOption{})
-	t.Logf("add groupMember: %s", updateMember.String())
+	updateMember := addAccount.GetAddress().String()
+	updateMembers := []string{updateMember}
+	txnHash, err := cli.UpdateGroupMember(ctx, groupName, groupOwner.String(), updateMembers, nil, types.UpdateGroupMemberOption{})
+	t.Logf("add groupMember: %s", updateMember[0])
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, txnHash)
 	assert.NoError(t, err)
 
 	// head added member
-	exist := cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
+	exist := cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
 	assert.Equal(t, true, exist)
 	if exist {
-		t.Logf("header groupMember: %s , exist", updateMember.String())
+		t.Logf("header groupMember: %s , exist", updateMember[0])
 	}
 
 	// remove groupMember
-	txnHash, err = cli.UpdateGroupMember(ctx, groupName, groupOwner, nil, updateMembers, types.UpdateGroupMemberOption{})
-	t.Logf("remove groupMember: %s", updateMember.String())
+	txnHash, err = cli.UpdateGroupMember(ctx, groupName, groupOwner.String(), nil, updateMembers, types.UpdateGroupMemberOption{})
+	t.Logf("remove groupMember: %s", updateMember[0])
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, txnHash)
 	assert.NoError(t, err)
 
 	// head removed member
-	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
+	exist = cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
 	assert.Equal(t, false, exist)
 	if !exist {
-		t.Logf("header groupMember: %s , not exist", updateMember.String())
+		t.Logf("header groupMember: %s , not exist", updateMember[0])
 	}
 
 	t.Log("---> Set Group Permission<---")
@@ -299,7 +298,7 @@ func Test_Group(t *testing.T) {
 		permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
 
 	// put group policy to another user
-	txnHash, err = cli.PutGroupPolicy(ctx, groupName, grantUser.GetAddress(),
+	txnHash, err = cli.PutGroupPolicy(ctx, groupName, grantUser.GetAddress().String(),
 		[]*permTypes.Statement{&statement}, types.PutPolicyOption{})
 	assert.NoError(t, err)
 
@@ -313,18 +312,18 @@ func Test_Group(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check permission, add back the member by grantClient
-	updateHash, err := grantClient.UpdateGroupMember(ctx, groupName, groupOwner, updateMembers,
-		[]sdk.AccAddress{}, types.UpdateGroupMemberOption{})
+	updateHash, err := grantClient.UpdateGroupMember(ctx, groupName, groupOwner.String(), updateMembers,
+		nil, types.UpdateGroupMemberOption{})
 	assert.NoError(t, err)
 
 	_, err = grantClient.WaitForTx(ctx, updateHash)
 	assert.NoError(t, err)
 
 	// head removed member
-	exist = cli.HeadGroupMember(ctx, groupName, groupOwner, updateMember)
+	exist = cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
 	assert.Equal(t, true, exist)
 	if exist {
-		t.Logf("header groupMember: %s , exist", updateMember.String())
+		t.Logf("header groupMember: %s , exist", updateMember[0])
 	}
 
 }

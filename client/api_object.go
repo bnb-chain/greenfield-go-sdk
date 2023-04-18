@@ -45,10 +45,15 @@ type Object interface {
 	// PutObjectPolicy apply object policy to the principal, return the txn hash
 	PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 		statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
-	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
-	// GetObjectPolicy get the object policy info of the user specified by principalAddr
-	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-	IsObjectPermissionAllowed(ctx context.Context, user sdk.AccAddress, bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error)
+	// DeleteObjectPolicy delete the object policy of the principal
+	// principalAddr indicates the HEX-encoded string of the principal address
+	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string, opt types.DeletePolicyOption) (string, error)
+	// GetObjectPolicy get the object policy info of the user specified by principalAddr.
+	// principalAddr indicates the HEX-encoded string of the principal address
+	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string) (*permTypes.Policy, error)
+	// IsObjectPermissionAllowed check if the permission of the object is allowed to the user
+	// userAddr indicates the HEX-encoded string of the user address
+	IsObjectPermissionAllowed(ctx context.Context, userAddr string, bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error)
 
 	ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
@@ -383,17 +388,28 @@ func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName str
 	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)
 }
 
-func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
-	principal := permTypes.NewPrincipalWithAccount(principalAddr)
+// DeleteObjectPolicy delete the object policy of the principal
+// principalAddr indicates the HEX-encoded string of the principal address
+func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string, opt types.DeletePolicyOption) (string, error) {
+	addr, err := sdk.AccAddressFromHexUnsafe(principalAddr)
+	if err != nil {
+		return "", err
+	}
+
+	principal := permTypes.NewPrincipalWithAccount(addr)
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
 	return c.sendDelPolicyTxn(ctx, c.MustGetDefaultAccount().GetAddress(), resource.String(), principal, opt.TxOpts)
 }
 
 // IsObjectPermissionAllowed check if the permission of the object is allowed to the user
-func (c *client) IsObjectPermissionAllowed(ctx context.Context, user sdk.AccAddress,
+func (c *client) IsObjectPermissionAllowed(ctx context.Context, userAddr string,
 	bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error) {
+	_, err := sdk.AccAddressFromHexUnsafe(userAddr)
+	if err != nil {
+		return permTypes.EFFECT_DENY, err
+	}
 	verifyReq := storageTypes.QueryVerifyPermissionRequest{
-		Operator:   user.String(),
+		Operator:   userAddr,
 		BucketName: bucketName,
 		ObjectName: objectName,
 		ActionType: action,
@@ -408,11 +424,16 @@ func (c *client) IsObjectPermissionAllowed(ctx context.Context, user sdk.AccAddr
 }
 
 // GetObjectPolicy get the object policy info of the user specified by principalAddr
-func (c *client) GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error) {
+func (c *client) GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string) (*permTypes.Policy, error) {
+	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
+	if err != nil {
+		return nil, err
+	}
+
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
 	queryPolicy := storageTypes.QueryPolicyForAccountRequest{
 		Resource:         resource.String(),
-		PrincipalAddress: principalAddr.String(),
+		PrincipalAddress: principalAddr,
 	}
 
 	queryPolicyResp, err := c.chainClient.QueryPolicyForAccount(ctx, &queryPolicy)

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
@@ -21,13 +22,13 @@ import (
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
-
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 )
 
 type Bucket interface {
 	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error)
-	CreateBucket(ctx context.Context, bucketName string, primaryAddr sdk.AccAddress, opts types.CreateBucketOptions) (string, error)
+	// CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
+	// primaryAddr indicates the HEX-encoded string of the primary storage provider address to which the bucket will be created
+	CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error)
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
 
@@ -35,9 +36,15 @@ type Bucket interface {
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
 
 	PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
-	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error)
-	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error)
-	IsBucketPermissionAllowed(ctx context.Context, user sdk.AccAddress, bucketName string, action permTypes.ActionType) (permTypes.Effect, error)
+	// DeleteBucketPolicy delete the bucket policy of the principal
+	// principalAddr indicates the HEX-encoded string of the principal address
+	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr string, opt types.DeletePolicyOption) (string, error)
+	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr.
+	// principalAddr indicates the HEX-encoded string of the principal address
+	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr string) (*permTypes.Policy, error)
+	// IsBucketPermissionAllowed check if the permission of bucket is allowed to the user.
+	// userAddr indicates the HEX-encoded string of the user address
+	IsBucketPermissionAllowed(ctx context.Context, userAddr string, bucketName string, action permTypes.ActionType) (permTypes.Effect, error)
 
 	ListBuckets(ctx context.Context) (types.ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)
@@ -94,7 +101,12 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
-func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAddr sdk.AccAddress, opts types.CreateBucketOptions) (string, error) {
+func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error) {
+	address, err := sdk.AccAddressFromHexUnsafe(primaryAddr)
+	if err != nil {
+		return "", err
+	}
+
 	var visibility storageTypes.VisibilityType
 	if opts.Visibility == storageTypes.VISIBILITY_TYPE_UNSPECIFIED {
 		visibility = storageTypes.VISIBILITY_TYPE_PRIVATE // set default visibility type
@@ -103,9 +115,9 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	}
 
 	createBucketMsg := storageTypes.NewMsgCreateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName,
-		visibility, primaryAddr, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
+		visibility, address, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
 
-	err := createBucketMsg.ValidateBasic()
+	err = createBucketMsg.ValidateBasic()
 	if err != nil {
 		return "", err
 	}
@@ -246,18 +258,27 @@ func (c *client) PutBucketPolicy(ctx context.Context, bucketName string, princip
 }
 
 // DeleteBucketPolicy delete the bucket policy of the principal
-func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress, opt types.DeletePolicyOption) (string, error) {
+func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr string, opt types.DeletePolicyOption) (string, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
-	principal := permTypes.NewPrincipalWithAccount(principalAddr)
+	addr, err := sdk.AccAddressFromHexUnsafe(principalAddr)
+	if err != nil {
+		return "", err
+	}
+
+	principal := permTypes.NewPrincipalWithAccount(addr)
 
 	return c.sendDelPolicyTxn(ctx, c.MustGetDefaultAccount().GetAddress(), resource, principal, opt.TxOpts)
 }
 
-// IsBucketPermissionAllowed check if the permission of bucket is allowed to the user
-func (c *client) IsBucketPermissionAllowed(ctx context.Context, user sdk.AccAddress,
+// IsBucketPermissionAllowed check if the permission of bucket is allowed to the user.
+func (c *client) IsBucketPermissionAllowed(ctx context.Context, userAddr string,
 	bucketName string, action permTypes.ActionType) (permTypes.Effect, error) {
+	_, err := sdk.AccAddressFromHexUnsafe(userAddr)
+	if err != nil {
+		return permTypes.EFFECT_DENY, err
+	}
 	verifyReq := storageTypes.QueryVerifyPermissionRequest{
-		Operator:   user.String(),
+		Operator:   userAddr,
 		BucketName: bucketName,
 		ActionType: action,
 	}
@@ -270,13 +291,17 @@ func (c *client) IsBucketPermissionAllowed(ctx context.Context, user sdk.AccAddr
 	return verifyResp.Effect, nil
 }
 
-// GetBucketPolicy get the bucket policy info of the user specified by principalAddr
-func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, principalAddr sdk.AccAddress) (*permTypes.Policy, error) {
-	resource := gnfdTypes.NewBucketGRN(bucketName).String()
+// GetBucketPolicy get the bucket policy info of the user specified by principalAddr.
+func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, principalAddr string) (*permTypes.Policy, error) {
+	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
+	if err != nil {
+		return nil, err
+	}
 
+	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 	queryPolicy := storageTypes.QueryPolicyForAccountRequest{
 		Resource:         resource,
-		PrincipalAddress: principalAddr.String(),
+		PrincipalAddress: principalAddr,
 	}
 
 	queryPolicyResp, err := c.chainClient.QueryPolicyForAccount(ctx, &queryPolicy)
