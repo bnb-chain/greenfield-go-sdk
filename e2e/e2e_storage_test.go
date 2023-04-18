@@ -13,6 +13,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
+	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -20,7 +21,7 @@ import (
 )
 
 func Test_Bucket(t *testing.T) {
-	bucketName := "test-bucket"
+	bucketName := storageTestUtil.GenRandomBucketName()
 
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
@@ -120,8 +121,8 @@ func Test_Bucket(t *testing.T) {
 }
 
 func Test_Object(t *testing.T) {
-	bucketName := "test-bucket"
-	objectName := "test-object"
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
 
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
@@ -228,7 +229,7 @@ func Test_Object(t *testing.T) {
 }
 
 func Test_Group(t *testing.T) {
-	groupName := "test-group"
+	groupName := storageTestUtil.GenRandomGroupName()
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	assert.NoError(t, err)
