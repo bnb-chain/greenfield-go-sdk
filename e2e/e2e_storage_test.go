@@ -268,7 +268,7 @@ func Test_Group(t *testing.T) {
 	exist := cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
 	assert.Equal(t, true, exist)
 	if exist {
-		t.Logf("header groupMember: %s , exist", updateMember[0])
+		t.Logf("header groupMember: %s , exist", updateMembers[0])
 	}
 
 	// remove groupMember
