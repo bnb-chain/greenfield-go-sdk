@@ -104,13 +104,13 @@ jobs:
         run: |
           git clone https://github.com/bnb-chain/greenfield-integration-test.git
           cd greenfield-integration-test
-          git checkout ${{ env.GreenfileldIntegrationTestBranch }}
+          git checkout gnfd-sp
           cd ..
           /bin/cp -rf ../greenfield-storage-provider/test/e2e/localup_env/integration_config/config.yml greenfield-integration-test/config/config.yml
           cd greenfield-integration-test
           go test tests/create_object_test.go
           cd ..
-          tail -n 500 ../greenfield-storage-provider/deployment/localup/local_env/sp0/gnfd-sp.log
+          
           make e2e_test
-          tail -n 500 ../greenfield-storage-provider/deployment/localup/local_env/sp0/gnfd-sp.log
+          tail -10 ../greenfield-storage-provider/deployment/localup/local_env/sp0/gnfd-sp.log
           cd ..
