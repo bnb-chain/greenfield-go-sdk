@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -81,20 +82,11 @@ func (s *BasicTestSuite) Test_Account() {
 	s.Require().Equal(len(paymentAccountsByOwner), 1)
 }
 
-func TestBasicTestSuite(t *testing.T) {
-	suite.Run(t, new(BasicTestSuite))
-}
-
-func Test_Payment(t *testing.T) {
-	mnemonic := ParseValidatorMnemonic(0)
-	account, err := types.NewAccountFromMnemonic("test", mnemonic)
-	assert.NoError(t, err)
-	cli, err := client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount: account,
-		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
-	)
-	assert.NoError(t, err)
-	ctx := context.Background()
+func (s *BasicTestSuite) Test_Payment() {
+	account := s.DefaultAccount
+	cli := s.Client
+	t := s.T()
+	ctx := s.ClientContext
 
 	txHash, err := cli.CreatePaymentAccount(ctx, account.GetAddress().String(), &types2.TxOption{})
 	assert.NoError(t, err)
@@ -145,4 +137,8 @@ func Test_Payment(t *testing.T) {
 	paymentAccountsByOwner, err = cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
 	assert.NoError(t, err)
 	assert.False(t, paymentAccountsByOwner[0].Refundable)
+}
+
+func TestBasicTestSuite(t *testing.T) {
+	suite.Run(t, new(BasicTestSuite))
 }

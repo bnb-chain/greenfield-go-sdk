@@ -31,7 +31,7 @@ func (c *client) GetStreamRecord(ctx context.Context, streamAddress string) (*pa
 }
 
 // Deposit deposits BNB to a stream account.
-func (c *client) Deposit(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *client) Deposit(ctx context.Context, toAddress string, amount math.Int, txOption *gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
 		return "", err
@@ -41,7 +41,7 @@ func (c *client) Deposit(ctx context.Context, toAddress string, amount math.Int,
 		To:      accAddress.String(),
 		Amount:  amount,
 	}
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgDeposit}, &txOption)
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgDeposit}, txOption)
 	if err != nil {
 		return "", err
 	}
@@ -49,7 +49,7 @@ func (c *client) Deposit(ctx context.Context, toAddress string, amount math.Int,
 }
 
 // Withdraw withdraws BNB from a stream account.
-func (c *client) Withdraw(ctx context.Context, fromAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *client) Withdraw(ctx context.Context, fromAddress string, amount math.Int, txOption *gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(fromAddress)
 	if err != nil {
 		return "", err
@@ -59,7 +59,7 @@ func (c *client) Withdraw(ctx context.Context, fromAddress string, amount math.I
 		From:    accAddress.String(),
 		Amount:  amount,
 	}
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgWithdraw}, &txOption)
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgWithdraw}, txOption)
 	if err != nil {
 		return "", err
 	}
@@ -67,7 +67,7 @@ func (c *client) Withdraw(ctx context.Context, fromAddress string, amount math.I
 }
 
 // DisableRefund disables refund for a stream account.
-func (c *client) DisableRefund(ctx context.Context, paymentAddress string, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *client) DisableRefund(ctx context.Context, paymentAddress string, txOption *gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(paymentAddress)
 	if err != nil {
 		return "", err
@@ -76,7 +76,7 @@ func (c *client) DisableRefund(ctx context.Context, paymentAddress string, txOpt
 		Owner: c.MustGetDefaultAccount().GetAddress().String(),
 		Addr:  accAddress.String(),
 	}
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgDisableRefund}, &txOption)
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgDisableRefund}, txOption)
 	if err != nil {
 		return "", err
 	}
