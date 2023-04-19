@@ -119,6 +119,7 @@ func Test_Validator_Operations(t *testing.T) {
 			isPresent = false
 		}
 	}
+	assert.False(t, isPresent)
 
 	// delegate validator
 	txHash, err = cli.DelegateValidator(ctx, newValidatorAddr.String(), delegationAmount, nil)

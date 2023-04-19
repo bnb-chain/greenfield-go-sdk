@@ -50,6 +50,9 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 	proposalDepositAmount math.Int, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error) {
 
 	govModule, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
+	if err != nil {
+		return 0, "", err
+	}
 	govAccountAddr := govModule.GetAddress()
 	delegationCoin := types.NewCoin(gnfdsdktypes.Denom, selfDelegation)
 	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddress)
@@ -165,10 +168,16 @@ func (c *client) GrantDelegationForValidator(ctx context.Context, delegationAmou
 	authorization, err := stakingtypes.NewStakeAuthorization([]sdk.AccAddress{c.MustGetDefaultAccount().GetAddress()},
 		nil, stakingtypes.AuthorizationType_AUTHORIZATION_TYPE_DELEGATE,
 		&delegationCoin)
+	if err != nil {
+		return "", err
+	}
 
 	msgGrant, err := authz.NewMsgGrant(c.MustGetDefaultAccount().GetAddress(),
 		govModule.GetAddress(),
 		authorization, nil)
+	if err != nil {
+		return "", err
+	}
 
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, txOption)
 	if err != nil {

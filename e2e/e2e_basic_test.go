@@ -139,6 +139,7 @@ func Test_MultiTransfer(t *testing.T) {
 	cli, err := client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: sender,
 	})
+	assert.NoError(t, err)
 	cli.SetDefaultAccount(sender)
 
 	transferDetails := make([]types.TransferDetail, 0)
