@@ -2,13 +2,14 @@ package client
 
 import (
 	"context"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 
 	"cosmossdk.io/math"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	paymentTypes "github.com/bnb-chain/greenfield/x/payment/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	types3 "github.com/cosmos/cosmos-sdk/x/bank/types"
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 type Account interface {
@@ -21,6 +22,7 @@ type Account interface {
 
 	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error)
 	Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
+	MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption *gnfdSdkTypes.TxOption) (string, error)
 }
 
 // GetAccount retrieves account information for a given address.
@@ -106,7 +108,7 @@ func (c *client) GetAccountBalance(ctx context.Context, address string) (*sdk.Co
 	if err != nil {
 		return nil, err
 	}
-	response, err := c.chainClient.BankQueryClient.Balance(ctx, &types3.QueryBalanceRequest{Address: accAddress.String(), Denom: gnfdSdkTypes.Denom})
+	response, err := c.chainClient.BankQueryClient.Balance(ctx, &bankTypes.QueryBalanceRequest{Address: accAddress.String(), Denom: gnfdSdkTypes.Denom})
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +175,35 @@ func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int
 	if err != nil {
 		return "", err
 	}
-	msgSend := types3.NewMsgSend(c.MustGetDefaultAccount().GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: amount}})
+	msgSend := bankTypes.NewMsgSend(c.MustGetDefaultAccount().GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: amount}})
 	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, &txOption)
+	if err != nil {
+		return "", err
+	}
+	return tx.TxResponse.TxHash, nil
+}
+
+// MultiTransfer makes transfers from an account to multiple accounts with respect coins
+func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption *gnfdSdkTypes.TxOption) (string, error) {
+	outputs := make([]bankTypes.Output, 0)
+	denom := gnfdSdkTypes.Denom
+	sum := math.NewInt(0)
+	for i := 0; i < len(details); i++ {
+		outputs = append(outputs, bankTypes.Output{
+			Address: details[i].ToAddress,
+			Coins:   []sdk.Coin{{Denom: denom, Amount: details[i].Amount}},
+		})
+		sum = sum.Add(details[i].Amount)
+	}
+	in := bankTypes.Input{
+		Address: c.MustGetDefaultAccount().GetAddress().String(),
+		Coins:   []sdk.Coin{{Denom: denom, Amount: sum}},
+	}
+	msg := &bankTypes.MsgMultiSend{
+		Inputs:  []bankTypes.Input{in},
+		Outputs: outputs,
+	}
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
 	if err != nil {
 		return "", err
 	}
