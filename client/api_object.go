@@ -60,7 +60,8 @@ type Object interface {
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
 	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
 
-	// CreateFolder creates an empty object ending with a forward slash (/) character
+	// CreateFolder creates an empty object used as folder.
+	// objectName must ending with a forward slash (/) character
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
 }
 
@@ -557,8 +558,12 @@ func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 	return &signedMsg, nil
 }
 
-// CreateFolder send createObject txn to greenfield chain
+// CreateFolder send create empty object txn to greenfield chain
 func (c *client) CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error) {
+	if !strings.HasSuffix(objectName, "/") {
+		return "", errors.New("failed to create folder. Folder names must end with a forward slash (/) character")
+	}
+
 	reader := bytes.NewReader([]byte(``))
 	txHash, err := c.CreateObject(ctx, bucketName, objectName, reader, opts)
 	return txHash, err
