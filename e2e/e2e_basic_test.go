@@ -127,16 +127,18 @@ func (s *BasicTestSuite) Test_Payment() {
 	assert.Equal(t, streamRecordAfterWithdraw.StaticBalance.String(), depositAmount.Sub(withdrawAmount).String())
 
 	// disable refund
-	assert.True(t, paymentAccountsByOwner[0].Refundable)
+	paymentAccountBeforeDisableRefund, err := cli.GetPaymentAccount(ctx, paymentAddr)
+	assert.NoError(t, err)
+	assert.True(t, paymentAccountBeforeDisableRefund.Refundable)
 	disableRefundTxHash, err := cli.DisableRefund(ctx, paymentAddr, nil)
 	assert.NoError(t, err)
 	t.Logf("disable refund tx: %s", disableRefundTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, disableRefundTxHash)
 	assert.NoError(t, err)
 	t.Logf("Wair for tx: %s", waitForTx.String())
-	paymentAccountsByOwner, err = cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
+	paymentAccountAfterDisableRefund, err := cli.GetPaymentAccount(ctx, paymentAddr)
 	assert.NoError(t, err)
-	assert.False(t, paymentAccountsByOwner[0].Refundable)
+	assert.False(t, paymentAccountAfterDisableRefund.Refundable)
 }
 
 func TestBasicTestSuite(t *testing.T) {
