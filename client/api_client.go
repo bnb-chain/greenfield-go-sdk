@@ -77,11 +77,12 @@ type Option struct {
 }
 
 // New - instantiate greenfield chain with chain info, account info and options.
-func New(chainID string, rpcAddr string, option Option) (Client, error) {
-	if rpcAddr == "" || chainID == "" {
+// endpoint indicates the rpc address of greenfield
+func New(chainID string, endpoint string, option Option) (Client, error) {
+	if endpoint == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
 	}
-	cc, err := sdkclient.NewGreenfieldClient(rpcAddr, chainID)
+	cc, err := sdkclient.NewGreenfieldClient(endpoint, chainID)
 	if err != nil {
 		return nil, err
 	}
