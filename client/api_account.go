@@ -183,7 +183,7 @@ func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int
 	return tx.TxResponse.TxHash, nil
 }
 
-// MultiTransfer makes transfers from an account to multiple accounts with respect coins
+// MultiTransfer makes transfers from an account to multiple accounts with respect amounts
 func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error) {
 	outputs := make([]bankTypes.Output, 0)
 	denom := gnfdSdkTypes.Denom

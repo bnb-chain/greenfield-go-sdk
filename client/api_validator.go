@@ -24,9 +24,9 @@ type Validator interface {
 	//  "BOND_STATUS_UNBONDING",
 	//	"BOND_STATUS_BONDED",
 	ListValidators(ctx context.Context, status string) (*stakingtypes.QueryValidatorsResponse, error)
-	// CreateValidator submits a proposal to create a validator to the greenfield blockchain, and it returns a proposal ID and tx hash.
+
 	CreateValidator(ctx context.Context, description stakingtypes.Description, commission stakingtypes.CommissionRates,
-		selfDelegation math.Int, validatorAddress string, pubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
+		selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
 		proposalDepositAmount math.Int, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error)
 	EditValidator(ctx context.Context, description stakingtypes.Description, newRate *sdk.Dec,
 		newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption) (string, error)
@@ -34,7 +34,6 @@ type Validator interface {
 	BeginRedelegate(ctx context.Context, validatorSrcAddr, validatorDestAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
 	Undelegate(ctx context.Context, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
 	CancelUnbondingDelegation(ctx context.Context, validatorAddr string, creationHeight int64, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
-	// GrantDelegationForValidator grant the gov module for proposal execution
 	GrantDelegationForValidator(ctx context.Context, delegationAmount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
 
 	UnJailValidator(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error)
@@ -45,8 +44,9 @@ func (c *client) ListValidators(ctx context.Context, status string) (*stakingtyp
 	return c.chainClient.StakingQueryClient.Validators(ctx, &stakingtypes.QueryValidatorsRequest{Status: status})
 }
 
+// CreateValidator submits a proposal to the Greenfield for creating a validator, and it returns a proposal ID and tx hash.
 func (c *client) CreateValidator(ctx context.Context, description stakingtypes.Description, commission stakingtypes.CommissionRates,
-	selfDelegation math.Int, validatorAddress string, pubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
+	selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
 	proposalDepositAmount math.Int, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error) {
 
 	govModule, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
@@ -71,7 +71,7 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 	if err != nil {
 		return 0, "", err
 	}
-	pk, err := pubKeyFromHex(pubKey)
+	pk, err := pubKeyFromHex(ed25519PubKey)
 	if err != nil {
 		return 0, "", err
 	}
@@ -85,6 +85,7 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 	return c.SubmitProposal(ctx, []sdk.Msg{msg}, proposalDepositAmount, SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
 }
 
+// EditValidator edits a existing validator info.
 func (c *client) EditValidator(ctx context.Context, description stakingtypes.Description,
 	newRate *sdk.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption) (string, error) {
 	relayer, err := sdk.AccAddressFromHexUnsafe(newRelayerAddr)
@@ -103,6 +104,7 @@ func (c *client) EditValidator(ctx context.Context, description stakingtypes.Des
 	return resp.TxResponse.TxHash, nil
 }
 
+// DelegateValidator makes a delegation to a validator by delegator.
 func (c *client) DelegateValidator(ctx context.Context, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
 	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddr)
 	if err != nil {
@@ -133,6 +135,7 @@ func (c *client) BeginRedelegate(ctx context.Context, validatorSrcAddr, validato
 	return resp.TxResponse.TxHash, nil
 }
 
+// Undelegate undelegates tokens from a validator by the delegator.
 func (c *client) Undelegate(ctx context.Context, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
 	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddr)
 	if err != nil {
@@ -146,6 +149,7 @@ func (c *client) Undelegate(ctx context.Context, validatorAddr string, amount ma
 	return resp.TxResponse.TxHash, nil
 }
 
+// CancelUnbondingDelegation cancel the unbonding delegation by delegator
 func (c *client) CancelUnbondingDelegation(ctx context.Context, validatorAddr string, creationHeight int64, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
 	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddr)
 	if err != nil {
@@ -159,6 +163,7 @@ func (c *client) CancelUnbondingDelegation(ctx context.Context, validatorAddr st
 	return resp.TxResponse.TxHash, nil
 }
 
+// GrantDelegationForValidator grant the gov module for proposal execution
 func (c *client) GrantDelegationForValidator(ctx context.Context, delegationAmount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
 	govModule, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
@@ -186,6 +191,7 @@ func (c *client) GrantDelegationForValidator(ctx context.Context, delegationAmou
 	return resp.TxResponse.TxHash, nil
 }
 
+// UnJailValidator unjails the validator
 func (c *client) UnJailValidator(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error) {
 	msg := slashingtypes.NewMsgUnjail(c.MustGetDefaultAccount().GetAddress())
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
