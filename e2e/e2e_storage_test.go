@@ -2,80 +2,82 @@ package e2e
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"testing"
 	"time"
 
 	"cosmossdk.io/math"
-	"github.com/bnb-chain/greenfield-go-sdk/client"
+	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func Test_Bucket(t *testing.T) {
+type StorageTestSuite struct {
+	basesuite.BaseSuite
+}
+
+func (s *StorageTestSuite) SetupSuite() {
+	s.BaseSuite.SetupSuite()
+}
+
+func TestStorageTestSuite(t *testing.T) {
+	suite.Run(t, new(StorageTestSuite))
+}
+
+func (s *StorageTestSuite) Test_Bucket() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 
-	mnemonic := ParseValidatorMnemonic(0)
-	account, err := types.NewAccountFromMnemonic("test", mnemonic)
-	assert.NoError(t, err)
-	cli, err := client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount: account,
-	})
-	assert.NoError(t, err)
-	ctx := context.Background()
-
-	spList, err := cli.ListStorageProviders(ctx, false)
-	assert.NoError(t, err)
+	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
+	s.Require().NoError(err)
 	primarySp := spList[0].GetOperator()
 
 	chargedQuota := uint64(100)
-	t.Log("---> CreateBucket and HeadBucket <---")
+	s.T().Log("---> CreateBucket and HeadBucket <---")
 	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota}
-	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp.String(), opts)
-	assert.NoError(t, err)
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, primarySp.String(), opts)
+	s.Require().NoError(err)
 
-	_, err = cli.WaitForTx(ctx, bucketTx)
-	assert.NoError(t, err)
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
 
-	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
-	assert.NoError(t, err)
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
 	if err == nil {
-		assert.Equal(t, bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
-		assert.Equal(t, bucketInfo.ChargedReadQuota, chargedQuota)
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+		s.Require().Equal(bucketInfo.ChargedReadQuota, chargedQuota)
 	}
 
-	t.Log("--->  UpdateBucket <---")
-	updateBucketTx, err := cli.UpdateBucketVisibility(ctx, bucketName,
+	s.T().Log("--->  UpdateBucket <---")
+	updateBucketTx, err := s.Client.UpdateBucketVisibility(s.ClientContext, bucketName,
 		storageTypes.VISIBILITY_TYPE_PUBLIC_READ, types.UpdateVisibilityOption{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, updateBucketTx)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, updateBucketTx)
+	s.Require().NoError(err)
 
-	t.Log("---> BuyQuotaForBucket <---")
+	s.T().Log("---> BuyQuotaForBucket <---")
 	targetQuota := uint64(300)
-	buyQuotaTx, err := cli.BuyQuotaForBucket(ctx, bucketName, targetQuota, types.BuyQuotaOption{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, buyQuotaTx)
-	assert.NoError(t, err)
+	buyQuotaTx, err := s.Client.BuyQuotaForBucket(s.ClientContext, bucketName, targetQuota, types.BuyQuotaOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, buyQuotaTx)
+	s.Require().NoError(err)
 
-	t.Log("---> Query Quota info <---")
-	quota, err := cli.GetBucketReadQuota(ctx, bucketName)
-	assert.NoError(t, err)
-	assert.Equal(t, quota.ReadQuotaSize, targetQuota)
+	s.T().Log("---> Query Quota info <---")
+	quota, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	s.Require().Equal(quota.ReadQuotaSize, targetQuota)
 
-	t.Log("---> PutBucketPolicy <---")
+	s.T().Log("---> PutBucketPolicy <---")
 	principal, _, err := types.NewAccount("principal")
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 
 	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	statements := []*permTypes.Statement{
 		{
 			Effect: permTypes.EFFECT_ALLOW,
@@ -89,63 +91,53 @@ func Test_Bucket(t *testing.T) {
 			LimitSize:      nil,
 		},
 	}
-	policy, err := cli.PutBucketPolicy(ctx, bucketName, principalStr, statements, types.PutPolicyOption{})
-	assert.NoError(t, err)
+	policy, err := s.Client.PutBucketPolicy(s.ClientContext, bucketName, principalStr, statements, types.PutPolicyOption{})
+	s.Require().NoError(err)
 
-	_, err = cli.WaitForTx(ctx, policy)
-	assert.NoError(t, err)
+	_, err = s.Client.WaitForTx(s.ClientContext, policy)
+	s.Require().NoError(err)
 
-	t.Log("---> GetBucketPolicy <---")
-	bucketPolicy, err := cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress().String())
-	assert.NoError(t, err)
-	t.Logf("get bucket policy:%s\n", bucketPolicy.String())
+	s.T().Log("---> GetBucketPolicy <---")
+	bucketPolicy, err := s.Client.GetBucketPolicy(s.ClientContext, bucketName, principal.GetAddress().String())
+	s.Require().NoError(err)
+	s.T().Logf("get bucket policy:%s\n", bucketPolicy.String())
 
-	t.Log("---> DeleteBucketPolicy <---")
-	deleteBucketPolicy, err := cli.DeleteBucketPolicy(ctx, bucketName, principal.GetAddress().String(), types.DeletePolicyOption{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, deleteBucketPolicy)
-	assert.NoError(t, err)
-	_, err = cli.GetBucketPolicy(ctx, bucketName, principal.GetAddress().String())
-	assert.Error(t, err)
+	s.T().Log("---> DeleteBucketPolicy <---")
+	deleteBucketPolicy, err := s.Client.DeleteBucketPolicy(s.ClientContext, bucketName, principal.GetAddress().String(), types.DeletePolicyOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteBucketPolicy)
+	s.Require().NoError(err)
+	_, err = s.Client.GetBucketPolicy(s.ClientContext, bucketName, principal.GetAddress().String())
+	s.Require().Error(err)
 
-	t.Log("--->  DeleteBucket <---")
-	delBucket, err := cli.DeleteBucket(ctx, bucketName, types.DeleteBucketOption{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, delBucket)
-	assert.NoError(t, err)
+	s.T().Log("--->  DeleteBucket <---")
+	delBucket, err := s.Client.DeleteBucket(s.ClientContext, bucketName, types.DeleteBucketOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, delBucket)
+	s.Require().NoError(err)
 
-	_, err = cli.HeadBucket(ctx, bucketName)
-	assert.Error(t, err)
+	_, err = s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().Error(err)
 }
 
-func Test_Object(t *testing.T) {
+func (s *StorageTestSuite) Test_Object() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
 
-	mnemonic := ParseValidatorMnemonic(0)
-	account, err := types.NewAccountFromMnemonic("test", mnemonic)
-	assert.NoError(t, err)
-	cli, err := client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount: account,
-	})
-
-	assert.NoError(t, err)
-	ctx := context.Background()
-
-	spList, err := cli.ListStorageProviders(ctx, false)
-	assert.NoError(t, err)
+	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
+	s.Require().NoError(err)
 	primarySp := spList[0].GetOperator()
 
-	bucketTx, err := cli.CreateBucket(ctx, bucketName, primarySp.String(), types.CreateBucketOptions{})
-	assert.NoError(t, err)
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, primarySp.String(), types.CreateBucketOptions{})
+	s.Require().NoError(err)
 
-	_, err = cli.WaitForTx(ctx, bucketTx)
-	assert.NoError(t, err)
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
 
-	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
-	assert.NoError(t, err)
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
 	if err == nil {
-		assert.Equal(t, bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
 	}
 
 	var buffer bytes.Buffer
@@ -155,44 +147,44 @@ func Test_Object(t *testing.T) {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
-	t.Log("---> CreateObject and HeadObject <---")
-	objectTx, err := cli.CreateObject(ctx, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, objectTx)
-	assert.NoError(t, err)
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
 
 	time.Sleep(5 * time.Second)
-	objectInfo, err := cli.HeadObject(ctx, bucketName, objectName)
-	assert.NoError(t, err)
-	assert.Equal(t, objectInfo.ObjectName, objectName)
-	assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectInfo.ObjectName, objectName)
+	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
-	t.Log("---> PutObject and GetObject <---")
-	err = cli.PutObject(ctx, bucketName, objectName, int64(buffer.Len()),
+	s.T().Log("---> PutObject and GetObject <---")
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 
 	time.Sleep(10 * time.Second)
-	objectInfo, err = cli.HeadObject(ctx, bucketName, objectName)
-	assert.NoError(t, err)
+	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
 	if err == nil {
-		assert.Equal(t, objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 	}
 
-	ior, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
-	assert.NoError(t, err)
+	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOption{})
+	s.Require().NoError(err)
 	if err == nil {
-		assert.Equal(t, info.ObjectName, objectName)
+		s.Require().Equal(info.ObjectName, objectName)
 		objectBytes, err := io.ReadAll(ior)
-		assert.NoError(t, err)
-		assert.Equal(t, objectBytes, buffer.Bytes())
+		s.Require().NoError(err)
+		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
 
-	t.Log("---> PutObjectPolicy <---")
+	s.T().Log("---> PutObjectPolicy <---")
 	principal, _, err := types.NewAccount("principal")
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	principalWithAccount, err := utils.NewPrincipalWithAccount(principal.GetAddress())
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	statements := []*permTypes.Statement{
 		{
 			Effect: permTypes.EFFECT_ALLOW,
@@ -204,124 +196,115 @@ func Test_Object(t *testing.T) {
 			LimitSize:      nil,
 		},
 	}
-	policy, err := cli.PutObjectPolicy(ctx, bucketName, objectName, principalWithAccount, statements, types.PutPolicyOption{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, policy)
-	assert.NoError(t, err)
+	policy, err := s.Client.PutObjectPolicy(s.ClientContext, bucketName, objectName, principalWithAccount, statements, types.PutPolicyOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, policy)
+	s.Require().NoError(err)
 
-	t.Log("--->  GetObjectPolicy <---")
-	objectPolicy, err := cli.GetObjectPolicy(ctx, bucketName, objectName, principal.GetAddress().String())
-	assert.NoError(t, err)
-	t.Logf("get object policy:%s\n", objectPolicy.String())
+	s.T().Log("--->  GetObjectPolicy <---")
+	objectPolicy, err := s.Client.GetObjectPolicy(s.ClientContext, bucketName, objectName, principal.GetAddress().String())
+	s.Require().NoError(err)
+	s.T().Logf("get object policy:%s\n", objectPolicy.String())
 
-	t.Log("---> DeleteObjectPolicy <---")
-	deleteObjectPolicy, err := cli.DeleteObjectPolicy(ctx, bucketName, objectName, principal.GetAddress().String(), types.DeletePolicyOption{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, deleteObjectPolicy)
-	assert.NoError(t, err)
+	s.T().Log("---> DeleteObjectPolicy <---")
+	deleteObjectPolicy, err := s.Client.DeleteObjectPolicy(s.ClientContext, bucketName, objectName, principal.GetAddress().String(), types.DeletePolicyOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteObjectPolicy)
+	s.Require().NoError(err)
 
-	t.Log("---> DeleteObject <---")
-	deleteObject, err := cli.DeleteObject(ctx, bucketName, objectName, types.DeleteObjectOption{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, deleteObject)
-	assert.NoError(t, err)
-	_, err = cli.HeadObject(ctx, bucketName, objectName)
-	assert.Error(t, err)
+	s.T().Log("---> DeleteObject <---")
+	deleteObject, err := s.Client.DeleteObject(s.ClientContext, bucketName, objectName, types.DeleteObjectOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteObject)
+	s.Require().NoError(err)
+	_, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().Error(err)
 }
 
-func Test_Group(t *testing.T) {
+func (s *StorageTestSuite) Test_Group() {
 	groupName := storageTestUtil.GenRandomGroupName()
-	mnemonic := ParseValidatorMnemonic(0)
-	account, err := types.NewAccountFromMnemonic("test", mnemonic)
-	assert.NoError(t, err)
-	cli, err := client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount: account,
-	})
-	assert.NoError(t, err)
-	ctx := context.Background()
 
-	groupOwner := account.GetAddress()
-	t.Log("---> CreateGroup and HeadGroup <---")
-	_, err = cli.CreateGroup(ctx, groupName, types.CreateGroupOptions{})
-	assert.NoError(t, err)
-	t.Logf("create GroupName: %s", groupName)
+	groupOwner := s.DefaultAccount.GetAddress()
+	s.T().Log("---> CreateGroup and HeadGroup <---")
+	_, err := s.Client.CreateGroup(s.ClientContext, groupName, types.CreateGroupOptions{})
+	s.Require().NoError(err)
+	s.T().Logf("create GroupName: %s", groupName)
 
 	time.Sleep(5 * time.Second)
-	headResult, err := cli.HeadGroup(ctx, groupName, groupOwner.String())
-	assert.NoError(t, err)
-	assert.Equal(t, groupName, headResult.GroupName)
+	headResult, err := s.Client.HeadGroup(s.ClientContext, groupName, groupOwner.String())
+	s.Require().NoError(err)
+	s.Require().Equal(groupName, headResult.GroupName)
 
-	t.Log("---> Update GroupMember <---")
+	s.T().Log("---> Update GroupMember <---")
 	addAccount, _, err := types.NewAccount("member1")
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	updateMember := addAccount.GetAddress().String()
 	updateMembers := []string{updateMember}
-	txnHash, err := cli.UpdateGroupMember(ctx, groupName, groupOwner.String(), updateMembers, nil, types.UpdateGroupMemberOption{})
-	t.Logf("add groupMember: %s", updateMembers[0])
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, txnHash)
-	assert.NoError(t, err)
+	txnHash, err := s.Client.UpdateGroupMember(s.ClientContext, groupName, groupOwner.String(), updateMembers, nil, types.UpdateGroupMemberOption{})
+	s.T().Logf("add groupMember: %s", updateMembers[0])
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, txnHash)
+	s.Require().NoError(err)
 
 	// head added member
-	exist := cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
-	assert.Equal(t, true, exist)
+	exist := s.Client.HeadGroupMember(s.ClientContext, groupName, groupOwner.String(), updateMember)
+	s.Require().Equal(true, exist)
 	if exist {
-		t.Logf("header groupMember: %s , exist", updateMembers[0])
+		s.T().Logf("header groupMember: %s , exist", updateMembers[0])
 	}
 
 	// remove groupMember
-	txnHash, err = cli.UpdateGroupMember(ctx, groupName, groupOwner.String(), nil, updateMembers, types.UpdateGroupMemberOption{})
-	t.Logf("remove groupMember: %s", updateMembers[0])
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, txnHash)
-	assert.NoError(t, err)
+	txnHash, err = s.Client.UpdateGroupMember(s.ClientContext, groupName, groupOwner.String(), nil, updateMembers, types.UpdateGroupMemberOption{})
+	s.T().Logf("remove groupMember: %s", updateMembers[0])
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, txnHash)
+	s.Require().NoError(err)
 
 	// head removed member
-	exist = cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
-	assert.Equal(t, false, exist)
+	exist = s.Client.HeadGroupMember(s.ClientContext, groupName, groupOwner.String(), updateMember)
+	s.Require().Equal(false, exist)
 	if !exist {
-		t.Logf("header groupMember: %s , not exist", updateMembers[0])
+		s.T().Logf("header groupMember: %s , not exist", updateMembers[0])
 	}
 
-	t.Log("---> Set Group Permission<---")
+	s.T().Log("---> Set Group Permission<---")
 	grantUser, _, err := types.NewAccount("member2")
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 
-	resp, err := cli.Transfer(ctx, grantUser.GetAddress().String(), math.NewIntWithDecimal(1, types2.DecimalBNB), types2.TxOption{})
-	assert.NoError(t, err)
-	_, err = cli.WaitForTx(ctx, resp)
-	assert.NoError(t, err)
+	resp, err := s.Client.Transfer(s.ClientContext, grantUser.GetAddress().String(), math.NewIntWithDecimal(1, types2.DecimalBNB), types2.TxOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, resp)
+	s.Require().NoError(err)
 
 	statement := utils.NewStatement([]permTypes.ActionType{permTypes.ACTION_UPDATE_GROUP_MEMBER},
 		permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
 
 	// put group policy to another user
-	txnHash, err = cli.PutGroupPolicy(ctx, groupName, grantUser.GetAddress().String(),
+	txnHash, err = s.Client.PutGroupPolicy(s.ClientContext, groupName, grantUser.GetAddress().String(),
 		[]*permTypes.Statement{&statement}, types.PutPolicyOption{})
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 
-	t.Logf("put group policy to user %s", grantUser.GetAddress().String())
-	_, err = cli.WaitForTx(ctx, txnHash)
-	assert.NoError(t, err)
+	s.T().Logf("put group policy to user %s", grantUser.GetAddress().String())
+	_, err = s.Client.WaitForTx(s.ClientContext, txnHash)
+	s.Require().NoError(err)
 	// use this user to update group
-	grantClient, err := client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount: grantUser,
-	})
-	assert.NoError(t, err)
+	s.Client.SetDefaultAccount(grantUser)
+	s.Require().NoError(err)
 
 	// check permission, add back the member by grantClient
-	updateHash, err := grantClient.UpdateGroupMember(ctx, groupName, groupOwner.String(), updateMembers,
+	updateHash, err := s.Client.UpdateGroupMember(s.ClientContext, groupName, groupOwner.String(), updateMembers,
 		nil, types.UpdateGroupMemberOption{})
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 
-	_, err = grantClient.WaitForTx(ctx, updateHash)
-	assert.NoError(t, err)
+	_, err = s.Client.WaitForTx(s.ClientContext, updateHash)
+	s.Require().NoError(err)
 
+	s.Client.SetDefaultAccount(s.DefaultAccount)
 	// head removed member
-	exist = cli.HeadGroupMember(ctx, groupName, groupOwner.String(), updateMember)
-	assert.Equal(t, true, exist)
+	exist = s.Client.HeadGroupMember(s.ClientContext, groupName, groupOwner.String(), updateMember)
+	s.Require().Equal(true, exist)
 	if exist {
-		t.Logf("header groupMember: %s , exist", updateMembers[0])
+		s.T().Logf("header groupMember: %s , exist", updateMembers[0])
 	}
 
 }
