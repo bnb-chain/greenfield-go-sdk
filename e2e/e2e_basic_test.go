@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"cosmossdk.io/math"
@@ -88,57 +87,59 @@ func (s *BasicTestSuite) Test_Payment() {
 	t := s.T()
 	ctx := s.ClientContext
 
+	paymentAccountsBeforeCreate, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
+	s.Require().NoError(err)
 	txHash, err := cli.CreatePaymentAccount(ctx, account.GetAddress().String(), &types2.TxOption{})
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	t.Logf("Acc: %s", txHash)
 	waitForTx, err := cli.WaitForTx(ctx, txHash)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	t.Logf("Wair for tx: %s", waitForTx.String())
 
-	paymentAccountsByOwner, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
-	assert.NoError(t, err)
-	assert.Equal(t, len(paymentAccountsByOwner), 1)
+	paymentAccountsByOwnerAfterCreate, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
+	s.Require().NoError(err)
+	s.Require().Equal(len(paymentAccountsByOwnerAfterCreate)-len(paymentAccountsBeforeCreate), 1)
 
 	// deposit
-	paymentAddr := paymentAccountsByOwner[0].Addr
+	paymentAddr := paymentAccountsByOwnerAfterCreate[len(paymentAccountsByOwnerAfterCreate)-1].Addr
 	depositAmount := math.NewIntFromUint64(100)
 	depositTxHash, err := cli.Deposit(ctx, paymentAddr, depositAmount, nil)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	t.Logf("deposit tx: %s", depositTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, depositTxHash)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	t.Logf("Wair for tx: %s", waitForTx.String())
 
 	// get stream record
 	streamRecord, err := cli.GetStreamRecord(ctx, paymentAddr)
-	assert.NoError(t, err)
-	assert.Equal(t, streamRecord.StaticBalance.String(), depositAmount.String())
+	s.Require().NoError(err)
+	s.Require().Equal(streamRecord.StaticBalance.String(), depositAmount.String())
 
 	// withdraw
 	withdrawAmount := math.NewIntFromUint64(50)
 	withdrawTxHash, err := cli.Withdraw(ctx, paymentAddr, withdrawAmount, nil)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	t.Logf("withdraw tx: %s", withdrawTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, withdrawTxHash)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	t.Logf("Wair for tx: %s", waitForTx.String())
 	streamRecordAfterWithdraw, err := cli.GetStreamRecord(ctx, paymentAddr)
-	assert.NoError(t, err)
-	assert.Equal(t, streamRecordAfterWithdraw.StaticBalance.String(), depositAmount.Sub(withdrawAmount).String())
+	s.Require().NoError(err)
+	s.Require().Equal(streamRecordAfterWithdraw.StaticBalance.String(), depositAmount.Sub(withdrawAmount).String())
 
 	// disable refund
 	paymentAccountBeforeDisableRefund, err := cli.GetPaymentAccount(ctx, paymentAddr)
-	assert.NoError(t, err)
-	assert.True(t, paymentAccountBeforeDisableRefund.Refundable)
+	s.Require().NoError(err)
+	s.Require().True(paymentAccountBeforeDisableRefund.Refundable)
 	disableRefundTxHash, err := cli.DisableRefund(ctx, paymentAddr, nil)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	t.Logf("disable refund tx: %s", disableRefundTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, disableRefundTxHash)
-	assert.NoError(t, err)
+	s.Require().NoError(err)
 	t.Logf("Wair for tx: %s", waitForTx.String())
 	paymentAccountAfterDisableRefund, err := cli.GetPaymentAccount(ctx, paymentAddr)
-	assert.NoError(t, err)
-	assert.False(t, paymentAccountAfterDisableRefund.Refundable)
+	s.Require().NoError(err)
+	s.Require().False(paymentAccountAfterDisableRefund.Refundable)
 }
 
 func TestBasicTestSuite(t *testing.T) {
