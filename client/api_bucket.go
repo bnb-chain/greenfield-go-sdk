@@ -30,7 +30,10 @@ type Bucket interface {
 	// primaryAddr indicates the HEX-encoded string of the primary storage provider address to which the bucket will be created
 	CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error)
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
+
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
+	UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOption) (string, error)
+	UpdateBucketPaymentAddr(ctx context.Context, bucketName string, paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption) (string, error)
 
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
