@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"strings"
 	"time"
 
 	"cosmossdk.io/math"
@@ -19,7 +20,7 @@ type SP interface {
 	// ListStorageProviders return the storage provider info on chain
 	// isInService indicates if only display the sp with STATUS_IN_SERVICE status
 	ListStorageProviders(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error)
-	// GetStorageProviderInfo return the sp info the sp chain address
+	// GetStorageProviderInfo return the sp info with the sp chain address
 	GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetStoragePrice returns the storage price for a particular storage provider, including update time, read price, store price and .etc.
 	GetStoragePrice(ctx context.Context, SPAddr string) (*spTypes.SpStoragePrice, error)
@@ -65,7 +66,7 @@ func (c *client) ListStorageProviders(ctx context.Context, isInService bool) ([]
 	return spInfoList, nil
 }
 
-// GetStorageProviderInfo return the sp info the sp chain address
+// GetStorageProviderInfo return the sp info with the sp chain address
 func (c *client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
 	request := &spTypes.QueryStorageProviderRequest{
 		SpAddress: SPAddr.String(),
@@ -93,8 +94,14 @@ func (c *client) getSPUrlList() (map[string]*url.URL, error) {
 	}
 
 	for _, info := range spList {
-		endpoint := info.Endpoint
-		urlInfo, urlErr := utils.GetEndpointURL(endpoint, c.secure)
+		var useHttps bool
+		if strings.Contains(info.Endpoint, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
+
+		urlInfo, urlErr := utils.GetEndpointURL(info.Endpoint, useHttps)
 		if urlErr != nil {
 			return nil, urlErr
 		}

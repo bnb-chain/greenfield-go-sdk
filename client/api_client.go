@@ -165,7 +165,15 @@ func (c *client) getInServiceSP() (*url.URL, error) {
 		return nil, errors.New("fail to get SP endpoint")
 	}
 
-	urlInfo, urlErr := utils.GetEndpointURL(spList[0].Endpoint, c.secure)
+	var useHttps bool
+	SPEndpoint := spList[0].Endpoint
+	if strings.Contains(SPEndpoint, "https") {
+		useHttps = true
+	} else {
+		useHttps = c.secure
+	}
+
+	urlInfo, urlErr := utils.GetEndpointURL(spList[0].Endpoint, useHttps)
 	if urlErr != nil {
 		return nil, urlErr
 	}
