@@ -105,7 +105,7 @@ func Test_Validator_Operations(t *testing.T) {
 
 	// unbond
 	cli.SetDefaultAccount(newValAccount)
-	txHash, err = cli.Undelegate(ctx, newValidatorAddr.String(), newValidatorAddr.String(), delegationAmount, nil)
+	txHash, err = cli.Undelegate(ctx, newValidatorAddr.String(), delegationAmount, nil)
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, txHash)
 	assert.NoError(t, err)
@@ -121,13 +121,13 @@ func Test_Validator_Operations(t *testing.T) {
 	}
 
 	// delegate validator
-	txHash, err = cli.DelegateValidator(ctx, newValidatorAddr.String(), newValidatorAddr.String(), delegationAmount, nil)
+	txHash, err = cli.DelegateValidator(ctx, newValidatorAddr.String(), delegationAmount, nil)
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, txHash)
 	assert.NoError(t, err)
 
 	// unjain
-	txHash, err = cli.UnJailValidator(ctx, newValidatorAddr.String(), nil)
+	txHash, err = cli.UnJailValidator(ctx, nil)
 	assert.NoError(t, err)
 	_, err = cli.WaitForTx(ctx, txHash)
 	assert.NoError(t, err)

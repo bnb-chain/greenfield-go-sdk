@@ -14,20 +14,20 @@ import (
 )
 
 type CrossChain interface {
-	// TransferOut makes a transfer from Greenfield to BSC
 	TransferOut(ctx context.Context, toAddress string, amount math.Int, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 
-	Claims(ctx context.Context, fromAddr string, srcShainId, destChainId uint32, sequence uint64, timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	Claims(ctx context.Context, srcShainId, destChainId uint32, sequence uint64, timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 	GetChannelSendSequence(ctx context.Context, channelId uint32) (uint64, error)
 	GetChannelReceiveSequence(ctx context.Context, channelId uint32) (uint64, error)
 	GetInturnRelayer(ctx context.Context, req *oracletypes.QueryInturnRelayerRequest) (*oracletypes.QueryInturnRelayerResponse, error)
 	GetCrossChainPackage(ctx context.Context, channelId uint32, sequence uint64) ([]byte, error)
 
-	MirrorGroup(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
-	MirrorBucket(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
-	MirrorObject(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	MirrorGroup(ctx context.Context, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	MirrorBucket(ctx context.Context, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	MirrorObject(ctx context.Context, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 }
 
+// TransferOut makes a transfer from Greenfield to BSC
 func (c *client) TransferOut(ctx context.Context, toAddress string, amount math.Int, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	msgTransferOut := bridgetypes.NewMsgTransferOut(c.MustGetDefaultAccount().GetAddress().String(),
 		toAddress,
@@ -40,11 +40,11 @@ func (c *client) TransferOut(ctx context.Context, toAddress string, amount math.
 	return txResp.TxResponse, nil
 }
 
-func (c *client) Claims(ctx context.Context, fromAddr string, srcShainId, destChainId uint32, sequence uint64,
+func (c *client) Claims(ctx context.Context, srcShainId, destChainId uint32, sequence uint64,
 	timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 
 	msg := oracletypes.NewMsgClaim(
-		fromAddr,
+		c.MustGetDefaultAccount().GetAddress().String(),
 		srcShainId,
 		destChainId,
 		sequence,
@@ -94,12 +94,8 @@ func (c *client) GetCrossChainPackage(ctx context.Context, channelId uint32, seq
 	return resp.Package, nil
 }
 
-func (c *client) MirrorGroup(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
-	operator, err := sdk.AccAddressFromHexUnsafe(operatorAddr)
-	if err != nil {
-		return nil, err
-	}
-	msgMirrorGroup := storagetypes.NewMsgMirrorGroup(operator, id)
+func (c *client) MirrorGroup(ctx context.Context, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+	msgMirrorGroup := storagetypes.NewMsgMirrorGroup(c.MustGetDefaultAccount().GetAddress(), id)
 	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgMirrorGroup}, txOption)
 	if err != nil {
 		return nil, err
@@ -107,12 +103,8 @@ func (c *client) MirrorGroup(ctx context.Context, operatorAddr string, id sdkmat
 	return txResp.TxResponse, nil
 }
 
-func (c *client) MirrorBucket(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
-	operator, err := sdk.AccAddressFromHexUnsafe(operatorAddr)
-	if err != nil {
-		return nil, err
-	}
-	msgMirrorBucket := storagetypes.NewMsgMirrorBucket(operator, id)
+func (c *client) MirrorBucket(ctx context.Context, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+	msgMirrorBucket := storagetypes.NewMsgMirrorBucket(c.MustGetDefaultAccount().GetAddress(), id)
 	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgMirrorBucket}, txOption)
 	if err != nil {
 		return nil, err
@@ -120,12 +112,8 @@ func (c *client) MirrorBucket(ctx context.Context, operatorAddr string, id sdkma
 	return txResp.TxResponse, nil
 }
 
-func (c *client) MirrorObject(ctx context.Context, operatorAddr string, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
-	operator, err := sdk.AccAddressFromHexUnsafe(operatorAddr)
-	if err != nil {
-		return nil, err
-	}
-	msgMirrorBucket := storagetypes.NewMsgMirrorBucket(operator, id)
+func (c *client) MirrorObject(ctx context.Context, id sdkmath.Uint, txOption *gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+	msgMirrorBucket := storagetypes.NewMsgMirrorBucket(c.MustGetDefaultAccount().GetAddress(), id)
 	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgMirrorBucket}, txOption)
 	if err != nil {
 		return nil, err

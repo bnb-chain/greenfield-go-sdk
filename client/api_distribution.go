@@ -9,22 +9,18 @@ import (
 )
 
 type Distribution interface {
-	SetWithdrawAddress(ctx context.Context, delAddr, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error)
-	WithdrawValidatorCommission(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
-	WithdrawDelegatorReward(ctx context.Context, delAddr, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
-	FundCommunityPool(ctx context.Context, amount math.Int, depositorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
+	SetWithdrawAddress(ctx context.Context, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error)
+	WithdrawValidatorCommission(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error)
+	WithdrawDelegatorReward(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
+	FundCommunityPool(ctx context.Context, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
 }
 
-func (c *client) SetWithdrawAddress(ctx context.Context, delAddr, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
-	del, err := sdk.AccAddressFromHexUnsafe(delAddr)
-	if err != nil {
-		return "", err
-	}
+func (c *client) SetWithdrawAddress(ctx context.Context, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
 	withdraw, err := sdk.AccAddressFromHexUnsafe(withdrawAddr)
 	if err != nil {
 		return "", err
 	}
-	msg := distrtypes.NewMsgSetWithdrawAddress(del, withdraw)
+	msg := distrtypes.NewMsgSetWithdrawAddress(c.MustGetDefaultAccount().GetAddress(), withdraw)
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
@@ -32,12 +28,21 @@ func (c *client) SetWithdrawAddress(ctx context.Context, delAddr, withdrawAddr s
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) WithdrawValidatorCommission(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *client) WithdrawValidatorCommission(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error) {
+	msg := distrtypes.NewMsgWithdrawValidatorCommission(c.MustGetDefaultAccount().GetAddress())
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, nil
+}
+
+func (c *client) WithdrawDelegatorReward(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
 	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddr)
 	if err != nil {
 		return "", err
 	}
-	msg := distrtypes.NewMsgWithdrawValidatorCommission(validator)
+	msg := distrtypes.NewMsgWithdrawDelegatorReward(c.MustGetDefaultAccount().GetAddress(), validator)
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
@@ -45,29 +50,8 @@ func (c *client) WithdrawValidatorCommission(ctx context.Context, validatorAddr 
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) WithdrawDelegatorReward(ctx context.Context, delAddr, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
-	del, err := sdk.AccAddressFromHexUnsafe(delAddr)
-	if err != nil {
-		return "", err
-	}
-	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddr)
-	if err != nil {
-		return "", err
-	}
-	msg := distrtypes.NewMsgWithdrawDelegatorReward(del, validator)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
-	if err != nil {
-		return "", err
-	}
-	return resp.TxResponse.TxHash, nil
-}
-
-func (c *client) FundCommunityPool(ctx context.Context, amount math.Int, depositorAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
-	depositor, err := sdk.AccAddressFromHexUnsafe(depositorAddr)
-	if err != nil {
-		return "", err
-	}
-	msg := distrtypes.NewMsgFundCommunityPool(sdk.Coins{sdk.Coin{Denom: gnfdsdktypes.Denom, Amount: amount}}, depositor)
+func (c *client) FundCommunityPool(ctx context.Context, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
+	msg := distrtypes.NewMsgFundCommunityPool(sdk.Coins{sdk.Coin{Denom: gnfdsdktypes.Denom, Amount: amount}}, c.MustGetDefaultAccount().GetAddress())
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
