@@ -35,7 +35,7 @@ type Client interface {
 	Account
 	SP
 	Proposal
-	Staking
+	Validator
 	Distribution
 	CrossChain
 

@@ -16,8 +16,10 @@ import (
 
 type Challenge interface {
 	GetChallengeInfo(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error)
-	SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
-	Attest(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint, voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
+	SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
+	Attest(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint, voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
+	LatestAttestedChallenges(ctx context.Context, req *challengetypes.QueryLatestAttestedChallengesRequest) ([]uint64, error)
+	InturnAttestationSubmitter(ctx context.Context, req *challengetypes.QueryInturnAttestationSubmitterRequest) (*challengetypes.QueryInturnAttestationSubmitterResponse, error)
 }
 
 // GetChallengeInfo  sends request to challenge and get challenge result info
@@ -86,7 +88,8 @@ func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo)
 	return result, nil
 }
 
-func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
+// SubmitChallenge challenges the service provider data integrity, used by off-chain service greenfield-challenger.
+func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
 	challenger, err := sdk.AccAddressFromHexUnsafe(challengerAddress)
 	if err != nil {
 		return nil, err
@@ -96,15 +99,19 @@ func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOpera
 		return nil, err
 	}
 	msg := challengetypes.NewMsgSubmit(challenger, spOperator, bucketName, objectName, randomIndex, segmentIndex)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return nil, err
 	}
 	return resp.TxResponse, nil
 }
 
+// Attest handles user's request for attesting a challenge.
+// The attestation can include a valid challenge or is only for heartbeat purpose.
+// If the challenge is valid, the related storage provider will be slashed.
+// For heartbeat attestation, the challenge is invalid and the storage provider will not be slashed.
 func (c *client) Attest(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint,
-	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption *gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
+	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
 
 	submitter, err := sdk.AccAddressFromHexUnsafe(submitterAddress)
 	if err != nil {
@@ -120,9 +127,21 @@ func (c *client) Attest(ctx context.Context, submitterAddress, challengerAddress
 	}
 
 	msg := challengetypes.NewMsgAttest(submitter, challengeId, objectId, spOperatorAddress, voteResult, challengerAddress, voteValidatorSet, VoteAggSignature)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return nil, err
 	}
 	return resp.TxResponse, nil
+}
+
+func (c *client) LatestAttestedChallenges(ctx context.Context, req *challengetypes.QueryLatestAttestedChallengesRequest) ([]uint64, error) {
+	resp, err := c.chainClient.LatestAttestedChallenges(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.ChallengeIds, nil
+}
+
+func (c *client) InturnAttestationSubmitter(ctx context.Context, req *challengetypes.QueryInturnAttestationSubmitterRequest) (*challengetypes.QueryInturnAttestationSubmitterResponse, error) {
+	return c.chainClient.InturnAttestationSubmitter(ctx, req)
 }

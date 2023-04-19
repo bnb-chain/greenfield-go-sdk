@@ -45,7 +45,7 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 	s.Client.SetDefaultAccount(newValAccount)
 	delegationAmount := math.NewIntWithDecimal(1, 18)
 
-	txHash, err = s.Client.GrantDelegationForValidator(s.ClientContext, delegationAmount, nil)
+	txHash, err = s.Client.GrantDelegationForValidator(s.ClientContext, delegationAmount, gnfdsdktypes.TxOption{})
 	s.Require().NoError(err)
 	s.T().Logf("grant auth txHash %s", txHash)
 
@@ -95,7 +95,7 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 	err = s.Client.WaitForNBlocks(s.ClientContext, 1)
 	s.Require().NoError(err)
 
-	// query the new validator is present
+	// query the new validator, status is BONDED
 	validators, err := s.Client.ListValidators(context.Background(), "BOND_STATUS_BONDED")
 	s.Require().NoError(err)
 	isPresent := false
@@ -108,14 +108,14 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 
 	// unbond
 	s.Client.SetDefaultAccount(newValAccount)
-	txHash, err = s.Client.Undelegate(s.ClientContext, newValidatorAddr.String(), delegationAmount, nil)
+	txHash, err = s.Client.Undelegate(s.ClientContext, newValidatorAddr.String(), delegationAmount, gnfdsdktypes.TxOption{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
 	err = s.Client.WaitForNBlocks(s.ClientContext, 3)
 	s.Require().NoError(err)
 
-	// query the new validator which is now UNBONDING
+	// query the new validator status is UNBONDING
 	validators, err = s.Client.ListValidators(context.Background(), "BOND_STATUS_UNBONDING")
 	s.Require().NoError(err)
 	isPresent = true
@@ -128,18 +128,18 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 	s.Require().False(isPresent)
 
 	// delegate validator
-	txHash, err = s.Client.DelegateValidator(s.ClientContext, newValidatorAddr.String(), delegationAmount, nil)
+	txHash, err = s.Client.DelegateValidator(s.ClientContext, newValidatorAddr.String(), delegationAmount, gnfdsdktypes.TxOption{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
 
 	// unjain
-	txHash, err = s.Client.UnJailValidator(s.ClientContext, nil)
+	txHash, err = s.Client.UnJailValidator(s.ClientContext, gnfdsdktypes.TxOption{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
 
-	// query the new validator is present
+	// query the new validator, status is BONDED again
 	validators, err = s.Client.ListValidators(context.Background(), "BOND_STATUS_BONDED")
 	s.Require().NoError(err)
 	isPresent = false

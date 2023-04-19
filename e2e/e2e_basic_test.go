@@ -115,7 +115,7 @@ func (s *BasicTestSuite) Test_MultiTransfer() {
 
 	s.T().Logf("totally sending %s", totalSendAmount.String())
 
-	txHash, err := s.Client.MultiTransfer(s.ClientContext, transferDetails, nil)
+	txHash, err := s.Client.MultiTransfer(s.ClientContext, transferDetails, types2.TxOption{})
 	s.Require().NoError(err)
 	s.T().Log(txHash)
 

@@ -22,7 +22,7 @@ type Account interface {
 
 	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error)
 	Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
-	MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption *gnfdSdkTypes.TxOption) (string, error)
+	MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error)
 }
 
 // GetAccount retrieves account information for a given address.
@@ -184,7 +184,7 @@ func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int
 }
 
 // MultiTransfer makes transfers from an account to multiple accounts with respect coins
-func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption *gnfdSdkTypes.TxOption) (string, error) {
+func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error) {
 	outputs := make([]bankTypes.Output, 0)
 	denom := gnfdSdkTypes.Denom
 	sum := math.NewInt(0)
@@ -203,7 +203,7 @@ func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDeta
 		Inputs:  []bankTypes.Input{in},
 		Outputs: outputs,
 	}
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOption)
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
