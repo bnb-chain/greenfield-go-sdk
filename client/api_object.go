@@ -60,7 +60,7 @@ type Object interface {
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
 	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
 
-	// CreateFolder creates an empty object ending with slash
+	// CreateFolder creates an empty object ending with a forward slash (/) character
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
 }
 
