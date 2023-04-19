@@ -84,3 +84,65 @@ func (s *BasicTestSuite) Test_Account() {
 func TestBasicTestSuite(t *testing.T) {
 	suite.Run(t, new(BasicTestSuite))
 }
+
+func Test_Payment(t *testing.T) {
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	assert.NoError(t, err)
+	cli, err := client.New(ChainID, Endpoint, client.Option{
+		DefaultAccount: account,
+		GrpcDialOption: grpc.WithTransportCredentials(insecure.NewCredentials())},
+	)
+	assert.NoError(t, err)
+	ctx := context.Background()
+
+	txHash, err := cli.CreatePaymentAccount(ctx, account.GetAddress().String(), &types2.TxOption{})
+	assert.NoError(t, err)
+	t.Logf("Acc: %s", txHash)
+	waitForTx, err := cli.WaitForTx(ctx, txHash)
+	assert.NoError(t, err)
+	t.Logf("Wair for tx: %s", waitForTx.String())
+
+	paymentAccountsByOwner, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
+	assert.NoError(t, err)
+	assert.Equal(t, len(paymentAccountsByOwner), 1)
+
+	// deposit
+	paymentAddr := paymentAccountsByOwner[0].Addr
+	depositAmount := math.NewIntFromUint64(100)
+	depositTxHash, err := cli.Deposit(ctx, paymentAddr, depositAmount, nil)
+	assert.NoError(t, err)
+	t.Logf("deposit tx: %s", depositTxHash)
+	waitForTx, err = cli.WaitForTx(ctx, depositTxHash)
+	assert.NoError(t, err)
+	t.Logf("Wair for tx: %s", waitForTx.String())
+
+	// get stream record
+	streamRecord, err := cli.GetStreamRecord(ctx, paymentAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, streamRecord.StaticBalance.String(), depositAmount.String())
+
+	// withdraw
+	withdrawAmount := math.NewIntFromUint64(50)
+	withdrawTxHash, err := cli.Withdraw(ctx, paymentAddr, withdrawAmount, nil)
+	assert.NoError(t, err)
+	t.Logf("withdraw tx: %s", withdrawTxHash)
+	waitForTx, err = cli.WaitForTx(ctx, withdrawTxHash)
+	assert.NoError(t, err)
+	t.Logf("Wair for tx: %s", waitForTx.String())
+	streamRecordAfterWithdraw, err := cli.GetStreamRecord(ctx, paymentAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, streamRecordAfterWithdraw.StaticBalance.String(), depositAmount.Sub(withdrawAmount).String())
+
+	// disable refund
+	assert.True(t, paymentAccountsByOwner[0].Refundable)
+	disableRefundTxHash, err := cli.DisableRefund(ctx, paymentAddr, nil)
+	assert.NoError(t, err)
+	t.Logf("disable refund tx: %s", disableRefundTxHash)
+	waitForTx, err = cli.WaitForTx(ctx, disableRefundTxHash)
+	assert.NoError(t, err)
+	t.Logf("Wair for tx: %s", waitForTx.String())
+	paymentAccountsByOwner, err = cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
+	assert.NoError(t, err)
+	assert.False(t, paymentAccountsByOwner[0].Refundable)
+}
