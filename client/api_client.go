@@ -412,13 +412,10 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 		urlStr = scheme + "://" + host + "/"
 		if bucketName != "" {
 			if isVirtualHost {
+				// set virtual host url
 				urlStr = scheme + "://" + bucketName + "." + host + "/"
-
-				if objectName != "" {
-					urlStr += utils.EncodePath(objectName)
-				}
 			} else {
-				// set path style
+				// set path style url
 				urlStr = urlStr + bucketName + "/"
 			}
 
