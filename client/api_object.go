@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -58,6 +59,10 @@ type Object interface {
 	ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
 	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
+
+	// CreateFolder creates an empty object used as folder.
+	// objectName must ending with a forward slash (/) character
+	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -551,4 +556,15 @@ func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 	storageTypes.ModuleCdc.MustUnmarshalJSON(signedMsgBytes, &signedMsg)
 
 	return &signedMsg, nil
+}
+
+// CreateFolder send create empty object txn to greenfield chain
+func (c *client) CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error) {
+	if !strings.HasSuffix(objectName, "/") {
+		return "", errors.New("failed to create folder. Folder names must end with a forward slash (/) character")
+	}
+
+	reader := bytes.NewReader([]byte(``))
+	txHash, err := c.CreateObject(ctx, bucketName, objectName, reader, opts)
+	return txHash, err
 }
