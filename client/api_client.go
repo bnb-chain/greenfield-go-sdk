@@ -35,6 +35,9 @@ type Client interface {
 	Account
 	SP
 	Proposal
+	Validator
+	Distribution
+	CrossChain
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
@@ -74,9 +77,7 @@ type Option struct {
 }
 
 // New - instantiate greenfield chain with chain info, account info and options.
-// The grpcAddress indicate the grpc address of greenfield chain.
-// The account indicate the account used for signing transactions.
-// The rpcAddress indicate the rpc address of the tendermint client.
+// endpoint indicates the rpc address of greenfield
 func New(chainID string, endpoint string, option Option) (Client, error) {
 	if endpoint == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
