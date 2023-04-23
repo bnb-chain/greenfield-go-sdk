@@ -20,7 +20,7 @@ type Account interface {
 	GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error)
 	GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error)
 
-	CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error)
+	CreatePaymentAccount(ctx context.Context, address string, txOption gnfdSdkTypes.TxOption) (string, error)
 	Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
 	MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error)
 }
@@ -53,13 +53,13 @@ func (c *client) GetAccount(ctx context.Context, address string) (authTypes.Acco
 
 // CreatePaymentAccount creates a new payment account on the blockchain using the provided address.
 // It returns a TxResponse containing information about the transaction, or an error if the transaction failed.
-func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOption *gnfdSdkTypes.TxOption) (string, error) {
+func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
 		return "", err
 	}
 	msgCreatePaymentAccount := paymentTypes.NewMsgCreatePaymentAccount(accAddress.String())
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgCreatePaymentAccount}, txOption)
+	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgCreatePaymentAccount}, &txOption)
 	if err != nil {
 		return "", err
 	}

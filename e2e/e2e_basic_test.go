@@ -69,7 +69,7 @@ func (s *BasicTestSuite) Test_Account() {
 	s.Require().Equal(acc.GetAddress(), account1.GetAddress())
 	s.Require().Equal(acc.GetSequence(), uint64(0))
 
-	txHash, err := s.Client.CreatePaymentAccount(s.ClientContext, s.DefaultAccount.GetAddress().String(), &types2.TxOption{})
+	txHash, err := s.Client.CreatePaymentAccount(s.ClientContext, s.DefaultAccount.GetAddress().String(), types2.TxOption{})
 	s.Require().NoError(err)
 	s.T().Logf("Acc: %s", txHash)
 	waitForTx, err = s.Client.WaitForTx(s.ClientContext, txHash)
@@ -143,7 +143,7 @@ func (s *BasicTestSuite) Test_Payment() {
 
 	paymentAccountsBeforeCreate, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
 	s.Require().NoError(err)
-	txHash, err := cli.CreatePaymentAccount(ctx, account.GetAddress().String(), &types2.TxOption{})
+	txHash, err := cli.CreatePaymentAccount(ctx, account.GetAddress().String(), types2.TxOption{})
 	s.Require().NoError(err)
 	t.Logf("Acc: %s", txHash)
 	waitForTx, err := cli.WaitForTx(ctx, txHash)
@@ -157,7 +157,7 @@ func (s *BasicTestSuite) Test_Payment() {
 	// deposit
 	paymentAddr := paymentAccountsByOwnerAfterCreate[len(paymentAccountsByOwnerAfterCreate)-1].Addr
 	depositAmount := math.NewIntFromUint64(100)
-	depositTxHash, err := cli.Deposit(ctx, paymentAddr, depositAmount, nil)
+	depositTxHash, err := cli.Deposit(ctx, paymentAddr, depositAmount, types2.TxOption{})
 	s.Require().NoError(err)
 	t.Logf("deposit tx: %s", depositTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, depositTxHash)
@@ -171,7 +171,7 @@ func (s *BasicTestSuite) Test_Payment() {
 
 	// withdraw
 	withdrawAmount := math.NewIntFromUint64(50)
-	withdrawTxHash, err := cli.Withdraw(ctx, paymentAddr, withdrawAmount, nil)
+	withdrawTxHash, err := cli.Withdraw(ctx, paymentAddr, withdrawAmount, types2.TxOption{})
 	s.Require().NoError(err)
 	t.Logf("withdraw tx: %s", withdrawTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, withdrawTxHash)
@@ -185,7 +185,7 @@ func (s *BasicTestSuite) Test_Payment() {
 	paymentAccountBeforeDisableRefund, err := cli.GetPaymentAccount(ctx, paymentAddr)
 	s.Require().NoError(err)
 	s.Require().True(paymentAccountBeforeDisableRefund.Refundable)
-	disableRefundTxHash, err := cli.DisableRefund(ctx, paymentAddr, nil)
+	disableRefundTxHash, err := cli.DisableRefund(ctx, paymentAddr, types2.TxOption{})
 	s.Require().NoError(err)
 	t.Logf("disable refund tx: %s", disableRefundTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, disableRefundTxHash)

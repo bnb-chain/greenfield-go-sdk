@@ -24,10 +24,14 @@ type SP interface {
 	GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetStoragePrice returns the storage price for a particular storage provider, including update time, read price, store price and .etc.
 	GetStoragePrice(ctx context.Context, SPAddr string) (*spTypes.SpStoragePrice, error)
+	// GetSecondarySpStorePrice returns the secondary storage price, including update time and store price
+	GetSecondarySpStorePrice(ctx context.Context) (*spTypes.SecondarySpStorePrice, error)
 	// GrantDepositForStorageProvider submit a grant transaction to allow gov module account to deduct the specified number of tokens
 	GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts GrantDepositForStorageProviderOptions) (string, error)
 	// CreateStorageProvider submits a proposal to create a storage provider to the greenfield blockchain, and it returns a proposal ID
 	CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr string, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error)
+	// UpdateSpStoragePrice updates the read price, storage price and free read quota for a particular storage provider
+	UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error)
 }
 
 func (c *client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.SpStoragePrice, error) {
@@ -43,6 +47,16 @@ func (c *client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.S
 		return nil, err
 	}
 	return &resp.SpStoragePrice, nil
+}
+
+func (c *client) GetSecondarySpStorePrice(ctx context.Context) (*spTypes.SecondarySpStorePrice, error) {
+	resp, err := c.chainClient.QueryGetSecondarySpStorePriceByTime(ctx, &spTypes.QueryGetSecondarySpStorePriceByTimeRequest{
+		Timestamp: 0,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &resp.SecondarySpStorePrice, nil
 }
 
 // ListStorageProviders return the storage provider info on chain
@@ -201,6 +215,24 @@ func (c *client) GrantDepositForStorageProvider(ctx context.Context, spAddr stri
 		return "", err
 	}
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, &opts.TxOption)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, nil
+}
+
+func (c *client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error) {
+	spAcc, err := sdk.AccAddressFromHexUnsafe(spAddr)
+	if err != nil {
+		return "", err
+	}
+	msgUpdateStoragePrice := &spTypes.MsgUpdateSpStoragePrice{
+		SpAddress:     spAcc.String(),
+		ReadPrice:     readPrice,
+		StorePrice:    storePrice,
+		FreeReadQuota: freeReadQuota,
+	}
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateStoragePrice}, &TxOption)
 	if err != nil {
 		return "", err
 	}
