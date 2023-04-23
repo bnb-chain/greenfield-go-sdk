@@ -1,6 +1,7 @@
 package types
 
 import (
+	"cosmossdk.io/math"
 	"encoding/hex"
 
 	"github.com/bnb-chain/greenfield/sdk/keys"
@@ -13,6 +14,11 @@ import (
 type Account struct {
 	name string
 	km   keys.KeyManager
+}
+
+type TransferDetail struct {
+	ToAddress string
+	Amount    math.Int
 }
 
 func NewAccountFromPrivateKey(name, privKey string) (*Account, error) {
