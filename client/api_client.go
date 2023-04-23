@@ -385,7 +385,7 @@ func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOpt
 
 	resp, err := c.doAPI(ctx, req, metadata, !opt.disableCloseBody)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("do API error, url: %s", req.URL.String()))
+		log.Error().Msg(fmt.Sprintf("do API error, url: %s, err: %s", req.URL.String(), err))
 		return nil, err
 	}
 	return resp, nil

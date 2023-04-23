@@ -14,16 +14,26 @@ import (
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
+	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/stretchr/testify/suite"
 )
 
 type StorageTestSuite struct {
 	basesuite.BaseSuite
+	PrimarySP spTypes.StorageProvider
 }
 
 func (s *StorageTestSuite) SetupSuite() {
 	s.BaseSuite.SetupSuite()
+
+	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
+	s.Require().NoError(err)
+	for _, sp := range spList {
+		if sp.Endpoint != "https://sp0.greenfield.io" {
+			s.PrimarySP = sp
+		}
+	}
 }
 
 func TestStorageTestSuite(t *testing.T) {
@@ -33,14 +43,10 @@ func TestStorageTestSuite(t *testing.T) {
 func (s *StorageTestSuite) Test_Bucket() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 
-	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
-	s.Require().NoError(err)
-	primarySp := spList[0].GetOperator()
-
 	chargedQuota := uint64(100)
 	s.T().Log("---> CreateBucket and HeadBucket <---")
 	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota}
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, primarySp.String(), opts)
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, opts)
 	s.Require().NoError(err)
 
 	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
@@ -124,11 +130,7 @@ func (s *StorageTestSuite) Test_Object() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
 
-	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
-	s.Require().NoError(err)
-	primarySp := spList[0].GetOperator()
-
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, primarySp.String(), types.CreateBucketOptions{})
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
 	s.Require().NoError(err)
 
 	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
