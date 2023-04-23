@@ -34,13 +34,6 @@ type QuotaRecordInfo struct {
 	ReadRecords          []ReadRecord `xml:"ReadRecord"`
 }
 
-// GetObjectResult contains the metadata of download objects
-type GetObjectResult struct {
-	ObjectName  string
-	ContentType string
-	Size        int64
-}
-
 type ListObjectsResult struct {
 	// objects defines the list of object
 	Objects []*ObjectMeta `json:"objects"`
@@ -54,22 +47,50 @@ type ListBucketsResult struct {
 // ObjectMeta is the structure for metadata service user object
 type ObjectMeta struct {
 	// object_info defines the information of the object.
-	ObjectInfo *GetObjectResult `json:"object_info"`
+	ObjectInfo *ObjectInfo `json:"object_info"`
 	// locked_balance defines locked balance of object
 	LockedBalance string `json:"locked_balance"`
 	// removed defines the object is deleted or not
 	Removed bool `json:"removed"`
+	// update_at defines the block number when the object updated
+	UpdateAt int64 `json:"update_at,string"`
+	// delete_at defines the block number when the object deleted
+	DeleteAt int64 `json:"delete_at,string"`
+	// delete_reason defines the deleted reason of object
+	DeleteReason string `json:"delete_reason"`
+	// operator defines the operator address of object
+	Operator string `json:"operator"`
+	// create_tx_hash defines the creation transaction hash of object
+	CreateTxHash string `json:"create_tx_hash"`
+	// update_tx_hash defines the update transaction hash of object
+	UpdateTxHash string `json:"update_tx_hash"`
+	// seal_tx_hash defines the sealed transaction hash of object
+	SealTxHash string `json:"seal_tx_hash"`
 }
 
 // BucketMeta is the structure for metadata service user bucket
 type BucketMeta struct {
 	// bucket_info defines the information of the bucket.
-	BucketInfo *BucketInfo `protobuf:"bytes,1,opt,name=bucket_info,json=bucketInfo,proto3" json:"bucket_info"`
+	BucketInfo *BucketInfo `json:"bucket_info"`
 	// removed defines the bucket is deleted or not
-	Removed bool `protobuf:"varint,2,opt,name=removed,proto3" json:"removed"`
+	Removed bool `json:"removed"`
+	// delete_at defines the block number when the bucket deleted.
+	DeleteAt int64 `json:"delete_at,string"`
+	// delete_reason defines the deleted reason of bucket
+	DeleteReason string `json:"delete_reason"`
+	// operator defines the operator address of bucket
+	Operator string `json:"operator"`
+	// create_tx_hash defines the creation transaction hash of object
+	CreateTxHash string `json:"create_tx_hash"`
+	// update_tx_hash defines the update transaction hash of object
+	UpdateTxHash string `json:"update_tx_hash"`
+	// update_at defines the block number when the object updated
+	UpdateAt int64 `json:"update_at,string"`
+	// update_time defines the block number when the object updated
+	UpdateTime int64 `json:"update_time,string"`
 }
 
-// ObjectInfo differ from GetObjectResult in greenfield as it adds uint64/int64 unmarshal guide in json part
+// ObjectInfo differ from ObjectInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
 type ObjectInfo struct {
 	Owner string `json:"owner"`
 	// bucket_name is the name of the bucket
@@ -80,8 +101,8 @@ type ObjectInfo struct {
 	Id storageType.Uint `json:"id"`
 	// payloadSize is the total size of the object payload
 	PayloadSize uint64 `json:"payload_size,string"`
-	// is_public define the highest permissions for object. When the object is public, everyone can access it.
-	IsPublic bool `json:"is_public"`
+	// visibility defines the highest permissions for object. When an object is public, everyone can access it.
+	Visibility storageType.VisibilityType `json:"visibility"`
 	// content_type define the format of the object which should be a standard MIME type.
 	ContentType string `json:"content_type"`
 	// create_at define the block number when the object created
@@ -104,8 +125,8 @@ type BucketInfo struct {
 	Owner string `json:"owner"`
 	// bucket_name is a globally unique name of bucket
 	BucketName string `json:"bucket_name"`
-	// is_public define the highest permissions for bucket. When the bucket is public, everyone can get storage objects in it.
-	IsPublic bool `json:"is_public"`
+	// visibility defines the highest permissions for bucket. When a bucket is public, everyone can get storage objects in it.
+	Visibility storageType.VisibilityType `json:"visibility"`
 	// id is the unique identification for bucket.
 	Id storageType.Uint `json:"id"`
 	// source_type defines which chain the user should send the bucket management transactions to
@@ -117,8 +138,12 @@ type BucketInfo struct {
 	// primary_sp_address is the address of the primary sp. Objects belongs to this bucket will never
 	// leave this SP, unless you explicitly shift them to another SP.
 	PrimarySpAddress string `json:"primary_sp_address"`
-	// read_quota defines the traffic quota for read in bytes per month, add "string" in json part for correct unmarshal
-	ReadQuota uint64 `json:"read_quota,string"`
+	// charged_read_quota defines the traffic quota for read in bytes per month.
+	// The available read data for each user is the sum of the free read data provided by SP and
+	// the ChargeReadQuota specified here.
+	ChargedReadQuota uint64 `json:"charged_read_quota,string"`
 	// billing info of the bucket
 	BillingInfo storageType.BillingInfo `json:"billing_info"`
+	// bucket_status define the status of the bucket.
+	BucketStatus storageType.BucketStatus `json:"bucket_status"`
 }
