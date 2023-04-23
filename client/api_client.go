@@ -33,6 +33,7 @@ type Client interface {
 	Group
 	Challenge
 	Account
+	Payment
 	SP
 	Proposal
 	Validator
