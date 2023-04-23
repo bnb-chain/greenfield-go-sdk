@@ -80,13 +80,13 @@ type BucketMeta struct {
 	DeleteReason string `json:"delete_reason"`
 	// operator defines the operator address of bucket
 	Operator string `json:"operator"`
-	// create_tx_hash defines the creation transaction hash of object
+	// create_tx_hash defines the creation transaction hash of bucket
 	CreateTxHash string `json:"create_tx_hash"`
-	// update_tx_hash defines the update transaction hash of object
+	// update_tx_hash defines the update transaction hash of bucket
 	UpdateTxHash string `json:"update_tx_hash"`
-	// update_at defines the block number when the object updated
+	// update_at defines the block number when the bucket updated
 	UpdateAt int64 `json:"update_at,string"`
-	// update_time defines the block number when the object updated
+	// update_time defines the block number when the bucket updated
 	UpdateTime int64 `json:"update_time,string"`
 }
 
