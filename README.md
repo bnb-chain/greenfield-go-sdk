@@ -12,7 +12,7 @@ The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield st
 
 ### Requirement
 
-Go version above 1.18
+Go version above 1.20
 
 ## Getting started
 To get started working with the SDK setup your project for Go modules, and retrieve the SDK dependencies with `go get`.
