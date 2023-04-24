@@ -27,7 +27,7 @@ type Validator interface {
 
 	CreateValidator(ctx context.Context, description stakingtypes.Description, commission stakingtypes.CommissionRates,
 		selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
-		proposalDepositAmount math.Int, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error)
+		proposalDepositAmount math.Int, title, summary, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error)
 	EditValidator(ctx context.Context, description stakingtypes.Description, newRate *sdktypes.Dec,
 		newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption) (string, error)
 	DelegateValidator(ctx context.Context, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
@@ -47,7 +47,7 @@ func (c *client) ListValidators(ctx context.Context, status string) (*stakingtyp
 // CreateValidator submits a proposal to the Greenfield for creating a validator, and it returns a proposal ID and tx hash.
 func (c *client) CreateValidator(ctx context.Context, description stakingtypes.Description, commission stakingtypes.CommissionRates,
 	selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
-	proposalDepositAmount math.Int, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error) {
+	proposalDepositAmount math.Int, title, summary, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error) {
 
 	govModule, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
@@ -82,7 +82,7 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 	if err = msg.ValidateBasic(); err != nil {
 		return 0, "", err
 	}
-	return c.SubmitProposal(ctx, []sdktypes.Msg{msg}, proposalDepositAmount, types.SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
+	return c.SubmitProposal(ctx, []sdktypes.Msg{msg}, proposalDepositAmount, title, summary, types.SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
 }
 
 // EditValidator edits a existing validator info.

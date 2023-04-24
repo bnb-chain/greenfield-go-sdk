@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 
 	"github.com/bnb-chain/greenfield/sdk/keys"
+	"github.com/cometbft/cometbft/crypto/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
 )
 
 // TODO: Will add an AccountRegister struct to manage multi account.

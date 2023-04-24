@@ -178,7 +178,7 @@ func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 		return 0, "", err
 	}
 
-	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOption})
+	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOption})
 }
 
 func (c *client) GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error) {
