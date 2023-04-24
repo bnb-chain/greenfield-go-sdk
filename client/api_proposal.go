@@ -25,7 +25,7 @@ type Proposal interface {
 }
 
 func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts SubmitProposalOptions) (uint64, string, error) {
-	msgSubmitProposal, err := govTypesV1.NewMsgSubmitProposal(msgs, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)), c.defaultAccount.GetAddress().String(), opts.Metadata)
+	msgSubmitProposal, err := govTypesV1.NewMsgSubmitProposal(msgs, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)), c.defaultAccount.GetAddress().String(), opts.Metadata, "test", "test", false)
 	if err != nil {
 		return 0, "", err
 	}

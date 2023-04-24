@@ -1,14 +1,21 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
+	"github.com/bnb-chain/greenfield/sdk/client/test"
 	"github.com/stretchr/testify/suite"
+	"strconv"
 	"testing"
 
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
+
+	"github.com/cometbft/cometbft/rpc/client"
+	chttp "github.com/cometbft/cometbft/rpc/client/http"
+	libclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 )
 
 type BasicTestSuite struct {
@@ -196,6 +203,72 @@ func (s *BasicTestSuite) Test_Payment() {
 	s.Require().False(paymentAccountAfterDisableRefund.Refundable)
 }
 
+func (s *BasicTestSuite) Test_Events() {
+	tmCli := NewTendermintClient(test.TEST_RPC_ADDR)
+	height := int64(396)
+	results, err := tmCli.TmClient.BlockResults(context.Background(), &height)
+	if err != nil {
+		return
+	}
+	for _, tx := range results.TxsResults {
+		for _, event := range tx.Events {
+			if event.Type == "cosmos.crosschain.v1.EventCrossChain" {
+				for _, attr := range event.Attributes {
+					switch attr.Key {
+					case "channel_id":
+						chanelId, err := strconv.ParseInt(attr.Value, 10, 8)
+						if err != nil {
+							fmt.Println(err.Error())
+						}
+						fmt.Println(chanelId)
+					case "src_chain_id":
+						srcChainId, err := strconv.ParseInt(attr.Value, 10, 32)
+						if err != nil {
+							fmt.Println(err.Error())
+						}
+						fmt.Println(uint32(srcChainId))
+					case "dest_chain_id":
+						destChainId, err := strconv.ParseInt(attr.Value, 10, 32)
+						if err != nil {
+							fmt.Println(err.Error())
+						}
+						fmt.Println(uint32(destChainId))
+					case "package_load":
+						payloadStr, err := strconv.Unquote(attr.Value)
+						if err != nil {
+							fmt.Println(err.Error())
+						}
+						fmt.Println(payloadStr)
+					}
+				}
+			}
+		}
+
+	}
+}
+
 func TestBasicTestSuite(t *testing.T) {
 	suite.Run(t, new(BasicTestSuite))
+}
+
+type TendermintClient struct {
+	TmClient client.Client
+}
+
+func httpClient(addr string) *chttp.HTTP {
+	httpCli, err := libclient.DefaultHTTPClient(addr)
+	if err != nil {
+		panic(err)
+	}
+	cli, err := chttp.NewWithClient(addr, "/websocket", httpCli)
+	if err != nil {
+		panic(err)
+	}
+	return cli
+}
+
+func NewTendermintClient(addr string) TendermintClient {
+	return TendermintClient{
+		TmClient: httpClient(addr),
+	}
 }
