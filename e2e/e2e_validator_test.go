@@ -69,6 +69,8 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 		"0x4038993E087832D84e2Ac855d27f6b0b2EEc1907",
 		"a5e140ee80a0ff1552a954701f599622adf029916f55b3157a649e16086a0669900f784d03bff79e69eb8eb7ccfd77d8",
 		math.NewIntWithDecimal(1, 18),
+		"create new validator",
+		"create new validator",
 		"",
 		gnfdsdktypes.TxOption{},
 	)

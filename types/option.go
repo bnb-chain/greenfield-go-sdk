@@ -34,6 +34,8 @@ type CreateStorageProviderOptions struct {
 	FreeReadQuota         uint64
 	StorePrice            sdk.Dec
 	ProposalDepositAmount math.Int // wei BNB
+	ProposalTitle         string
+	ProposalSummary       string
 	ProposalMetaData      string
 	TxOption              gnfdsdktypes.TxOption
 }
