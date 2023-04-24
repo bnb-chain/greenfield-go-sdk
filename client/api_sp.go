@@ -131,6 +131,9 @@ type CreateStorageProviderOptions struct {
 	StorePrice            sdk.Dec
 	ProposalDepositAmount math.Int // wei BNB
 	ProposalMetaData      string
+	ProposalTitle         string
+	ProposalSummary       string
+	ProposalExpedited     bool
 	TxOption              gnfdSdkTypes.TxOption
 }
 
@@ -185,7 +188,7 @@ func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 		return 0, "", err
 	}
 
-	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOption})
+	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, SubmitProposalOptions{Metadata: opts.ProposalMetaData, Expedited: opts.ProposalExpedited, TxOption: opts.TxOption})
 }
 
 type GrantDepositForStorageProviderOptions struct {

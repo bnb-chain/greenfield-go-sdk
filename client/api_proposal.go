@@ -14,18 +14,19 @@ import (
 )
 
 type SubmitProposalOptions struct {
-	Metadata string
-	TxOption gnfdSdkTypes.TxOption
+	Metadata  string
+	Expedited bool
+	TxOption  gnfdSdkTypes.TxOption
 }
 
 type Proposal interface {
-	SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts SubmitProposalOptions) (uint64, string, error)
+	SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, title, summary string, opts SubmitProposalOptions) (uint64, string, error)
 	VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts VoteProposalOptions) (string, error)
 	GetProposal(ctx context.Context, proposalID uint64) (*govTypesV1.Proposal, error)
 }
 
-func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts SubmitProposalOptions) (uint64, string, error) {
-	msgSubmitProposal, err := govTypesV1.NewMsgSubmitProposal(msgs, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)), c.defaultAccount.GetAddress().String(), opts.Metadata, "test", "test", false)
+func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, title, summary string, opts SubmitProposalOptions) (uint64, string, error) {
+	msgSubmitProposal, err := govTypesV1.NewMsgSubmitProposal(msgs, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)), c.defaultAccount.GetAddress().String(), opts.Metadata, title, summary, opts.Expedited)
 	if err != nil {
 		return 0, "", err
 	}
