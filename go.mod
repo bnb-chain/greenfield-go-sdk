@@ -175,7 +175,7 @@ replace (
 	cosmossdk.io/x/evidence => github.com/bnb-chain/greenfield-cosmos-sdk/x/evidence v0.0.0-20230420120548-24ed3abaca8f
 	cosmossdk.io/x/feegrant => github.com/bnb-chain/greenfield-cosmos-sdk/x/feegrant v0.0.0-20230420120548-24ed3abaca8f
 	cosmossdk.io/x/upgrade => github.com/bnb-chain/greenfield-cosmos-sdk/x/upgrade v0.0.0-20230420120548-24ed3abaca8f
-	github.com/bnb-chain/greenfield => ../greenfield
+	github.com/bnb-chain/greenfield => github.com/bnb-chain/greenfield v0.0.12-0.20230424061255-7d659f9c561e
 	github.com/cometbft/cometbft => github.com/bnb-chain/greenfield-tendermint v0.0.0-20230407055437-d971cdfb9041
 	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.0-20230421025628-9c7f08156dab
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
