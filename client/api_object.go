@@ -16,14 +16,17 @@ import (
 	"strings"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
+	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
+
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 type Object interface {
@@ -136,6 +139,12 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	signedCreateObjectMsg, err := c.GetCreateObjectApproval(ctx, createObjectMsg)
 	if err != nil {
 		return "", err
+	}
+
+	// set the default txn broadcast mode as block mode
+	if opts.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
