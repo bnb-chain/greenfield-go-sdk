@@ -150,7 +150,7 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 		return newSpInfo[primarySP], nil
 	}
 
-	return nil, errors.New(fmt.Sprintf("the SP endpoint %s not exists on chain", primarySP))
+	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", primarySP)
 }
 
 // getSPUrlByAddr route url of the sp from sp address
@@ -169,7 +169,7 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 		return newSpInfo[address], nil
 	}
 
-	return nil, errors.New(fmt.Sprintf("the SP endpoint %s not exists on chain", address))
+	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", address)
 }
 
 // getInServiceSP return the first SP endpoint which is in service in SP list
@@ -387,6 +387,7 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 	// construct err responses and messages
 	err = types.ConstructErrResponse(resp, meta.bucketName, meta.objectName)
 	if err != nil {
+		// dump error msg
 		if c.isTraceEnabled {
 			err = c.dumpSPMsg(req, resp)
 			if err != nil {
