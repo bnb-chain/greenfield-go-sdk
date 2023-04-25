@@ -46,7 +46,7 @@ type Client interface {
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
-	EnableTrace(outputStream io.Writer)
+	EnableTrace(outputStream io.Writer, onlyTraceErr bool)
 }
 
 // client represents a Greenfield SDK client that can interact with the blockchain
@@ -69,6 +69,7 @@ type client struct {
 	// define if trace the error request to SP
 	isTraceEnabled bool
 	traceOutput    io.Writer
+	onlyTraceError bool
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -119,10 +120,12 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 }
 
 // EnableTrace support trace error info the request and the response
-func (c *client) EnableTrace(output io.Writer) {
+func (c *client) EnableTrace(output io.Writer, onlyTraceErr bool) {
 	if output == nil {
 		output = os.Stdout
 	}
+
+	c.onlyTraceError = onlyTraceErr
 
 	c.traceOutput = output
 	c.isTraceEnabled = true
@@ -390,20 +393,14 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 	if err != nil {
 		// dump error msg
 		if c.isTraceEnabled {
-			err = c.dumpSPMsg(req, resp)
-			if err != nil {
-				return nil, err
-			}
+			c.dumpSPMsg(req, resp)
 		}
 		return resp, err
 	}
 
-	// dump error msg
-	if c.isTraceEnabled {
-		err = c.dumpSPMsg(req, resp)
-		if err != nil {
-			return nil, err
-		}
+	// dump msg
+	if c.isTraceEnabled && !c.onlyTraceError {
+		c.dumpSPMsg(req, resp)
 	}
 
 	return resp, nil
@@ -516,7 +513,13 @@ func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
 }
 
 func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) error {
-	_, err := fmt.Fprintln(c.traceOutput, "---------TRACE REQUEST---------")
+	var err error
+	defer func() {
+		if err != nil {
+			log.Error().Msg("dump msg err:" + err.Error())
+		}
+	}()
+	_, err = fmt.Fprintln(c.traceOutput, "---------TRACE REQUEST---------")
 	if err != nil {
 		return err
 	}
