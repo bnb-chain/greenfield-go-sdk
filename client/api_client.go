@@ -512,7 +512,7 @@ func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
 	return true
 }
 
-func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) error {
+func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) {
 	var err error
 	defer func() {
 		if err != nil {
@@ -521,49 +521,49 @@ func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) error {
 	}()
 	_, err = fmt.Fprintln(c.traceOutput, "---------TRACE REQUEST---------")
 	if err != nil {
-		return err
+		return
 	}
 	// write url info to trace output.
 	_, err = fmt.Fprint(c.traceOutput, string(req.URL.String()))
 	if err != nil {
-		return err
+		return
 	}
 
 	// dump headers
 	reqTrace, err := httputil.DumpRequestOut(req, false)
 	if err != nil {
-		return err
+		return
 	}
 
 	// write header info to trace output.
 	_, err = fmt.Fprint(c.traceOutput, string(reqTrace))
 	if err != nil {
-		return err
+		return
 	}
 
 	_, err = fmt.Fprintln(c.traceOutput, "---------TRACE RESPONSE---------")
 	if err != nil {
-		return err
+		return
 	}
 
 	// dump response
 	respInfo, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		return err
+		return
 	}
 
 	// Write response info to trace output.
 	_, err = fmt.Fprint(c.traceOutput, strings.TrimSuffix(string(respInfo), "\r\n"))
 	if err != nil {
-		return err
+		return
 	}
 
 	_, err = fmt.Fprintln(c.traceOutput, "---------END-STRACE---------")
 	if err != nil {
-		return err
+		return
 	}
 
-	return nil
+	return
 }
 
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
