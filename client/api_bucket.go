@@ -348,6 +348,7 @@ func (c *client) ListBuckets(ctx context.Context) (types.ListBucketsResult, erro
 
 	endpoint, err := c.getInServiceSP()
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
 		return types.ListBucketsResult{}, err
 	}
 

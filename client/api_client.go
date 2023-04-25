@@ -234,6 +234,7 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath,
 		meta.urlValues, isAdminAPi, endpoint, isVirtualHost)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("generate request url on SP: %s fail, err: %s", endpoint.String(), err))
 		return nil, err
 	}
 
@@ -387,7 +388,7 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 	err = types.ConstructErrResponse(resp, meta.bucketName, meta.objectName)
 	if err != nil {
 		if c.isTraceEnabled {
-			err = c.dumpSPAPI(req, resp)
+			err = c.dumpSPMsg(req, resp)
 			if err != nil {
 				return nil, err
 			}
@@ -504,8 +505,13 @@ func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
 	return true
 }
 
-func (c *client) dumpSPAPI(req *http.Request, resp *http.Response) error {
+func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) error {
 	_, err := fmt.Fprintln(c.traceOutput, "---------START-TRACE---------")
+	if err != nil {
+		return err
+	}
+	// write header info to trace output.
+	_, err = fmt.Fprint(c.traceOutput, string(req.URL.String()))
 	if err != nil {
 		return err
 	}
