@@ -63,6 +63,8 @@ type client struct {
 	host string
 	// The user agent info
 	userAgent string
+	// define if trace the error request to SP
+	isTraceEnabled bool
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -133,9 +135,9 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	if _, ok := newSpInfo[primarySP]; ok {
 		c.spEndpoints = newSpInfo
 		return newSpInfo[primarySP], nil
-	} else {
-		return nil, errors.New("fail to locate endpoint from bucket")
 	}
+
+	return nil, errors.New(fmt.Sprintf("the SP endpoint %s not exists on chain", primarySP))
 }
 
 // getSPUrlByAddr route url of the sp from sp address
@@ -152,9 +154,9 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 	if _, ok := newSpInfo[address]; ok {
 		c.spEndpoints = newSpInfo
 		return newSpInfo[address], nil
-	} else {
-		return nil, errors.New("fail to locate endpoint from address")
 	}
+
+	return nil, errors.New(fmt.Sprintf("the SP endpoint %s not exists on chain", address))
 }
 
 // getInServiceSP return the first SP endpoint which is in service in SP list

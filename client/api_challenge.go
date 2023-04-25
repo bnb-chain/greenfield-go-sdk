@@ -2,13 +2,16 @@ package client
 
 import (
 	"context"
-	"cosmossdk.io/math"
 	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"cosmossdk.io/math"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 	challengetypes "github.com/bnb-chain/greenfield/x/challenge/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"net/http"
-	"strings"
+	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	types "github.com/bnb-chain/greenfield-go-sdk/types"
@@ -54,8 +57,10 @@ func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo)
 		return types.ChallengeResult{}, err
 	}
 
-	endpoint, err := c.getSPUrlByBucket(objectInfo.BucketName)
+	bucketName := objectInfo.BucketName
+	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
 		return types.ChallengeResult{}, err
 	}
 

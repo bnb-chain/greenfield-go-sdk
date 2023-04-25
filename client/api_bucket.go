@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -79,8 +80,10 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 		isAdminApi: true,
 	}
 
-	endpoint, err := c.getSPUrlByAddr(createBucketMsg.GetPrimarySpAddress())
+	primarySP := createBucketMsg.GetPrimarySpAddress()
+	endpoint, err := c.getSPUrlByAddr(primarySP)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by addr: %s failed, err: %s", primarySP, err.Error()))
 		return nil, err
 	}
 
@@ -228,7 +231,7 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
-	
+
 	return c.sendTxn(ctx, updateBucketMsg, opts.TxOpts)
 }
 
@@ -424,6 +427,7 @@ func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
 		return types.QuotaRecordInfo{}, err
 	}
 
@@ -474,6 +478,7 @@ func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string) (typ
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
 		return types.QuotaInfo{}, err
 	}
 
