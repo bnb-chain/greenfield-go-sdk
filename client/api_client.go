@@ -46,7 +46,7 @@ type Client interface {
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
-	EnableTraceSPAPI(outputStream io.Writer)
+	EnableTrace(outputStream io.Writer)
 }
 
 // client represents a Greenfield SDK client that can interact with the blockchain
@@ -118,7 +118,8 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	return &c, nil
 }
 
-func (c *client) EnableTraceSPAPI(output io.Writer) {
+// EnableTrace support trace error info the request and the response
+func (c *client) EnableTrace(output io.Writer) {
 	if output == nil {
 		output = os.Stdout
 	}
@@ -397,6 +398,14 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 		return resp, err
 	}
 
+	// dump error msg
+	if c.isTraceEnabled {
+		err = c.dumpSPMsg(req, resp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return resp, nil
 }
 
@@ -507,11 +516,11 @@ func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
 }
 
 func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) error {
-	_, err := fmt.Fprintln(c.traceOutput, "---------START-TRACE---------")
+	_, err := fmt.Fprintln(c.traceOutput, "---------TRACE REQUEST---------")
 	if err != nil {
 		return err
 	}
-	// write header info to trace output.
+	// write url info to trace output.
 	_, err = fmt.Fprint(c.traceOutput, string(req.URL.String()))
 	if err != nil {
 		return err
@@ -529,13 +538,18 @@ func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) error {
 		return err
 	}
 
+	_, err = fmt.Fprintln(c.traceOutput, "---------TRACE RESPONSE---------")
+	if err != nil {
+		return err
+	}
+
 	// dump response
 	respInfo, err := httputil.DumpResponse(resp, true)
 	if err != nil {
 		return err
 	}
 
-	// Write response to trace output.
+	// Write response info to trace output.
 	_, err = fmt.Fprint(c.traceOutput, strings.TrimSuffix(string(respInfo), "\r\n"))
 	if err != nil {
 		return err
