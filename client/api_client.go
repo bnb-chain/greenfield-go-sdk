@@ -10,7 +10,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +46,7 @@ type Client interface {
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
+	EnableTraceSPAPI(outputStream io.Writer)
 }
 
 // client represents a Greenfield SDK client that can interact with the blockchain
@@ -65,6 +68,7 @@ type client struct {
 	userAgent string
 	// define if trace the error request to SP
 	isTraceEnabled bool
+	traceOutput    io.Writer
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -112,6 +116,15 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 
 	c.spEndpoints = spInfo
 	return &c, nil
+}
+
+func (c *client) EnableTraceSPAPI(output io.Writer) {
+	if output == nil {
+		output = os.Stdout
+	}
+
+	c.traceOutput = output
+	c.isTraceEnabled = true
 }
 
 // getSPUrlByBucket route url of the sp from bucket name
@@ -373,6 +386,12 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 	// construct err responses and messages
 	err = types.ConstructErrResponse(resp, meta.bucketName, meta.objectName)
 	if err != nil {
+		if c.isTraceEnabled {
+			err = c.dumpSPAPI(req, resp)
+			if err != nil {
+				return nil, err
+			}
+		}
 		return resp, err
 	}
 
@@ -483,6 +502,44 @@ func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
 	}
 
 	return true
+}
+
+func (c *client) dumpSPAPI(req *http.Request, resp *http.Response) error {
+	_, err := fmt.Fprintln(c.traceOutput, "---------START-TRACE---------")
+	if err != nil {
+		return err
+	}
+
+	// dump headers
+	reqTrace, err := httputil.DumpRequestOut(req, false)
+	if err != nil {
+		return err
+	}
+
+	// write header info to trace output.
+	_, err = fmt.Fprint(c.traceOutput, string(reqTrace))
+	if err != nil {
+		return err
+	}
+
+	// dump response
+	respInfo, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return err
+	}
+
+	// Write response to trace output.
+	_, err = fmt.Fprint(c.traceOutput, strings.TrimSuffix(string(respInfo), "\r\n"))
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(c.traceOutput, "---------END-STRACE---------")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
