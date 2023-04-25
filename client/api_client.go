@@ -563,7 +563,6 @@ func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) {
 		return
 	}
 
-	return
 }
 
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
