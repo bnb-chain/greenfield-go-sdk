@@ -123,8 +123,16 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		visibility = opts.Visibility
 	}
 
+	var paymentAddr sdk.AccAddress
+	if opts.PaymentAddress != "" {
+		paymentAddr, err = sdk.AccAddressFromHexUnsafe(opts.PaymentAddress)
+		if err != nil {
+			return "", err
+		}
+	}
+
 	createBucketMsg := storageTypes.NewMsgCreateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName,
-		visibility, address, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
+		visibility, address, paymentAddr, 0, nil, opts.ChargedQuota)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
@@ -194,7 +202,7 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 		return "", err
 	}
 
-	if opts.Visibility == bucketInfo.Visibility && opts.PaymentAddress == nil && opts.ChargedQuota == nil {
+	if opts.Visibility == bucketInfo.Visibility && opts.PaymentAddress == "" && opts.ChargedQuota == nil {
 		return "", errors.New("no meta need to update")
 	}
 
@@ -208,8 +216,11 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 		visibility = bucketInfo.Visibility
 	}
 
-	if len(opts.PaymentAddress) > 0 {
-		paymentAddr = opts.PaymentAddress
+	if opts.PaymentAddress != "" {
+		paymentAddr, err = sdk.AccAddressFromHexUnsafe(opts.PaymentAddress)
+		if err != nil {
+			return "", err
+		}
 	} else {
 		paymentAddr, err = sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
 		if err != nil {
