@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"cosmossdk.io/math"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -15,6 +16,30 @@ type CreateBucketOptions struct {
 	TxOpts         *gnfdsdktypes.TxOption
 	PaymentAddress sdk.AccAddress
 	ChargedQuota   uint64
+}
+
+type VoteProposalOptions struct {
+	Metadata string
+	TxOption gnfdsdktypes.TxOption
+}
+
+type SubmitProposalOptions struct {
+	Metadata string
+	TxOption gnfdsdktypes.TxOption
+}
+
+type CreateStorageProviderOptions struct {
+	ReadPrice             sdk.Dec
+	FreeReadQuota         uint64
+	StorePrice            sdk.Dec
+	ProposalDepositAmount math.Int // wei BNB
+	ProposalMetaData      string
+	TxOption              gnfdsdktypes.TxOption
+}
+
+type GrantDepositForStorageProviderOptions struct {
+	Expiration *time.Time
+	TxOption   gnfdsdktypes.TxOption
 }
 
 type DeleteBucketOption struct {

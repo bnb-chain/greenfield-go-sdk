@@ -15,8 +15,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Basic interface defines basic functions of greenfield client.
 type Basic interface {
 	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error)
+
 	GetLatestBlockHeight(ctx context.Context) (int64, error)
 	GetLatestBlock(ctx context.Context) (*tmservice.Block, error)
 	GetSyncing(ctx context.Context) (bool, error)

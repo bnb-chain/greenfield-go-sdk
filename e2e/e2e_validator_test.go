@@ -2,9 +2,11 @@ package e2e
 
 import (
 	"context"
-	"cosmossdk.io/math"
 	"encoding/hex"
-	"github.com/bnb-chain/greenfield-go-sdk/client"
+	"testing"
+	"time"
+
+	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
@@ -13,8 +15,6 @@ import (
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/suite"
-	"testing"
-	"time"
 )
 
 type ValidatorTestSuite struct {
@@ -78,7 +78,7 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 	s.Require().NoError(err)
 
 	s.Client.SetDefaultAccount(validator0Account)
-	_, err = s.Client.VoteProposal(s.ClientContext, proposalID, govTypesV1.OptionYes, client.VoteProposalOptions{})
+	_, err = s.Client.VoteProposal(s.ClientContext, proposalID, govTypesV1.OptionYes, types.VoteProposalOptions{})
 	s.Require().NoError(err)
 
 	for {
