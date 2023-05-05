@@ -20,7 +20,6 @@ import (
 type Validator interface {
 	// ListValidators lists all validators (if status is empty string) or validators filtered by status.
 	// status:
-	//  "BOND_STATUS_UNSPECIFIED",
 	//  "BOND_STATUS_UNBONDED",
 	//  "BOND_STATUS_UNBONDING",
 	//	"BOND_STATUS_BONDED",
@@ -119,6 +118,7 @@ func (c *client) DelegateValidator(ctx context.Context, validatorAddr string, am
 	return resp.TxResponse.TxHash, nil
 }
 
+// BeginRedelegate delegates coins from a delegator and source validator to a destination validator
 func (c *client) BeginRedelegate(ctx context.Context, validatorSrcAddr, validatorDestAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
 	validatorSrc, err := sdktypes.AccAddressFromHexUnsafe(validatorSrcAddr)
 	if err != nil {
@@ -202,6 +202,7 @@ func (c *client) UnJailValidator(ctx context.Context, txOption gnfdsdktypes.TxOp
 	return resp.TxResponse.TxHash, nil
 }
 
+// ImpeachValidator impeaches a validator
 func (c *client) ImpeachValidator(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
 	validator, err := sdktypes.AccAddressFromHexUnsafe(validatorAddr)
 	if err != nil {
