@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"cosmossdk.io/math"
 	sdkmath "cosmossdk.io/math"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	bridgetypes "github.com/bnb-chain/greenfield/x/bridge/types"
@@ -14,7 +13,7 @@ import (
 )
 
 type CrossChain interface {
-	TransferOut(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
+	TransferOut(ctx context.Context, toAddress string, amount sdkmath.Int, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 
 	Claims(ctx context.Context, srcShainId, destChainId uint32, sequence uint64, timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 	GetChannelSendSequence(ctx context.Context, channelId uint32) (uint64, error)
@@ -28,7 +27,7 @@ type CrossChain interface {
 }
 
 // TransferOut makes a transfer from Greenfield to BSC
-func (c *client) TransferOut(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
+func (c *client) TransferOut(ctx context.Context, toAddress string, amount sdkmath.Int, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	msgTransferOut := bridgetypes.NewMsgTransferOut(c.MustGetDefaultAccount().GetAddress().String(),
 		toAddress,
 		&sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: amount},

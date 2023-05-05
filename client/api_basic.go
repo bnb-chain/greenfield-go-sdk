@@ -8,7 +8,7 @@ import (
 	"cosmossdk.io/errors"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	"github.com/cometbft/cometbft/proto/tendermint/p2p"
-	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
+	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/types/tx"
@@ -16,13 +16,13 @@ import (
 )
 
 type Basic interface {
-	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *cmtservice.VersionInfo, error)
+	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error)
 	GetLatestBlockHeight(ctx context.Context) (int64, error)
-	GetLatestBlock(ctx context.Context) (*cmtservice.Block, error)
+	GetLatestBlock(ctx context.Context) (*tmservice.Block, error)
 	GetSyncing(ctx context.Context) (bool, error)
-	GetBlockByHeight(ctx context.Context, height int64) (*cmtservice.Block, error)
+	GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error)
 
-	GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*cmtservice.Validator, *query.PageResponse, error)
+	GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error)
 
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, error)
@@ -37,8 +37,8 @@ type Basic interface {
 
 // GetNodeInfo returns the current node info of the greenfield that the client is connected to.
 // It takes a context as input and returns a ResultStatus object and an error (if any).
-func (c *client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *cmtservice.VersionInfo, error) {
-	nodeInfoResponse, err := c.chainClient.TmClient.GetNodeInfo(ctx, &cmtservice.GetNodeInfoRequest{})
+func (c *client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error) {
+	nodeInfoResponse, err := c.chainClient.TmClient.GetNodeInfo(ctx, &tmservice.GetNodeInfoRequest{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,8 +82,8 @@ func (c *client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc
 
 // GetLatestBlock retrieves the latest block from the chain.
 // The function returns a pointer to a Block object and any error that occurred during the operation.
-func (c *client) GetLatestBlock(ctx context.Context) (*cmtservice.Block, error) {
-	resp, err := c.chainClient.TmClient.GetLatestBlock(ctx, &cmtservice.GetLatestBlockRequest{})
+func (c *client) GetLatestBlock(ctx context.Context) (*tmservice.Block, error) {
+	resp, err := c.chainClient.TmClient.GetLatestBlock(ctx, &tmservice.GetLatestBlockRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (c *client) SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxO
 // GetSyncing retrieves the syncing status of the node. If true, means the node is catching up the latest block.
 // The function returns a boolean indicating whether the node is syncing and any error that occurred during the operation.
 func (c *client) GetSyncing(ctx context.Context) (bool, error) {
-	syncing, err := c.chainClient.GetSyncing(ctx, &cmtservice.GetSyncingRequest{})
+	syncing, err := c.chainClient.GetSyncing(ctx, &tmservice.GetSyncingRequest{})
 	if err != nil {
 		return false, err
 	}
@@ -185,8 +185,8 @@ func (c *client) GetSyncing(ctx context.Context) (bool, error) {
 
 // GetBlockByHeight retrieves the block at the given height from the chain.
 // The function returns a pointer to a Block object and any error that occurred during the operation.
-func (c *client) GetBlockByHeight(ctx context.Context, height int64) (*cmtservice.Block, error) {
-	blockByHeight, err := c.chainClient.GetBlockByHeight(ctx, &cmtservice.GetBlockByHeightRequest{Height: height})
+func (c *client) GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error) {
+	blockByHeight, err := c.chainClient.GetBlockByHeight(ctx, &tmservice.GetBlockByHeightRequest{Height: height})
 	if err != nil {
 		return nil, err
 	}
@@ -195,8 +195,8 @@ func (c *client) GetBlockByHeight(ctx context.Context, height int64) (*cmtservic
 
 // GetValidatorSet retrieves the latest validator set from the chain.
 // The function returns the block height of the validator set, a slice of Validator objects, a pointer to a PageResponse object, and any error that occurred during the operation.
-func (c *client) GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*cmtservice.Validator, *query.PageResponse, error) {
-	validatorSetResponse, err := c.chainClient.TmClient.GetLatestValidatorSet(ctx, &cmtservice.GetLatestValidatorSetRequest{Pagination: request})
+func (c *client) GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error) {
+	validatorSetResponse, err := c.chainClient.TmClient.GetLatestValidatorSet(ctx, &tmservice.GetLatestValidatorSetRequest{Pagination: request})
 	if err != nil {
 		return 0, nil, nil, err
 	}

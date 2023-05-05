@@ -82,7 +82,7 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 	if err = msg.ValidateBasic(); err != nil {
 		return 0, "", err
 	}
-	return c.SubmitProposal(ctx, []sdk.Msg{msg}, proposalDepositAmount, title, summary, SubmitProposalOptions{Metadata: proposalMetadata, Expedited: false, TxOption: txOption})
+	return c.SubmitProposal(ctx, []sdk.Msg{msg}, proposalDepositAmount, title, summary, SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
 }
 
 // EditValidator edits a existing validator info.

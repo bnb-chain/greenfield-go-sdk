@@ -14,9 +14,8 @@ import (
 )
 
 type SubmitProposalOptions struct {
-	Metadata  string
-	Expedited bool
-	TxOption  gnfdSdkTypes.TxOption
+	Metadata string
+	TxOption gnfdSdkTypes.TxOption
 }
 
 type Proposal interface {
@@ -26,7 +25,7 @@ type Proposal interface {
 }
 
 func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, title, summary string, opts SubmitProposalOptions) (uint64, string, error) {
-	msgSubmitProposal, err := govTypesV1.NewMsgSubmitProposal(msgs, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)), c.defaultAccount.GetAddress().String(), opts.Metadata, title, summary, opts.Expedited)
+	msgSubmitProposal, err := govTypesV1.NewMsgSubmitProposal(msgs, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)), c.defaultAccount.GetAddress().String(), opts.Metadata, title, summary)
 	if err != nil {
 		return 0, "", err
 	}
