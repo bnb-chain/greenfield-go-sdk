@@ -34,6 +34,13 @@ type QuotaRecordInfo struct {
 	ReadRecords          []ReadRecord `xml:"ReadRecord"`
 }
 
+// UploadProgress indicates the progress info of uploading object
+type UploadProgress struct {
+	XMLName             xml.Name `xml:"QueryUploadProgress"`
+	Version             string   `xml:"version,attr"`
+	ProgressDescription string   `xml:"ProgressDescription"`
+}
+
 type ListObjectsResult struct {
 	// objects defines the list of object
 	Objects []*ObjectMeta `json:"objects"`

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -66,6 +67,9 @@ type Object interface {
 	// CreateFolder creates an empty object used as folder.
 	// objectName must ending with a forward slash (/) character
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
+
+	// GetObjectStatus return the status of the uploading object
+	GetObjectStatus(ctx context.Context, bucketName, objectName string) (string, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -581,4 +585,62 @@ func (c *client) CreateFolder(ctx context.Context, bucketName, objectName string
 	reader := bytes.NewReader([]byte(``))
 	txHash, err := c.CreateObject(ctx, bucketName, objectName, reader, opts)
 	return txHash, err
+}
+
+// GetObjectStatus  return the status of object including the uploading progress
+func (c *client) GetObjectStatus(ctx context.Context, bucketName, objectName string) (string, error) {
+	status, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return "", err
+	}
+
+	// get object status from sp
+	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED &&
+		status.ObjectStatus != storageTypes.OBJECT_STATUS_SEALED {
+		uploadProgressInfo, err := c.getObjectStatusFromSP(ctx, bucketName, objectName)
+		if err != nil {
+			return "", errors.New("fail to fetch object uploading progress from sp" + err.Error())
+		}
+		return uploadProgressInfo.ProgressDescription, nil
+	}
+
+	return status.ObjectStatus.String(), nil
+}
+
+func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectName string) (types.UploadProgress, error) {
+	params := url.Values{}
+	params.Set("upload-progress", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		bucketName:    bucketName,
+		objectName:    objectName,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getSPUrlByBucket(bucketName)
+	if err != nil {
+		return types.UploadProgress{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.UploadProgress{}, err
+	}
+
+	defer utils.CloseResponse(resp)
+
+	objectStatus := types.UploadProgress{}
+	// decode the xml content from response body
+	err = xml.NewDecoder(resp.Body).Decode(&objectStatus)
+	if err != nil {
+		return types.UploadProgress{}, err
+	}
+
+	return objectStatus, nil
 }
