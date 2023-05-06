@@ -13,18 +13,13 @@ import (
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 )
 
-type SubmitProposalOptions struct {
-	Metadata string
-	TxOption gnfdSdkTypes.TxOption
-}
-
 type Proposal interface {
-	SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts SubmitProposalOptions) (uint64, string, error)
-	VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts VoteProposalOptions) (string, error)
+	SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts types.SubmitProposalOptions) (uint64, string, error)
+	VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts types.VoteProposalOptions) (string, error)
 	GetProposal(ctx context.Context, proposalID uint64) (*govTypesV1.Proposal, error)
 }
 
-func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts SubmitProposalOptions) (uint64, string, error) {
+func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, opts types.SubmitProposalOptions) (uint64, string, error) {
 	msgSubmitProposal, err := govTypesV1.NewMsgSubmitProposal(msgs, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)), c.defaultAccount.GetAddress().String(), opts.Metadata)
 	if err != nil {
 		return 0, "", err
@@ -61,12 +56,7 @@ func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmou
 	return 0, txResp.TxResponse.TxHash, types.ErrorProposalIDNotFound
 }
 
-type VoteProposalOptions struct {
-	Metadata string
-	TxOption gnfdSdkTypes.TxOption
-}
-
-func (c *client) VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts VoteProposalOptions) (string, error) {
+func (c *client) VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts types.VoteProposalOptions) (string, error) {
 	msgVote := govTypesV1.NewMsgVote(c.MustGetDefaultAccount().GetAddress(), proposalID, voteOption, opts.Metadata)
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgVote}, &opts.TxOption)
 	if err != nil {

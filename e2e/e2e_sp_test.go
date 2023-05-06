@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
@@ -71,7 +70,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 	s.T().Logf("operator validatorAccount balance: %s", operatorBalance.String())
 
 	s.Client.SetDefaultAccount(s.FundingAcc)
-	txHash, err = s.Client.GrantDepositForStorageProvider(s.ClientContext, s.OperatorAcc.GetAddress().String(), math.NewIntWithDecimal(10000, types2.DecimalBNB), client.GrantDepositForStorageProviderOptions{})
+	txHash, err = s.Client.GrantDepositForStorageProvider(s.ClientContext, s.OperatorAcc.GetAddress().String(), math.NewIntWithDecimal(10000, types2.DecimalBNB), types.GrantDepositForStorageProviderOptions{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
@@ -81,7 +80,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
 		types3.Description{Moniker: "test"},
-		client.CreateStorageProviderOptions{ProposalMetaData: "create"})
+		types.CreateStorageProviderOptions{ProposalMetaData: "create"})
 	s.Require().NoError(err)
 
 	createTx, err := s.Client.WaitForTx(s.ClientContext, txHash)
@@ -99,7 +98,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 	}
 
 	s.Client.SetDefaultAccount(s.DefaultAccount)
-	voteTxHash, err := s.Client.VoteProposal(s.ClientContext, proposalID, govTypesV1.OptionYes, client.VoteProposalOptions{})
+	voteTxHash, err := s.Client.VoteProposal(s.ClientContext, proposalID, govTypesV1.OptionYes, types.VoteProposalOptions{})
 	s.Require().NoError(err)
 
 	tx, err := s.Client.WaitForTx(s.ClientContext, voteTxHash)

@@ -61,6 +61,7 @@ func (c *client) Claims(ctx context.Context, srcShainId, destChainId uint32, seq
 	return txResp.TxResponse, nil
 }
 
+// GetChannelSendSequence gets the next send sequence for a channel
 func (c *client) GetChannelSendSequence(ctx context.Context, channelId uint32) (uint64, error) {
 	resp, err := c.chainClient.CrosschainQueryClient.SendSequence(
 		ctx,
@@ -72,6 +73,7 @@ func (c *client) GetChannelSendSequence(ctx context.Context, channelId uint32) (
 	return resp.Sequence, nil
 }
 
+// GetChannelReceiveSequence gets the next receive sequence for a channel
 func (c *client) GetChannelReceiveSequence(ctx context.Context, channelId uint32) (uint64, error) {
 	resp, err := c.chainClient.CrosschainQueryClient.ReceiveSequence(
 		ctx,
@@ -83,6 +85,7 @@ func (c *client) GetChannelReceiveSequence(ctx context.Context, channelId uint32
 	return resp.Sequence, nil
 }
 
+// GetInturnRelayer gets the in-turn relayer bls public key and its relay interval
 func (c *client) GetInturnRelayer(ctx context.Context, req *oracletypes.QueryInturnRelayerRequest) (*oracletypes.QueryInturnRelayerResponse, error) {
 	return c.chainClient.InturnRelayer(ctx, req)
 }
@@ -95,6 +98,7 @@ func (c *client) GetCrossChainPackage(ctx context.Context, channelId uint32, seq
 	return resp.Package, nil
 }
 
+// MirrorGroup mirrors the group to BSC as NFT
 func (c *client) MirrorGroup(ctx context.Context, groupId sdkmath.Uint, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	msgMirrorGroup := storagetypes.NewMsgMirrorGroup(c.MustGetDefaultAccount().GetAddress(), groupId)
 	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgMirrorGroup}, &txOption)
@@ -104,6 +108,7 @@ func (c *client) MirrorGroup(ctx context.Context, groupId sdkmath.Uint, txOption
 	return txResp.TxResponse, nil
 }
 
+// MirrorBucket mirrors the bucket to BSC as NFT
 func (c *client) MirrorBucket(ctx context.Context, bucketId sdkmath.Uint, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	msgMirrorBucket := storagetypes.NewMsgMirrorBucket(c.MustGetDefaultAccount().GetAddress(), bucketId)
 	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgMirrorBucket}, &txOption)
@@ -113,6 +118,7 @@ func (c *client) MirrorBucket(ctx context.Context, bucketId sdkmath.Uint, txOpti
 	return txResp.TxResponse, nil
 }
 
+// MirrorObject mirrors the object to BSC as NFT
 func (c *client) MirrorObject(ctx context.Context, objectId sdkmath.Uint, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
 	msgMirrorBucket := storagetypes.NewMsgMirrorBucket(c.MustGetDefaultAccount().GetAddress(), objectId)
 	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgMirrorBucket}, &txOption)

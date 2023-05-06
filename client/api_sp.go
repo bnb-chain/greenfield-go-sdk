@@ -9,6 +9,7 @@ import (
 
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -27,9 +28,9 @@ type SP interface {
 	// GetSecondarySpStorePrice returns the secondary storage price, including update time and store price
 	GetSecondarySpStorePrice(ctx context.Context) (*spTypes.SecondarySpStorePrice, error)
 	// GrantDepositForStorageProvider submit a grant transaction to allow gov module account to deduct the specified number of tokens
-	GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts GrantDepositForStorageProviderOptions) (string, error)
+	GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error)
 	// CreateStorageProvider submits a proposal to create a storage provider to the greenfield blockchain, and it returns a proposal ID
-	CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr string, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error)
+	CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr string, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error)
 	// UpdateSpStoragePrice updates the read price, storage price and free read quota for a particular storage provider
 	UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error)
 }
@@ -125,17 +126,8 @@ func (c *client) getSPUrlList() (map[string]*url.URL, error) {
 	return spInfo, nil
 }
 
-type CreateStorageProviderOptions struct {
-	ReadPrice             sdk.Dec
-	FreeReadQuota         uint64
-	StorePrice            sdk.Dec
-	ProposalDepositAmount math.Int // wei BNB
-	ProposalMetaData      string
-	TxOption              gnfdSdkTypes.TxOption
-}
-
 // CreateStorageProvider will submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
-func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr string, endpoint string, depositAmount math.Int, description spTypes.Description, opts CreateStorageProviderOptions) (uint64, string, error) {
+func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr string, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error) {
 	defaultAccount := c.MustGetDefaultAccount()
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
@@ -185,15 +177,10 @@ func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 		return 0, "", err
 	}
 
-	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOption})
+	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOption})
 }
 
-type GrantDepositForStorageProviderOptions struct {
-	expiration *time.Time
-	TxOption   gnfdSdkTypes.TxOption
-}
-
-func (c *client) GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts GrantDepositForStorageProviderOptions) (string, error) {
+func (c *client) GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error) {
 	granter := c.MustGetDefaultAccount()
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
@@ -206,11 +193,11 @@ func (c *client) GrantDepositForStorageProvider(ctx context.Context, spAddr stri
 	coin := sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)
 	authorization := spTypes.NewDepositAuthorization(spAcc, &coin)
 
-	if opts.expiration == nil {
+	if opts.Expiration == nil {
 		expiration := time.Now().Add(24 * time.Hour)
-		opts.expiration = &expiration
+		opts.Expiration = &expiration
 	}
-	msgGrant, err := authz.NewMsgGrant(granter.GetAddress(), govModuleAddress.GetAddress(), authorization, opts.expiration)
+	msgGrant, err := authz.NewMsgGrant(granter.GetAddress(), govModuleAddress.GetAddress(), authorization, opts.Expiration)
 	if err != nil {
 		return "", err
 	}
