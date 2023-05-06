@@ -80,10 +80,10 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 		isAdminApi: true,
 	}
 
-	primarySP := createBucketMsg.GetPrimarySpAddress()
-	endpoint, err := c.getSPUrlByAddr(primarySP)
+	primarySPAddr := createBucketMsg.GetPrimarySpAddress()
+	endpoint, err := c.getSPUrlByAddr(primarySPAddr)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("route endpoint by addr: %s failed, err: %s", primarySP, err.Error()))
+		log.Error().Msg(fmt.Sprintf("route endpoint by addr: %s failed, err: %s", primarySPAddr, err.Error()))
 		return nil, err
 	}
 

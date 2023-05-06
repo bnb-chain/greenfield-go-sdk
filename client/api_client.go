@@ -524,7 +524,7 @@ func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) {
 		return
 	}
 	// write url info to trace output.
-	_, err = fmt.Fprint(c.traceOutput, string(req.URL.String()))
+	_, err = fmt.Fprintln(c.traceOutput, req.URL.String())
 	if err != nil {
 		return
 	}
