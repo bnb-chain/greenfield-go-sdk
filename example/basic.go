@@ -5,19 +5,9 @@ import (
 	"log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/client"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
-func main() {
-	privateKey := "<Your own private key>"
-	account, err := types.NewAccountFromPrivateKey("test", privateKey)
-	if err != nil {
-		log.Fatalf("New account from private key error, %v", err)
-	}
-	cli, err := client.New("greenfield_9000-121", "http://localhost:26750", client.Option{DefaultAccount: account})
-	if err != nil {
-		log.Fatalf("unable to new greenfield client, %v", err)
-	}
+func testBasic(cli client.Client) {
 	ctx := context.Background()
 	nodeInfo, versionInfo, err := cli.GetNodeInfo(ctx)
 	if err != nil {
@@ -42,4 +32,5 @@ func main() {
 	}
 
 	log.Printf("Current block height: %d", height)
+
 }
