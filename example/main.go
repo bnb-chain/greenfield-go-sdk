@@ -17,11 +17,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
-
-	//testBasic(cli)
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
 	groupName := storageTestUtil.GenRandomGroupName()
+	
+	testBasic(cli)
 	testStorage(cli, bucketName, objectName)
 	testGroup(cli, groupName)
 	testPermission(cli, bucketName, objectName)

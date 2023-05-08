@@ -11,6 +11,10 @@ import (
 )
 
 func testPermission(cli client.Client, bucketName, objectName string) {
+	if len(principal) < 42 {
+		log.Println("please set principal if you need run permission test")
+		return
+	}
 	// put bucket policy
 	bucketActions := []permTypes.ActionType{
 		permTypes.ACTION_UPDATE_BUCKET_INFO,

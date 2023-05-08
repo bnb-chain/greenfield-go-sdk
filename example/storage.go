@@ -21,13 +21,13 @@ func testStorage(cli client.Client, bucketName, objectName string) {
 	if err != nil {
 		log.Fatalf("fail to list in service sps")
 	}
-
-	primarySP := spLists[3].GetOperatorAddress()
+	// choose the first sp to be the primary SP
+	primarySP := spLists[0].GetOperatorAddress()
 
 	// create bucket
 	_, err = cli.CreateBucket(ctx, bucketName, primarySP, types.CreateBucketOptions{})
 	HandleErr(err, "CreateBucket")
-	log.Printf("create bucket %s on SP: %s successfully \n", bucketName, spLists[3].Endpoint)
+	log.Printf("create bucket %s on SP: %s successfully \n", bucketName, spLists[0].Endpoint)
 
 	// head bucket
 	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
@@ -63,10 +63,18 @@ func testStorage(cli client.Client, bucketName, objectName string) {
 
 	// list object
 	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{})
-	log.Println("list objects")
+	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo
 		log.Printf("object: %s, status: %s\n", i.ObjectName, i.ObjectStatus)
+	}
+
+	// delete object
+	delTx, err := cli.DeleteObject(ctx, bucketName, objectName, types.DeleteObjectOption{})
+	HandleErr(err, "DeleteObject")
+	_, err = cli.WaitForTx(ctx, delTx)
+	if err != nil {
+		log.Fatalln("txn fail")
 	}
 
 }
@@ -104,6 +112,14 @@ func testGroup(cli client.Client, groupName string) {
 	memIsExist := cli.HeadGroupMember(ctx, groupName, creator.GetAddress().String(), groupMember)
 	if !memIsExist {
 		log.Fatalf("head group member %s fail \n", groupMember)
+	}
+
+	// delete group
+	delTx, err := cli.DeleteGroup(ctx, groupName, types.DeleteGroupOption{})
+	HandleErr(err, "DeleteGroup")
+	_, err = cli.WaitForTx(ctx, delTx)
+	if err != nil {
+		log.Fatalln("txn fail")
 	}
 }
 
