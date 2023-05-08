@@ -143,7 +143,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 
 	// set the default txn broadcast mode as block mode
 	if opts.TxOpts == nil {
-		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 

@@ -19,10 +19,10 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.20
+          go-version: [1.20.x]
       - uses: actions/checkout@v3
 
-      - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
+      - run: export GOPRIVATE="github.com/bnb-chain/*"
       - run: git config --global url."https://${{ secrets.GH_TOKEN }}@github.com".insteadOf "https://github.com"
 
       - uses: actions/cache@v3
