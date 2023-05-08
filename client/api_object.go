@@ -74,6 +74,7 @@ func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 		return 0, 0, 0, err
 	}
 
+	// Todo
 	_ = queryResp.Params
 	return 2, 2, 16 * 1024 * 1024, nil
 	//return params.GetRedundantDataChunkNum(), params.GetRedundantParityChunkNum(), params.GetMaxSegmentSize(), nil
