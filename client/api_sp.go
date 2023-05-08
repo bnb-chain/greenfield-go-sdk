@@ -103,6 +103,7 @@ func (c *client) getSPUrlList() (map[string]*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	spList := gnfdRep.GetSps()
 	if len(spList) == 0 {
 		return nil, errors.New("no SP found on chain")

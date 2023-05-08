@@ -16,14 +16,17 @@ import (
 	"strings"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
+	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
+
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 type Object interface {
@@ -138,6 +141,12 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
+	// set the default txn broadcast mode as block mode
+	if opts.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
+	}
+
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
@@ -213,6 +222,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
 		return err
 	}
 
@@ -270,6 +280,7 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
 		return nil, types.ObjectStat{}, err
 	}
 
@@ -467,6 +478,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
 		return types.ListObjectsResult{}, err
 	}
 
@@ -531,8 +543,10 @@ func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 		isAdminApi: true,
 	}
 
-	endpoint, err := c.getSPUrlByBucket(createObjectMsg.BucketName)
+	bucketName := createObjectMsg.BucketName
+	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
 		return nil, err
 	}
 

@@ -6,7 +6,7 @@ import (
 
 const (
 	libName   = "greenfield-go-sdk"
-	Version   = "v0.0.7"
+	Version   = "v0.1.0"
 	UserAgent = "Greenfield (" + runtime.GOOS + "; " + runtime.GOARCH + ") " + libName + "/" + Version
 
 	HTTPHeaderAuthorization = "Authorization"

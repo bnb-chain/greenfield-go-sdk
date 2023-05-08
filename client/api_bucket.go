@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -14,14 +15,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
+	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
+
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 type Bucket interface {
@@ -76,8 +80,10 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 		isAdminApi: true,
 	}
 
-	endpoint, err := c.getSPUrlByAddr(createBucketMsg.GetPrimarySpAddress())
+	primarySPAddr := createBucketMsg.GetPrimarySpAddress()
+	endpoint, err := c.getSPUrlByAddr(primarySPAddr)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by addr: %s failed, err: %s", primarySPAddr, err.Error()))
 		return nil, err
 	}
 
@@ -117,8 +123,16 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		visibility = opts.Visibility
 	}
 
+	var paymentAddr sdk.AccAddress
+	if opts.PaymentAddress != "" {
+		paymentAddr, err = sdk.AccAddressFromHexUnsafe(opts.PaymentAddress)
+		if err != nil {
+			return "", err
+		}
+	}
+
 	createBucketMsg := storageTypes.NewMsgCreateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName,
-		visibility, address, opts.PaymentAddress, 0, nil, opts.ChargedQuota)
+		visibility, address, paymentAddr, 0, nil, opts.ChargedQuota)
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
@@ -127,6 +141,12 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	signedMsg, err := c.GetCreateBucketApproval(ctx, createBucketMsg)
 	if err != nil {
 		return "", err
+	}
+
+	// set the default txn broadcast mode as block mode
+	if opts.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedMsg}, opts.TxOpts)
@@ -182,7 +202,7 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 		return "", err
 	}
 
-	if opts.Visibility == bucketInfo.Visibility && opts.PaymentAddress == nil && opts.ChargedQuota == nil {
+	if opts.Visibility == bucketInfo.Visibility && opts.PaymentAddress == "" && opts.ChargedQuota == nil {
 		return "", errors.New("no meta need to update")
 	}
 
@@ -196,8 +216,11 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 		visibility = bucketInfo.Visibility
 	}
 
-	if len(opts.PaymentAddress) > 0 {
-		paymentAddr = opts.PaymentAddress
+	if opts.PaymentAddress != "" {
+		paymentAddr, err = sdk.AccAddressFromHexUnsafe(opts.PaymentAddress)
+		if err != nil {
+			return "", err
+		}
 	} else {
 		paymentAddr, err = sdk.AccAddressFromHexUnsafe(bucketInfo.PaymentAddress)
 		if err != nil {
@@ -213,6 +236,13 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.MustGetDefaultAccount().GetAddress(), bucketName,
 		&chargedReadQuota, paymentAddr, visibility)
+
+	// set the default txn broadcast mode as block mode
+	if opts.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
+	}
+
 	return c.sendTxn(ctx, updateBucketMsg, opts.TxOpts)
 }
 
@@ -329,6 +359,7 @@ func (c *client) ListBuckets(ctx context.Context) (types.ListBucketsResult, erro
 
 	endpoint, err := c.getInServiceSP()
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
 		return types.ListBucketsResult{}, err
 	}
 
@@ -408,6 +439,7 @@ func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
 		return types.QuotaRecordInfo{}, err
 	}
 
@@ -458,6 +490,7 @@ func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string) (typ
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
 		return types.QuotaInfo{}, err
 	}
 

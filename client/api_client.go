@@ -10,7 +10,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +46,7 @@ type Client interface {
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
+	EnableTrace(outputStream io.Writer, onlyTraceErr bool)
 }
 
 // client represents a Greenfield SDK client that can interact with the blockchain
@@ -63,6 +66,10 @@ type client struct {
 	host string
 	// The user agent info
 	userAgent string
+	// define if trace the error request to SP
+	isTraceEnabled bool
+	traceOutput    io.Writer
+	onlyTraceError bool
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -112,6 +119,18 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	return &c, nil
 }
 
+// EnableTrace support trace error info the request and the response
+func (c *client) EnableTrace(output io.Writer, onlyTraceErr bool) {
+	if output == nil {
+		output = os.Stdout
+	}
+
+	c.onlyTraceError = onlyTraceErr
+
+	c.traceOutput = output
+	c.isTraceEnabled = true
+}
+
 // getSPUrlByBucket route url of the sp from bucket name
 func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	ctx := context.Background()
@@ -133,9 +152,9 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	if _, ok := newSpInfo[primarySP]; ok {
 		c.spEndpoints = newSpInfo
 		return newSpInfo[primarySP], nil
-	} else {
-		return nil, errors.New("fail to locate endpoint from bucket")
 	}
+
+	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", primarySP)
 }
 
 // getSPUrlByAddr route url of the sp from sp address
@@ -152,9 +171,9 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 	if _, ok := newSpInfo[address]; ok {
 		c.spEndpoints = newSpInfo
 		return newSpInfo[address], nil
-	} else {
-		return nil, errors.New("fail to locate endpoint from address")
 	}
+
+	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", address)
 }
 
 // getInServiceSP return the first SP endpoint which is in service in SP list
@@ -219,6 +238,7 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath,
 		meta.urlValues, isAdminAPi, endpoint, isVirtualHost)
 	if err != nil {
+		log.Error().Msg(fmt.Sprintf("generate request url on SP: %s fail, err: %s", endpoint.String(), err))
 		return nil, err
 	}
 
@@ -371,7 +391,16 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 	// construct err responses and messages
 	err = types.ConstructErrResponse(resp, meta.bucketName, meta.objectName)
 	if err != nil {
+		// dump error msg
+		if c.isTraceEnabled {
+			c.dumpSPMsg(req, resp)
+		}
 		return resp, err
+	}
+
+	// dump msg
+	if c.isTraceEnabled && !c.onlyTraceError {
+		c.dumpSPMsg(req, resp)
 	}
 
 	return resp, nil
@@ -481,6 +510,59 @@ func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
 	}
 
 	return true
+}
+
+func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) {
+	var err error
+	defer func() {
+		if err != nil {
+			log.Error().Msg("dump msg err:" + err.Error())
+		}
+	}()
+	_, err = fmt.Fprintln(c.traceOutput, "---------TRACE REQUEST---------")
+	if err != nil {
+		return
+	}
+	// write url info to trace output.
+	_, err = fmt.Fprintln(c.traceOutput, req.URL.String())
+	if err != nil {
+		return
+	}
+
+	// dump headers
+	reqTrace, err := httputil.DumpRequestOut(req, false)
+	if err != nil {
+		return
+	}
+
+	// write header info to trace output.
+	_, err = fmt.Fprint(c.traceOutput, string(reqTrace))
+	if err != nil {
+		return
+	}
+
+	_, err = fmt.Fprintln(c.traceOutput, "---------TRACE RESPONSE---------")
+	if err != nil {
+		return
+	}
+
+	// dump response
+	respInfo, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return
+	}
+
+	// Write response info to trace output.
+	_, err = fmt.Fprint(c.traceOutput, strings.TrimSuffix(string(respInfo), "\r\n"))
+	if err != nil {
+		return
+	}
+
+	_, err = fmt.Fprintln(c.traceOutput, "---------END-STRACE---------")
+	if err != nil {
+		return
+	}
+
 }
 
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size

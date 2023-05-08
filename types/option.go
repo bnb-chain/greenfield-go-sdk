@@ -11,10 +11,11 @@ import (
 )
 
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
+// PaymentAddress  indicates the HEX-encoded string of the payment address
 type CreateBucketOptions struct {
 	Visibility     storageTypes.VisibilityType
 	TxOpts         *gnfdsdktypes.TxOption
-	PaymentAddress sdk.AccAddress
+	PaymentAddress string
 	ChargedQuota   uint64
 }
 
@@ -50,10 +51,12 @@ type UpdatePaymentOption struct {
 	TxOpts *gnfdsdktypes.TxOption
 }
 
+// UpdateBucketOption indicates the meta to construct updateBucket msg of storage module
+// PaymentAddress  indicates the HEX-encoded string of the payment address
 type UpdateBucketOption struct {
 	Visibility     storageTypes.VisibilityType
 	TxOpts         *gnfdsdktypes.TxOption
-	PaymentAddress sdk.AccAddress
+	PaymentAddress string
 	ChargedQuota   *uint64
 }
 
