@@ -81,10 +81,8 @@ func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 		return 0, 0, 0, err
 	}
 
-	// Todo
-	_ = queryResp.Params
-	return 2, 2, 16 * 1024 * 1024, nil
-	//return params.GetRedundantDataChunkNum(), params.GetRedundantParityChunkNum(), params.GetMaxSegmentSize(), nil
+	versionedParams := queryResp.Params.VersionedParams
+	return versionedParams.GetRedundantDataChunkNum(), versionedParams.GetRedundantParityChunkNum(), versionedParams.GetMaxSegmentSize(), nil
 }
 
 // ComputeHashRoots return the integrity hash, content size and the redundancy type of the file
@@ -150,7 +148,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 
 	// set the default txn broadcast mode as block mode
 	if opts.TxOpts == nil {
-		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
