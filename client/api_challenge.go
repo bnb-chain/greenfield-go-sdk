@@ -20,9 +20,10 @@ import (
 type Challenge interface {
 	GetChallengeInfo(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error)
 	SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
-	Attest(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint, voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
+	AttestChallenge(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint, voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
 	LatestAttestedChallenges(ctx context.Context, req *challengetypes.QueryLatestAttestedChallengesRequest) ([]uint64, error)
 	InturnAttestationSubmitter(ctx context.Context, req *challengetypes.QueryInturnAttestationSubmitterRequest) (*challengetypes.QueryInturnAttestationSubmitterResponse, error)
+	ChallengeParams(ctx context.Context, req *challengetypes.QueryParamsRequest) (*challengetypes.QueryParamsResponse, error)
 }
 
 // GetChallengeInfo  sends request to challenge and get challenge result info
@@ -115,7 +116,7 @@ func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOpera
 // The attestation can include a valid challenge or is only for heartbeat purpose.
 // If the challenge is valid, the related storage provider will be slashed.
 // For heartbeat attestation, the challenge is invalid and the storage provider will not be slashed.
-func (c *client) Attest(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint,
+func (c *client) AttestChallenge(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint,
 	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
 
 	submitter, err := sdk.AccAddressFromHexUnsafe(submitterAddress)
@@ -149,4 +150,9 @@ func (c *client) LatestAttestedChallenges(ctx context.Context, req *challengetyp
 
 func (c *client) InturnAttestationSubmitter(ctx context.Context, req *challengetypes.QueryInturnAttestationSubmitterRequest) (*challengetypes.QueryInturnAttestationSubmitterResponse, error) {
 	return c.chainClient.InturnAttestationSubmitter(ctx, req)
+}
+
+// ChallengeParams returns the on chain parameters for challenge module.
+func (c *client) ChallengeParams(ctx context.Context, req *challengetypes.QueryParamsRequest) (*challengetypes.QueryParamsResponse, error) {
+	return c.chainClient.ChallengeQueryClient.Params(ctx, req)
 }
