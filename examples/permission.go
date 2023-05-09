@@ -10,11 +10,23 @@ import (
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 )
 
-func testPermission(cli client.Client, bucketName, objectName string) {
+// the storage example need to run before permission examples to make sure the resources has been created
+func main() {
+	// you need to set the principal address in config.go to run this exampls
 	if len(principal) < 42 {
 		log.Println("please set principal if you need run permission test")
 		return
 	}
+
+	account, err := types.NewAccountFromPrivateKey("test", privateKey)
+	if err != nil {
+		log.Fatalf("New account from private key error, %v", err)
+	}
+	cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
+	if err != nil {
+		log.Fatalf("unable to new greenfield client, %v", err)
+	}
+
 	// put bucket policy
 	bucketActions := []permTypes.ActionType{
 		permTypes.ACTION_UPDATE_BUCKET_INFO,
@@ -24,7 +36,7 @@ func testPermission(cli client.Client, bucketName, objectName string) {
 	statements := utils.NewStatement(bucketActions, permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
 	policyTx, err := cli.PutBucketPolicy(ctx, bucketName, principal, []*permTypes.Statement{&statements},
 		types.PutPolicyOption{})
-	HandleErr(err, "PutBucketPolicy")
+	handleErr(err, "PutBucketPolicy")
 	_, err = cli.WaitForTx(ctx, policyTx)
 	if err != nil {
 		log.Fatalln("txn fail")
@@ -32,12 +44,12 @@ func testPermission(cli client.Client, bucketName, objectName string) {
 
 	// get bucket policy
 	policyInfo, err := cli.GetBucketPolicy(ctx, bucketName, principal)
-	HandleErr(err, "GetBucketPolicy")
+	handleErr(err, "GetBucketPolicy")
 	log.Printf("bucket: %s policy info:%s\n", bucketName, policyInfo.String())
 
 	// verify permission
 	effect, err := cli.IsBucketPermissionAllowed(ctx, principal, bucketName, permTypes.ACTION_DELETE_BUCKET)
-	HandleErr(err, "IsBucketPermissionAllowed")
+	handleErr(err, "IsBucketPermissionAllowed")
 
 	if effect != permTypes.EFFECT_ALLOW {
 		log.Fatalln("permission not allowed to:", principal)
@@ -51,7 +63,7 @@ func testPermission(cli client.Client, bucketName, objectName string) {
 	statements = utils.NewStatement(objectActions, permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
 	policyTx, err = cli.PutObjectPolicy(ctx, bucketName, objectName, principal, []*permTypes.Statement{&statements},
 		types.PutPolicyOption{})
-	HandleErr(err, "PutObjectPolicy")
+	handleErr(err, "PutObjectPolicy")
 	_, err = cli.WaitForTx(ctx, policyTx)
 	if err != nil {
 		log.Fatalln("txn fail")
@@ -59,7 +71,7 @@ func testPermission(cli client.Client, bucketName, objectName string) {
 
 	// verify permission
 	effect, err = cli.IsObjectPermissionAllowed(ctx, principal, bucketName, objectName, permTypes.ACTION_DELETE_OBJECT)
-	HandleErr(err, "IsObjectPermissionAllowed")
+	handleErr(err, "IsObjectPermissionAllowed")
 
 	if effect != permTypes.EFFECT_ALLOW {
 		log.Fatalln("permission not allowed to:", principal)
