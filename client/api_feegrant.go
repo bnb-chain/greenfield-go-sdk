@@ -13,13 +13,15 @@ type FeeGrant interface {
 	GrantBasicAllowance(ctx context.Context, granteeAddr string, feeAllowanceAmount math.Int, expiration *time.Time, txOption gnfdsdktypes.TxOption) (string, error)
 	QueryBasicAllowance(ctx context.Context, granterAddr, granteeAddr string) (*feegrant.BasicAllowance, error)
 
+	// for generic allowance(BasicAllowance, PeriodicAllowance, AllowedMsgAllowance)
 	GrantAllowance(ctx context.Context, granteeAddr string, allowance feegrant.FeeAllowanceI, txOption gnfdsdktypes.TxOption) (string, error)
 	QueryAllowance(ctx context.Context, granterAddr, granteeAddr string) (*feegrant.Grant, error)
+	QueryAllowances(ctx context.Context, granteeAddr string) ([]*feegrant.Grant, error)
 
 	RevokeAllowance(ctx context.Context, granteeAddr string, txOption gnfdsdktypes.TxOption) (string, error)
 }
 
-// GrantBasicAllowance grants the grantee the BasicAllowance with specified amount and expiration. If the
+// GrantBasicAllowance grants the grantee the BasicAllowance with specified amount and expiration.
 func (c *client) GrantBasicAllowance(ctx context.Context, granteeAddr string, feeAllowanceAmount math.Int, expiration *time.Time, txOption gnfdsdktypes.TxOption) (string, error) {
 	grantee, err := sdk.AccAddressFromHexUnsafe(granteeAddr)
 	if err != nil {
@@ -41,7 +43,7 @@ func (c *client) GrantBasicAllowance(ctx context.Context, granteeAddr string, fe
 	return resp.TxResponse.TxHash, nil
 }
 
-// GrantAllowance provides a generic way to grant 3 types of allowance(BasicAllowance, PeriodicAllowance, AllowedMsgAllowance), the user needs to construct the desired type of allowance
+// GrantAllowance provides a generic way to grant different types of allowance(BasicAllowance, PeriodicAllowance, AllowedMsgAllowance), the user needs to construct the desired type of allowance
 func (c *client) GrantAllowance(ctx context.Context, granteeAddr string, allowance feegrant.FeeAllowanceI, txOption gnfdsdktypes.TxOption) (string, error) {
 	grantee, err := sdk.AccAddressFromHexUnsafe(granteeAddr)
 	if err != nil {
@@ -58,6 +60,7 @@ func (c *client) GrantAllowance(ctx context.Context, granteeAddr string, allowan
 	return resp.TxResponse.TxHash, nil
 }
 
+// RevokeAllowance revokes allowance on a grantee by the granter
 func (c *client) RevokeAllowance(ctx context.Context, granteeAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
 	grantee, err := sdk.AccAddressFromHexUnsafe(granteeAddr)
 	if err != nil {
@@ -74,6 +77,7 @@ func (c *client) RevokeAllowance(ctx context.Context, granteeAddr string, txOpti
 	return resp.TxResponse.TxHash, nil
 }
 
+// QueryBasicAllowance queries the BasicAllowance
 func (c *client) QueryBasicAllowance(ctx context.Context, granterAddr, granteeAddr string) (*feegrant.BasicAllowance, error) {
 	allowance, err := c.QueryAllowance(ctx, granterAddr, granteeAddr)
 	if err != nil {
@@ -81,10 +85,8 @@ func (c *client) QueryBasicAllowance(ctx context.Context, granterAddr, granteeAd
 	}
 	basicAllowance := &feegrant.BasicAllowance{}
 	if err = c.chainClient.GetCodec().Unmarshal(allowance.Allowance.GetValue(), basicAllowance); err != nil {
-		// Return an error if there was an issue unmarshalling the account data.
 		return nil, err
 	}
-	// Unmarshal the raw account data from the response into a BaseAccount object.
 	return basicAllowance, nil
 }
 
@@ -105,6 +107,35 @@ func (c *client) QueryAllowance(ctx context.Context, granterAddr, granteeAddr st
 	if err != nil {
 		return nil, err
 	}
-	// Unmarshal the raw account data from the response into a BaseAccount object.
 	return response.Allowance, nil
+}
+
+func (c *client) QueryAllowances(ctx context.Context, granteeAddr string) ([]*feegrant.Grant, error) {
+	_, err := sdk.AccAddressFromHexUnsafe(granteeAddr)
+	if err != nil {
+		return nil, err
+	}
+	req := &feegrant.QueryAllowancesRequest{
+		Grantee: granteeAddr,
+	}
+	response, err := c.chainClient.FeegrantQueryClient.Allowances(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return response.Allowances, nil
+}
+
+func (c *client) QueryGranterAllowances(ctx context.Context, granterAddr string) ([]*feegrant.Grant, error) {
+	_, err := sdk.AccAddressFromHexUnsafe(granterAddr)
+	if err != nil {
+		return nil, err
+	}
+	req := &feegrant.QueryAllowancesByGranterRequest{
+		Granter: granterAddr,
+	}
+	response, err := c.chainClient.FeegrantQueryClient.AllowancesByGranter(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return response.Allowances, nil
 }

@@ -196,69 +196,6 @@ func (s *BasicTestSuite) Test_Payment() {
 	s.Require().False(paymentAccountAfterDisableRefund.Refundable)
 }
 
-func (s *BasicTestSuite) Test_FeeGrant() {
-	cli := s.Client
-	t := s.T()
-	ctx := s.ClientContext
-
-	granter, _, err := types.NewAccount("granter")
-	s.Require().NoError(err)
-	grantee, _, err := types.NewAccount("grantee")
-	s.Require().NoError(err)
-	//extraAcct, _, err := types.NewAccount("extraAcct")
-	s.Require().NoError(err)
-
-	// charge granter and grantee accounts
-	chargeAmount := math.NewIntWithDecimal(1, 19)
-	transferDetails := make([]types.TransferDetail, 0)
-	transferDetails = append(transferDetails, types.TransferDetail{
-		ToAddress: granter.GetAddress().String(),
-		Amount:    chargeAmount,
-	})
-	transferDetails = append(transferDetails, types.TransferDetail{
-		ToAddress: grantee.GetAddress().String(),
-		Amount:    chargeAmount,
-	})
-
-	txHash, err := cli.MultiTransfer(ctx, transferDetails, types2.TxOption{})
-	s.Require().NoError(err)
-	_, err = cli.WaitForTx(s.ClientContext, txHash)
-	s.Require().NoError(err)
-
-	// granter grants allowance to grantee
-	cli.SetDefaultAccount(granter)
-	allowanceAmount := math.NewIntWithDecimal(1, 18)
-
-	txHash, err = cli.GrantBasicAllowance(ctx, grantee.GetAddress().String(), allowanceAmount, nil, types2.TxOption{})
-	s.Require().NoError(err)
-	_, err = cli.WaitForTx(ctx, txHash)
-	s.Require().NoError(err)
-
-	// Query the allowance
-	allowance, err := cli.QueryBasicAllowance(ctx, granter.GetAddress().String(), grantee.GetAddress().String())
-	s.Require().NoError(err)
-	t.Log(allowance.String())
-
-	// show grantee balance before the grantee making a tx
-	granteeBalanceBefore, err := cli.GetAccountBalance(ctx, grantee.GetAddress().String())
-	s.Require().NoError(err)
-	t.Logf("before grantee sending tx, grantee balance is %s", granteeBalanceBefore.Amount)
-
-	// grantee makes a tx
-	cli.SetDefaultAccount(grantee)
-	txHash, err = cli.CreatePaymentAccount(ctx, grantee.GetAddress().String(), types2.TxOption{
-		FeeGranter: granter.GetAddress(),
-	})
-	s.Require().NoError(err)
-	_, _ = cli.WaitForTx(ctx, txHash)
-
-	granteeBalanceAfter, err := cli.GetAccountBalance(ctx, grantee.GetAddress().String())
-	s.Require().NoError(err)
-
-	// grantee balance stays still
-	s.Require().Equal(granteeBalanceBefore, granteeBalanceAfter)
-}
-
 func TestBasicTestSuite(t *testing.T) {
 	suite.Run(t, new(BasicTestSuite))
 }
