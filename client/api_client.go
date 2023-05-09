@@ -43,6 +43,7 @@ type Client interface {
 	Validator
 	Distribution
 	CrossChain
+	FeeGrant
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
