@@ -20,9 +20,13 @@ func main() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
 	groupName := storageTestUtil.GenRandomGroupName()
-	
+
 	testBasic(cli)
 	testStorage(cli, bucketName, objectName)
 	testGroup(cli, groupName)
 	testPermission(cli, bucketName, objectName)
+
+	crossChainTransfer(cli)
+	mirrorBucket(cli)
+	payment(cli)
 }
