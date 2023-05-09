@@ -206,18 +206,23 @@ func (c *client) getInServiceSP() (*url.URL, error) {
 
 // requestMeta - contains the metadata to construct the http request.
 type requestMeta struct {
-	bucketName       string
-	objectName       string
-	urlRelPath       string     // relative path of url
-	urlValues        url.Values // url values to be added into url
-	rangeInfo        string
-	txnMsg           string
-	contentType      string
-	contentLength    int64
-	contentMD5Base64 string // base64 encoded md5sum
-	contentSHA256    string // hex encoded sha256sum
-	challengeInfo    types.ChallengeInfo
-	userAddress      string
+	bucketName        string
+	objectName        string
+	urlRelPath        string     // relative path of url
+	urlValues         url.Values // url values to be added into url
+	rangeInfo         string
+	txnMsg            string
+	contentType       string
+	contentLength     int64
+	contentMD5Base64  string // base64 encoded md5sum
+	contentSHA256     string // hex encoded sha256sum
+	challengeInfo     types.ChallengeInfo
+	userAddress       string
+	maxKeys           string
+	startAfter        string
+	continuationToken string
+	delimiter         string
+	prefix            string
 }
 
 // SendOptions -  options to use to send the http message

@@ -36,7 +36,16 @@ type QuotaRecordInfo struct {
 
 type ListObjectsResult struct {
 	// objects defines the list of object
-	Objects []*ObjectMeta `json:"objects"`
+	Objects               []*ObjectMeta `json:"objects"`
+	KeyCount              uint64        `json:"key_count,string"`
+	MaxKeys               uint64        `json:"max_keys,string"`
+	IsTruncated           bool          `json:"is_truncated"`
+	NextContinuationToken string        `json:"next_continuation_token"`
+	Name                  string        `json:"name"`
+	Prefix                string        `json:"prefix"`
+	Delimiter             string        `json:"delimiter"`
+	CommonPrefixes        []string      `json:"common_prefixes"`
+	ContinuationToken     string        `json:"continuation_token"`
 }
 
 type ListBucketsResult struct {
