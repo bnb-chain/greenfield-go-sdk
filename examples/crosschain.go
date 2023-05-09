@@ -10,18 +10,34 @@ import (
 	"log"
 )
 
-func crossChainTransfer(cli client.Client) {
+func main() {
+	account, err := types.NewAccountFromPrivateKey("test", privateKey)
+	if err != nil {
+		log.Fatalf("New account from private key error, %v", err)
+	}
+	cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
+	if err != nil {
+		log.Fatalf("unable to new greenfield client, %v", err)
+	}
 	ctx := context.Background()
+
+	// cross chain transfer to an account in BSC
+	transferOut(cli, ctx)
+
+	// mirror resource to BSC
+	mirrorBucket(cli, ctx)
+}
+
+func transferOut(cli client.Client, ctx context.Context) {
+	// cross chain transfer to BSC
 	txResp, err := cli.TransferOut(ctx, toAddress, math.NewInt(123456), gnfdSdkTypes.TxOption{})
-	HandleErr(err, "crossChainTransfer")
+	handleErr(err, "crossChainTransfer")
 	waitForTx, _ := cli.WaitForTx(ctx, txResp.TxHash)
 	log.Printf("Wait for tx: %s", waitForTx.String())
 	log.Printf("the tx log is %s", txResp.String())
 }
 
-func mirrorBucket(cli client.Client) {
-	ctx := context.Background()
-
+func mirrorBucket(cli client.Client, ctx context.Context) {
 	// get storage providers list
 	spLists, err := cli.ListStorageProviders(ctx, true)
 	if err != nil {
@@ -33,7 +49,7 @@ func mirrorBucket(cli client.Client) {
 	bucketName := storageTestUtil.GenRandomBucketName()
 
 	txHash, err := cli.CreateBucket(ctx, bucketName, primarySP, types.CreateBucketOptions{})
-	HandleErr(err, "CreateBucket")
+	handleErr(err, "CreateBucket")
 	log.Printf("create bucket %s on SP: %s successfully \n", bucketName, spLists[0].Endpoint)
 
 	waitForTx, _ := cli.WaitForTx(ctx, txHash)
@@ -41,12 +57,12 @@ func mirrorBucket(cli client.Client) {
 
 	// head bucket
 	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
-	HandleErr(err, "HeadBucket")
+	handleErr(err, "HeadBucket")
 	log.Println("bucket info:", bucketInfo.String())
 
 	// mirror bucket
 	txResp, err := cli.MirrorBucket(ctx, bucketInfo.Id, gnfdSdkTypes.TxOption{})
-	HandleErr(err, "MirrorBucket")
+	handleErr(err, "MirrorBucket")
 	waitForTx, _ = cli.WaitForTx(ctx, txResp.TxHash)
 	log.Printf("Wait for tx: %s", waitForTx.String())
 	log.Printf("successfully mirrored bucket wiht bucket id %s to BSC", bucketInfo.Id)
