@@ -123,9 +123,11 @@ func (c *client) AttestChallenge(ctx context.Context, submitterAddress, challeng
 	if err != nil {
 		return nil, err
 	}
-	_, err = sdk.AccAddressFromHexUnsafe(challengerAddress)
-	if err != nil {
-		return nil, err
+	if challengerAddress != "" {
+		_, err = sdk.AccAddressFromHexUnsafe(challengerAddress)
+		if err != nil {
+			return nil, err
+		}
 	}
 	_, err = sdk.AccAddressFromHexUnsafe(spOperatorAddress)
 	if err != nil {
