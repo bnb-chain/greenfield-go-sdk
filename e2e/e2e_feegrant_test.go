@@ -91,7 +91,7 @@ func (s *FeeGrantTestSuite) Test_FeeGrant() {
 
 	// transaction is failed
 	cli.SetDefaultAccount(grantee)
-	txHash, err = cli.CreatePaymentAccount(ctx, granteeAddr, types2.TxOption{
+	_, err = cli.CreatePaymentAccount(ctx, granteeAddr, types2.TxOption{
 		FeeGranter: granter.GetAddress(),
 	})
 	s.Require().Error(err)
