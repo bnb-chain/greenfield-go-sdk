@@ -11,7 +11,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/rs/zerolog/log"
 )
@@ -164,4 +167,46 @@ func GetContentLength(reader io.Reader) (int64, error) {
 		err = fmt.Errorf("can't get reader content length,unkown reader type")
 	}
 	return contentLength, err
+}
+
+// StringToUint64 converts string to uint64
+func StringToUint64(str string) (uint64, error) {
+	ui64, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return ui64, nil
+}
+
+// hasInvalidPath checks if the given path contains "." or ".." as path segments.
+func hasInvalidPath(path string) bool {
+	path = filepath.ToSlash(strings.TrimSpace(path))
+	for _, p := range strings.Split(path, "/") {
+		// Check for special characters "." and ".." which have special meaning in file systems.
+		// In object storage systems, these characters should not be used as they can cause confusion.
+		switch strings.TrimSpace(p) {
+		case ".":
+			return true
+		case "..":
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidObjectPrefix checks if the given object prefix is valid:
+// - does not have invalid path segments
+// - is a valid UTF-8 string
+// - does not contain double slashes "//"
+func IsValidObjectPrefix(prefix string) bool {
+	if hasInvalidPath(prefix) {
+		return false
+	}
+	if !utf8.ValidString(prefix) {
+		return false
+	}
+	if strings.Contains(prefix, `//`) {
+		return false
+	}
+	return true
 }

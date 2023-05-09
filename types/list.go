@@ -43,7 +43,16 @@ type UploadProgress struct {
 
 type ListObjectsResult struct {
 	// objects defines the list of object
-	Objects []*ObjectMeta `json:"objects"`
+	Objects               []*ObjectMeta `json:"objects"`
+	KeyCount              string        `json:"key_count"`
+	MaxKeys               string        `json:"max_keys"`
+	IsTruncated           bool          `json:"is_truncated"`
+	NextContinuationToken string        `json:"next_continuation_token"`
+	Name                  string        `json:"name"`
+	Prefix                string        `json:"prefix"`
+	Delimiter             string        `json:"delimiter"`
+	CommonPrefixes        []string      `json:"common_prefixes"`
+	ContinuationToken     string        `json:"continuation_token"`
 }
 
 type ListBucketsResult struct {
