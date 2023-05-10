@@ -177,6 +177,7 @@ func (s *StorageTestSuite) Test_List_Objects() {
 	objectSlice := []string{objectName1, objectName2, objectName3}
 	rootPathObjectsSlice := []string{objectName1, objectName2}
 	sort.Strings(rootPathObjectsSlice)
+	commonPrefixes := []string{pathName}
 	objectsInfo, err := s.Client.ListObjects(s.ClientContext, bucketName, maxKeys, startAfter, continuationToken, delimiter, prefix, types.ListObjectsOptions{ShowRemovedObject: true})
 	s.Require().NoError(err)
 	if err == nil {
@@ -189,7 +190,7 @@ func (s *StorageTestSuite) Test_List_Objects() {
 		s.Require().Equal(objectsInfo.MaxKeys, maxKeys)
 		s.Require().Equal(objectsInfo.Delimiter, delimiter)
 		s.Require().Equal(objectsInfo.Prefix, prefix)
-		s.Require().Equal(objectsInfo.CommonPrefixes, []string{pathName})
+		s.Require().Equal(objectsInfo.CommonPrefixes, commonPrefixes)
 	}
 }
 

@@ -60,7 +60,7 @@ type Object interface {
 	// userAddr indicates the HEX-encoded string of the user address
 	IsObjectPermissionAllowed(ctx context.Context, userAddr string, bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error)
 
-	ListObjects(ctx context.Context, bucketName, maxKeys, startAfter, continuationToken, delimiter, prefix string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
+	ListObjects(ctx context.Context, bucketName, startAfter, continuationToken, delimiter, prefix string, maxKeys uint64, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
 	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
 
@@ -467,6 +467,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName, maxKeys, startAfte
 		return types.ListObjectsResult{}, err
 	}
 
+	var maxKeysVal uint64
 	if maxKeys != "" {
 		if maxKeysVal, err := utils.StringToUint64(maxKeys); err != nil || maxKeysVal == 0 {
 			return types.ListObjectsResult{}, err
@@ -501,7 +502,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName, maxKeys, startAfte
 
 	reqMeta := requestMeta{
 		bucketName:        bucketName,
-		maxKeys:           maxKeys,
+		maxKeys:           maxKeysVal,
 		startAfter:        startAfter,
 		continuationToken: continuationToken,
 		delimiter:         delimiter,

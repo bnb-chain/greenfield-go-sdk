@@ -218,7 +218,7 @@ type requestMeta struct {
 	contentSHA256     string // hex encoded sha256sum
 	challengeInfo     types.ChallengeInfo
 	userAddress       string
-	maxKeys           string
+	maxKeys           uint64
 	startAfter        string
 	continuationToken string
 	delimiter         string
