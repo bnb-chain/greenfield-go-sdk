@@ -126,6 +126,43 @@ func (s *StorageTestSuite) Test_Bucket() {
 	s.Require().Error(err)
 }
 
+func (s *StorageTestSuite) Test_List_Objects() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*100; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectsInfo, err := s.Client.ListObjects(s.ClientContext, bucketName, "10", "", "", "/", "", types.ListObjectsOptions{ShowRemovedObject: true})
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(objectsInfo.Objects[0].ObjectInfo.ObjectName, objectName)
+		s.Require().Equal(objectsInfo.Objects[0].ObjectInfo.BucketName, bucketName)
+	}
+}
+
 func (s *StorageTestSuite) Test_Object() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
