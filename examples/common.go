@@ -11,12 +11,12 @@ const (
 	chainId     = "greenfield_9000-1741"
 	privateKey  = "xx"
 	objectSize  = 1000
-	groupMember = "xx"   // used for group examples
+	groupMember = "0x.." // used for group examples
 	principal   = "0x.." // used for permission examples
 	bucketName  = "test-bucket"
 	objectName  = "test-object"
 	groupName   = "test-group"
-	toAddress   = "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9"
+	toAddress   = "0x.." // used for cross chain transfer
 )
 
 func handleErr(err error, funcName string) {

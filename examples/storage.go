@@ -13,6 +13,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
+// it is the example of basic storage SDKs usage
 func main() {
 	account, err := types.NewAccountFromPrivateKey("test", privateKey)
 	if err != nil {

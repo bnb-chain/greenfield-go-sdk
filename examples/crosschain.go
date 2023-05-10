@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"log"
+
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
-	"log"
 )
 
+// it is the example of cross-chain SDKs usage
 func main() {
 	account, err := types.NewAccountFromPrivateKey("test", privateKey)
 	if err != nil {

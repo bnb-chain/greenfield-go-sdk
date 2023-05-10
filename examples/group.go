@@ -9,6 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+// it is the example of basic group SDKs usage
 func main() {
 	account, err := types.NewAccountFromPrivateKey("test", privateKey)
 	if err != nil {

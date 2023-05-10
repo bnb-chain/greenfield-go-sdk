@@ -10,6 +10,7 @@ import (
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 )
 
+// it is the example of basic permission SDKs usage
 // the storage example need to run before permission examples to make sure the resources has been created
 func main() {
 	// you need to set the principal address in config.go to run this exampls
