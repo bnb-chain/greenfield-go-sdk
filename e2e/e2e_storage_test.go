@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"testing"
 	"time"
 
@@ -128,7 +129,15 @@ func (s *StorageTestSuite) Test_Bucket() {
 
 func (s *StorageTestSuite) Test_List_Objects() {
 	bucketName := storageTestUtil.GenRandomBucketName()
-	objectName := storageTestUtil.GenRandomObjectName()
+	objectName1 := storageTestUtil.GenRandomObjectName()
+	objectName2 := storageTestUtil.GenRandomObjectName()
+	pathName := storageTestUtil.GenRandomObjectName()
+	objectName3 := fmt.Sprintf("%s/%s", pathName, storageTestUtil.GenRandomObjectName())
+	maxKeys := "10"
+	startAfter := ""
+	continuationToken := ""
+	delimiter := "/"
+	prefix := ""
 
 	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
 	s.Require().NoError(err)
@@ -148,18 +157,39 @@ func (s *StorageTestSuite) Test_List_Objects() {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
-	s.T().Log("---> CreateObject and HeadObject <---")
-	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.T().Log("---> CreateObjects and HeadObjects <---")
+	objectTx1, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName1, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
 	s.Require().NoError(err)
-	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx1)
+	s.Require().NoError(err)
+
+	objectTx2, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName2, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx2)
+	s.Require().NoError(err)
+
+	objectTx3, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName3, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx3)
 	s.Require().NoError(err)
 
 	time.Sleep(5 * time.Second)
-	objectsInfo, err := s.Client.ListObjects(s.ClientContext, bucketName, "10", "", "", "/", "", types.ListObjectsOptions{ShowRemovedObject: true})
+	objectSlice := []string{objectName1, objectName2, objectName3}
+	rootPathObjectsSlice := []string{objectName1, objectName2}
+	sort.Strings(rootPathObjectsSlice)
+	objectsInfo, err := s.Client.ListObjects(s.ClientContext, bucketName, maxKeys, startAfter, continuationToken, delimiter, prefix, types.ListObjectsOptions{ShowRemovedObject: true})
 	s.Require().NoError(err)
 	if err == nil {
-		s.Require().Equal(objectsInfo.Objects[0].ObjectInfo.ObjectName, objectName)
+		s.Require().Equal(objectsInfo.Objects[0].ObjectInfo.ObjectName, rootPathObjectsSlice[0])
 		s.Require().Equal(objectsInfo.Objects[0].ObjectInfo.BucketName, bucketName)
+		s.Require().Equal(objectsInfo.Objects[1].ObjectInfo.ObjectName, rootPathObjectsSlice[1])
+		s.Require().Equal(objectsInfo.Objects[1].ObjectInfo.BucketName, bucketName)
+		s.Require().Equal(objectsInfo.KeyCount, len(objectSlice))
+		s.Require().Equal(objectsInfo.ContinuationToken, continuationToken)
+		s.Require().Equal(objectsInfo.MaxKeys, maxKeys)
+		s.Require().Equal(objectsInfo.Delimiter, delimiter)
+		s.Require().Equal(objectsInfo.Prefix, prefix)
+		s.Require().Equal(objectsInfo.CommonPrefixes, []string{pathName})
 	}
 }
 
