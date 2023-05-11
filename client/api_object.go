@@ -68,8 +68,8 @@ type Object interface {
 	// objectName must ending with a forward slash (/) character
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
 
-	// GetObjectStatus return the status of the uploading object
-	GetObjectStatus(ctx context.Context, bucketName, objectName string) (string, error)
+	// GetObjectUploadProgress return the status of the uploading object
+	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -587,8 +587,8 @@ func (c *client) CreateFolder(ctx context.Context, bucketName, objectName string
 	return txHash, err
 }
 
-// GetObjectStatus  return the status of object including the uploading progress
-func (c *client) GetObjectStatus(ctx context.Context, bucketName, objectName string) (string, error) {
+// GetObjectUploadProgress return the status of object including the uploading progress
+func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error) {
 	status, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
 		return "", err
