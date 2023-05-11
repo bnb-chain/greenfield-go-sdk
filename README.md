@@ -88,15 +88,15 @@ func main() {
 The "examples" directory provides a wealth of examples to guide users in using the SDK's various features, including basic storage upload and download functionality, 
 group functionality, permission functionality, as well as payment and cross-chain related functionality.
 
-basic.go includes the basic functions to fetch the blockchain info.
+The **basic.go** includes the basic functions to fetch the blockchain info.
 
-storage.go includes the most storage functions such as creating a bucket, uploading files, downloading files, heading and deleting resource.
+The **storage.go** includes the most storage functions such as creating a bucket, uploading files, downloading files, heading and deleting resource.
 
-group.go includes the group related functions such as creating a group and updating group member.
+The **group.go** includes the group related functions such as creating a group and updating group member.
 
-payment.go includes the payment related functions to management payment account.
+The **payment.go** includes the payment related functions to management payment account.
 
-crosschain.go includes the cross chain related functions to transfer or mirror resource to BSC.
+The **crosschain.go** includes the cross chain related functions to transfer or mirror resource to BSC.
 
 
 #### Config Examples
