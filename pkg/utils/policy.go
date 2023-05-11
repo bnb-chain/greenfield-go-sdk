@@ -10,7 +10,8 @@ import (
 
 // NewStatement return the statement of permission module
 func NewStatement(actions []permTypes.ActionType, effect permTypes.Effect,
-	resource []string, opts types.NewStatementOptions) permTypes.Statement {
+	resource []string, opts types.NewStatementOptions,
+) permTypes.Statement {
 	statement := permTypes.Statement{
 		Actions:        actions,
 		Effect:         effect,

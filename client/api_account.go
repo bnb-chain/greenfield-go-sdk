@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 
 	"cosmossdk.io/math"

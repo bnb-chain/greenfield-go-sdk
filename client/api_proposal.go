@@ -71,5 +71,4 @@ func (c *client) GetProposal(ctx context.Context, proposalID uint64) (*govTypesV
 		return nil, nil
 	}
 	return resp.Proposal, nil
-
 }

@@ -1,12 +1,13 @@
 package e2e
 
 import (
+	"testing"
+
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type FeeGrantTestSuite struct {

@@ -2,11 +2,12 @@ package client
 
 import (
 	"context"
+	"time"
+
 	"cosmossdk.io/math"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
-	"time"
 )
 
 type FeeGrant interface {

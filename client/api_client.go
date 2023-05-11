@@ -232,8 +232,8 @@ type sendOptions struct {
 
 // newRequest constructs the http request, set url, body and headers
 func (c *client) newRequest(ctx context.Context, method string, meta requestMeta,
-	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL) (req *http.Request, err error) {
-
+	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL,
+) (req *http.Request, err error) {
 	isVirtualHost := c.isVirtualHostStyleUrl(*endpoint, meta.bucketName)
 	// construct the target url
 	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath,
@@ -424,7 +424,8 @@ func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOpt
 
 // generateURL constructs the target request url based on the parameters
 func (c *client) generateURL(bucketName string, objectName string, relativePath string,
-	queryValues url.Values, isAdminApi bool, endpoint *url.URL, isVirtualHost bool) (*url.URL, error) {
+	queryValues url.Values, isAdminApi bool, endpoint *url.URL, isVirtualHost bool,
+) (*url.URL, error) {
 	host := endpoint.Host
 	scheme := endpoint.Scheme
 
@@ -563,13 +564,13 @@ func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) {
 	if err != nil {
 		return
 	}
-
 }
 
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
 // It is used for generate meta of object on the chain
 func (c *client) GetPieceHashRoots(reader io.Reader, segSize int64,
-	dataShards, parityShards int) ([]byte, [][]byte, int64, storageTypes.RedundancyType, error) {
+	dataShards, parityShards int,
+) ([]byte, [][]byte, int64, storageTypes.RedundancyType, error) {
 	pieceHashRoots, size, redundancyType, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards)
 	if err != nil {
 		return nil, nil, 0, storageTypes.REDUNDANCY_EC_TYPE, err

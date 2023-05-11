@@ -96,7 +96,8 @@ func (c *client) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTyp
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain
 func (c *client) CreateObject(ctx context.Context, bucketName, objectName string,
-	reader io.Reader, opts types.CreateObjectOptions) (string, error) {
+	reader io.Reader, opts types.CreateObjectOptions,
+) (string, error) {
 	if reader == nil {
 		return "", errors.New("fail to compute hash of payload, reader is nil")
 	}
@@ -254,7 +255,8 @@ func (c *client) FPutObject(ctx context.Context, bucketName, objectName, filePat
 
 // GetObject download s3 object payload and return the related object info
 func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
-	opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error) {
+	opts types.GetObjectOption,
+) (io.ReadCloser, types.ObjectStat, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, types.ObjectStat{}, err
 	}
@@ -390,7 +392,8 @@ func (c *client) HeadObjectByID(ctx context.Context, objID string) (*storageType
 
 // PutObjectPolicy apply object policy to the principal, return the txn hash
 func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
-	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
+	statements []*permTypes.Statement, opt types.PutPolicyOption,
+) (string, error) {
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
 
 	principal := &permTypes.Principal{}
@@ -419,7 +422,8 @@ func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName 
 
 // IsObjectPermissionAllowed check if the permission of the object is allowed to the user
 func (c *client) IsObjectPermissionAllowed(ctx context.Context, userAddr string,
-	bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error) {
+	bucketName, objectName string, action permTypes.ActionType,
+) (permTypes.Effect, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(userAddr)
 	if err != nil {
 		return permTypes.EFFECT_DENY, err
@@ -499,7 +503,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 	listObjectsResult := types.ListObjectsResult{}
 	bufStr := buf.String()
 	err = json.Unmarshal([]byte(bufStr), &listObjectsResult)
-	//TODO(annie) remove tolerance for unmarshal err after structs got stabilized
+	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil && listObjectsResult.Objects == nil {
 		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
 		return types.ListObjectsResult{}, err

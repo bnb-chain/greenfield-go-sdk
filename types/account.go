@@ -1,8 +1,9 @@
 package types
 
 import (
-	"cosmossdk.io/math"
 	"encoding/hex"
+
+	"cosmossdk.io/math"
 
 	"github.com/bnb-chain/greenfield/sdk/keys"
 	sdk "github.com/cosmos/cosmos-sdk/types"

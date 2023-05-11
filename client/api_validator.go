@@ -47,8 +47,8 @@ func (c *client) ListValidators(ctx context.Context, status string) (*stakingtyp
 // CreateValidator submits a proposal to the Greenfield for creating a validator, and it returns a proposal ID and tx hash.
 func (c *client) CreateValidator(ctx context.Context, description stakingtypes.Description, commission stakingtypes.CommissionRates,
 	selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
-	proposalDepositAmount math.Int, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error) {
-
+	proposalDepositAmount math.Int, proposalMetadata string, txOption gnfdsdktypes.TxOption,
+) (uint64, string, error) {
 	govModule, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
 		return 0, "", err
@@ -87,7 +87,8 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 
 // EditValidator edits a existing validator info.
 func (c *client) EditValidator(ctx context.Context, description stakingtypes.Description,
-	newRate *sdktypes.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption) (string, error) {
+	newRate *sdktypes.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption,
+) (string, error) {
 	relayer, err := sdktypes.AccAddressFromHexUnsafe(newRelayerAddr)
 	if err != nil {
 		return "", err

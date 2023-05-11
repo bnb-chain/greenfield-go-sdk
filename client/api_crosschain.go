@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+
 	"cosmossdk.io/math"
 	sdkmath "cosmossdk.io/math"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
@@ -42,8 +43,8 @@ func (c *client) TransferOut(ctx context.Context, toAddress string, amount math.
 
 // Claims cross-chain packages from BSC to Greenfield, used by relayers which run by validators
 func (c *client) Claims(ctx context.Context, srcShainId, destChainId uint32, sequence uint64,
-	timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error) {
-
+	timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption gnfdSdkTypes.TxOption,
+) (*sdk.TxResponse, error) {
 	msg := oracletypes.NewMsgClaim(
 		c.MustGetDefaultAccount().GetAddress().String(),
 		srcShainId,

@@ -168,7 +168,8 @@ func (c *client) DeleteBucket(ctx context.Context, bucketName string, opt types.
 
 // UpdateBucketVisibility update the visibilityType of bucket
 func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
-	visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error) {
+	visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption,
+) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
@@ -185,7 +186,8 @@ func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 
 // UpdateBucketPaymentAddr  update the payment addr of bucket
 func (c *client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
-	paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption) (string, error) {
+	paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption,
+) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
@@ -277,7 +279,8 @@ func (c *client) HeadBucketByID(ctx context.Context, bucketID string) (*storageT
 
 // PutBucketPolicy apply bucket policy to the principal, return the txn hash
 func (c *client) PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal,
-	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
+	statements []*permTypes.Statement, opt types.PutPolicyOption,
+) (string, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName)
 	principal := &permTypes.Principal{}
 	if err := principal.Unmarshal([]byte(principalStr)); err != nil {
@@ -305,7 +308,8 @@ func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, prin
 
 // IsBucketPermissionAllowed check if the permission of bucket is allowed to the user.
 func (c *client) IsBucketPermissionAllowed(ctx context.Context, userAddr string,
-	bucketName string, action permTypes.ActionType) (permTypes.Effect, error) {
+	bucketName string, action permTypes.ActionType,
+) (permTypes.Effect, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(userAddr)
 	if err != nil {
 		return permTypes.EFFECT_DENY, err
@@ -371,7 +375,7 @@ func (c *client) ListBuckets(ctx context.Context) (types.ListBucketsResult, erro
 	defer utils.CloseResponse(resp)
 
 	listBucketsResult := types.ListBucketsResult{}
-	//unmarshal the json content from response body
+	// unmarshal the json content from response body
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
@@ -382,7 +386,7 @@ func (c *client) ListBuckets(ctx context.Context) (types.ListBucketsResult, erro
 	bufStr := buf.String()
 	err = json.Unmarshal([]byte(bufStr), &listBucketsResult)
 
-	//TODO(annie) remove tolerance for unmarshal err after structs got stabilized
+	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil && listBucketsResult.Buckets == nil {
 		return types.ListBucketsResult{}, err
 	}

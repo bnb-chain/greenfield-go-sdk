@@ -121,7 +121,6 @@ func (c *client) WaitForBlockHeight(ctx context.Context, h int64) error {
 		case <-ticker.C:
 		}
 	}
-
 }
 
 // WaitForNextBlock waits until next block is committed.
