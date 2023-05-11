@@ -85,8 +85,8 @@ func main() {
 
 ###  Quick Start Examples
 
-The "examples" directory provides a wealth of examples to guide users in using the SDK's various features, including basic storage upload and download functionality, 
-group functionality, permission functionality, as well as payment and cross-chain related functionality.
+The examples directory provides a wealth of examples to guide users in using the SDK's various features, including basic storage upload and download functions, 
+group functions, permission functions, as well as payment and cross-chain related functions.
 
 The **basic.go** includes the basic functions to fetch the blockchain info.
 
