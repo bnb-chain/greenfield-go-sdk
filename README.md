@@ -10,19 +10,7 @@ for any bug bounty. We advise you to be careful and experiment on the network at
 
 The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield storage network. 
 
-Rich SDKs is provided to operate Greenfield resources, send txn or query status, mainly divided into the following categories: 
-
-(1) SDKs for operating resources, such as creating buckets, objects, groups, and uploading files for basic storage functions; 
-
-(2) Various functions for setting and modifying metadata, such as updating bucket information and setting permissions; 
-
-(3) Query functions to get the resources status and state;
-
-(4) Payment-related functions to support payment; 
-
-(5) Cross-chain related functions to achieve cross-chain transfer and mirror functions; 
-
-(6) Account related functions to operate greenfield account.
+Rich SDKs is provided to operate Greenfield resources or query status of resource.
 
 ### Requirement
 
@@ -95,25 +83,35 @@ func main() {
 
 ```
 
-###  Quick Start Example
+###  Quick Start Examples
 
 The "examples" directory provides a wealth of examples to guide users in using the SDK's various features, including basic storage upload and download functionality, 
 group functionality, permission functionality, as well as payment and cross-chain related functionality.
 
-We recommend becoming familiar with the "storage.go" example first, as it includes the most basic operations such as creating a bucket, uploading files, downloading files, and accessing resource headers.
+basic.go includes the basic functions to fetch the blockchain info.
 
-#### config example
+storage.go includes the most storage functions such as creating a bucket, uploading files, downloading files, heading and deleting resource.
+
+group.go includes the group related functions such as creating a group and updating group member.
+
+payment.go includes the payment related functions to management payment account.
+
+crosschain.go includes the cross chain related functions to transfer or mirror resource to BSC.
+
+
+#### Config Examples
 
 You need to modify the variables in "common.go" under the "examples" directory to set the initialization information for the client, including "rpcAddr", "chainId", and "privateKey", etc. In addition, 
 you also need to set basic parameters such as "bucket name" and "object name" to run the basic functionality of storage.
 
-### run examples
+#### Run Examples
 The steps to run example are as follows
 ```
 make examples
 cd examples
 ./storage 
 ```
+
 You can also directly execute "go run" to run a specific example. 
 For example, execute "go run storage.go common.go" to run the relevant example for storage.
 Please note that the "permission.go" example must be run after "storage.go" because resources such as objects need to be created first before setting permissions.
