@@ -10,7 +10,7 @@ for any bug bounty. We advise you to be careful and experiment on the network at
 
 The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield storage network. 
 
-Rich SDKs is provided to operate Greenfield resources or query status of resource.
+Rich SDKs is provided to operate Greenfield resources or query status of resources.
 
 ### Requirement
 
@@ -36,11 +36,12 @@ $ go get github.com/bnb-chain/greenfield-go-sdk
 
 replace dependencies
 
-```go.mod
+```
 cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.13
+github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
+github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.1.1
 github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3
+github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.4
 ```
 
 ### Initialize Client
