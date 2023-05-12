@@ -4,8 +4,10 @@ import (
 	"io"
 )
 
-type Principal string
-type TxnHash string
+type (
+	Principal string
+	TxnHash   string
+)
 
 // ObjectInfo contains the metadata of downloaded objects
 type ObjectStat struct {

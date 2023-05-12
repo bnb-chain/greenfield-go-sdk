@@ -2,8 +2,9 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/suite"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
@@ -82,7 +83,6 @@ func (s *BasicTestSuite) Test_Account() {
 }
 
 func (s *BasicTestSuite) Test_MultiTransfer() {
-
 	transferDetails := make([]types.TransferDetail, 0)
 	totalSendAmount := math.NewInt(0)
 

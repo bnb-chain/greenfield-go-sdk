@@ -116,7 +116,6 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 		}
 		time.Sleep(1 * time.Second)
 	}
-
 }
 
 func TestSPTestSuite(t *testing.T) {

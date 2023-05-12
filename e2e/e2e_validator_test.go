@@ -26,7 +26,6 @@ func (s *ValidatorTestSuite) SetupSuite() {
 }
 
 func (s *ValidatorTestSuite) Test_Validator_Operations() {
-
 	newValAccount, _, _ := types.NewAccount("new_validator")
 	newValEd25519PubKey := hex.EncodeToString(ed25519.GenPrivKey().PubKey().Bytes())
 	newValidatorAddr := newValAccount.GetAddress()

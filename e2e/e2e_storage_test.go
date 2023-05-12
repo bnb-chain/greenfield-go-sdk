@@ -308,5 +308,4 @@ func (s *StorageTestSuite) Test_Group() {
 	if exist {
 		s.T().Logf("header groupMember: %s , exist", updateMembers[0])
 	}
-
 }

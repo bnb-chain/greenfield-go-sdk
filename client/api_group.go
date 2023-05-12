@@ -61,7 +61,8 @@ func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.De
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
 func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption) (string, error) {
+	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption,
+) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
 		return "", err
@@ -138,7 +139,8 @@ func (c *client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 
 // PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
 func (c *client) PutGroupPolicy(ctx context.Context, groupName string, principalAddr string,
-	statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error) {
+	statements []*permTypes.Statement, opt types.PutPolicyOption,
+) (string, error) {
 	sender := c.MustGetDefaultAccount().GetAddress()
 
 	resource := gnfdTypes.NewGroupGRN(sender, groupName)

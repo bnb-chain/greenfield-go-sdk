@@ -117,8 +117,8 @@ func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOpera
 // If the challenge is valid, the related storage provider will be slashed.
 // For heartbeat attestation, the challenge is invalid and the storage provider will not be slashed.
 func (c *client) AttestChallenge(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint,
-	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
-
+	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption,
+) (*sdk.TxResponse, error) {
 	submitter, err := sdk.AccAddressFromHexUnsafe(submitterAddress)
 	if err != nil {
 		return nil, err
