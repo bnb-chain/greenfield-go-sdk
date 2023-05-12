@@ -7,220 +7,122 @@ notification and not ready for production use. The code and security audit have 
 for any bug bounty. We advise you to be careful and experiment on the network at your own risk. Stay safe out there.**
 
 ## Instruction
-The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield in three ways:
 
-1.Interact using GreenfieldClient client, you can perform queries on accounts, chain info, and broadcasting transactions.
+The Greenfield-GO-SDK provides a thin wrapper for interacting with greenfield storage network. 
 
-2.Interact using GnfdClient, it integrates GreenfieldClient and the ability to access Storage provider, 
-you can call storage functions like createObject,putObject and getObject to realize the basic operation of object storage.
-
-3.Interact using TendermintClient client, you can perform low-level operations like executing ABCI queries and viewing network/consensus state.
-
+Rich SDKs is provided to operate Greenfield resources or query status of resources.
 
 ### Requirement
 
 Go version above 1.18
 
-## Usage
+## Getting started
+To get started working with the SDK setup your project for Go modules, and retrieve the SDK dependencies with `go get`.
+This example shows how you can use the greenfield go SDK to interact with the greenfield storage network,
 
-### Importing
+### Initialize Project
 
+```sh
+$ mkdir ~/hellogreenfield
+$ cd ~/hellogreenfield
+$ go mod init hellogreenfield
+```
+
+### Add SDK Dependencies
+
+```sh
+$ go get github.com/bnb-chain/greenfield-go-sdk
+```
+
+replace dependencies
+
+```
+cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
+github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
+github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.1.1
+github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.4
+```
+
+### Initialize Client
+
+The greenfield client requires the following parameters to connect to greenfield chain and storage providers.
+
+| Parameter             | Description                                       |
+|:----------------------|:--------------------------------------------------|
+| rpcAddr               | the tendermit address of greenfield chain         |
+| chainId               | the chain id of greenfield                        |
+| client.Option  | All the options such as DefaultAccount and secure |
+
+The DefaultAccount is need to set in options if you need send request to SP or send txn to Greenfield
 ```go
+package main
+
 import (
-    "github.com/bnb-chain/greenfield-go-sdk" latest
+	"context"
+	"log"
+
+	"github.com/bnb-chain/greenfield-go-sdk/client"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
-```
-### Replace dependencies
-```go
-replace (
-    cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-    github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.13
-    github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-    github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3
-)
-```
 
-### Key Manager
+func main() {
+	privateKey := "<Your own private key>"
+	account, err := types.NewAccountFromPrivateKey("test", privateKey)
+	if err != nil {
+		log.Fatalf("New account from private key error, %v", err)
+	}
 
-A Key Manager is needed to sign transaction messages or verify signatures. The Key Manager is an Identity Manager used 
-to define who you are in Greenfield. It provides the following interface:
-
-```go
-type KeyManager interface {
-    GetPrivKey() ctypes.PrivKey
-    GetAddr() types.AccAddress
+	rpcAddr := "https://gnfd-testnet-fullnode-tendermint-us.bnbchain.org:443"
+	chainId := "greenfield_5600-1"
+	
+	gnfdCLient, err := client.New(rpcAddr, chainId, client.Option{DefaultAccount: account})
+	if err != nil {
+		log.Fatalf("unable to new greenfield client, %v", err)
+	}
 }
+
 ```
 
-We provide three construction functions to generate the Key Manager:
+###  Quick Start Examples
 
-```go
-NewPrivateKeyManager(priKey string) (KeyManager, error)
+The examples directory provides a wealth of examples to guide users in using the SDK's various features, including basic storage upload and download functions, 
+group functions, permission functions, as well as payment and cross-chain related functions.
 
-NewMnemonicKeyManager(mnemonic string) (KeyManager, error)
+The **basic.go** includes the basic functions to fetch the blockchain info.
+
+The **storage.go** includes the most storage functions such as creating a bucket, uploading files, downloading files, heading and deleting resource.
+
+The **group.go** includes the group related functions such as creating a group and updating group member.
+
+The **payment.go** includes the payment related functions to management payment account.
+
+The **crosschain.go** includes the cross chain related functions to transfer or mirror resource to BSC.
+
+
+#### Config Examples
+
+You need to modify the variables in "common.go" under the "examples" directory to set the initialization information for the client, including "rpcAddr", "chainId", and "privateKey", etc. In addition, 
+you also need to set basic parameters such as "bucket name" and "object name" to run the basic functionality of storage.
+
+#### Run Examples
+The steps to run example are as follows
+```
+make examples
+cd examples
+./storage 
 ```
 
-- NewPrivateKeyManager: You should provide a Hex encoded string of your private key.
-- NewMnemonicKeyManager: You should provide your mnemonic, usually a string of 24 words.
+You can also directly execute "go run" to run a specific example. 
+For example, execute "go run storage.go common.go" to run the relevant example for storage.
+Please note that the "permission.go" example must be run after "storage.go" because resources such as objects need to be created first before setting permissions.
 
-Examples:
+## Reference
 
-From private key hex string:
-```GO
-privateKey := "9579fff0cab07a4379e845a890105004ba4c8276f8ad9d22082b2acbf02d884b"
-keyManager, err := NewPrivateKeyManager(privateKey)
-```
-
-From mnemonic:
-```Go
-mnemonic := "dragon shy author wave swamp avoid lens hen please series heavy squeeze alley castle crazy action peasant green vague camp mirror amount person legal"
-keyManager, _ := keys.NewMnemonicKeyManager(mnemonic)
-```
-
-### Use Greenfield Client
-
-#### Initialize client without a key manager; use it for querying purposes only.
-
-```go
-client := NewGreenfieldClient("localhost:9090", "greenfield_9000-121")
-
-query := banktypes.QueryBalanceRequest{
-		Address: "0x76d244CE05c3De4BbC6fDd7F56379B145709ade9",
-		Denom:   "BNB",
-}
-res, err := client.BankQueryClient.Balance(context.Background(), &query)  
-```
-
-#### Initialize client with a key manager to sign and send transactions
-
-```go
-keyManager, _ := keys.NewPrivateKeyManager("ab463aca3d2965233da3d1d6108aa521274c5ddc2369ff72970a52a451863fbf")
-gnfdClient := NewGreenfieldClient("localhost:9090", 
-	                            "greenfield_9000-121",
-	                            WithKeyManager(km),
-                                    WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials()))
-)
-```
-
-#### Broadcast TX
-
-A generic method `BroadcastTx` is provided to give you the flexibility to broadcast different types of transactions.
-
-```go
-BroadcastTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
-```
-
-`txOpt` is provided to customize your transaction. All fields are optional.
-```go
-type TxOption struct {
-    Mode      *tx.BroadcastMode   // default to `sync` mode
-    GasLimit  uint64 // default to use simulated gas 
-    Memo      string
-    FeeAmount sdk.Coins
-    FeePayer  sdk.AccAddress
-    Nonce     uint64
-}
-```
-Example:
-
-```go
-payerAddr, _ := sdk.AccAddressFromHexUnsafe("0x76d244CE05c3De4BbC6fDd7F56379B145709ade9")
-transfer := banktypes.NewMsgSend(km.GetAddr(), to, sdk.NewCoins(sdk.NewInt64Coin("BNB", 12)))
-broadcastMode := tx.BroadcastMode_BROADCAST_MODE_ASYNC
-txOpt := &types.TxOption{
-    Mode       &broadcastMode
-    GasLimit:  1000000,
-    Memo:      "test",
-    FeePayer:  payerAddr,
-}
-response, _ := gnfdClient.BroadcastTx([]sdk.Msg{transfer}, txOpt)
-```
-
-#### Simulate TX
-
-For the purpose of simulating a tx and get the gas info, `SimulateTx` is provided.
-
-```go
-SimulateTx(msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
-```
-
-### Sign Tx
-
-`SignTx` function signs the provided messages and returns raw bytes.
-
-```go
-SignTx(msgs []sdk.Msg, txOpt *types.TxOption) ([]byte, error)
-```
-
-### Get Nonce
-
-The `GetNonce` function retrieves the nonce of an account.
-
-```go
-GetNonce() (uint64, error)
-```
-
-#### Support transaction types
-Please refer to [msgTypes.go](./types/msg_types.go) to see all of the supported types of `sdk.Msg`.
-
-### Use GnfdClient
-
-The construct fuction need to pass chain grpc address, chain id and SP endpoint
-```go 
-client, err := NewGnfdClient(grpcAddr, chainId, endpoint, keyManager, false,
-          WithKeyManager(keyManager),
-          WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
-```
-
-#### Call APIs and Send Requests to use storage functions
-
-1) create bucket 
-```go
-opts := CreateBucketOptions{ChargedQuota: chargeQuota, Visibility: &storageTypes.VISIBILITY_TYPE_PRIVATE}
-txnHash, err = client.CreateBucket(ctx, bucketName, primarySp, opts)
- 
-// head bucket
-bucketInfo, err := client.HeadBucket(ctx, bucketName)
-```
-
-2) two stages of uploading including createObject and putObject
-
-```go
-// (1) create object on chain
-txnHash, err = client.CreateObject(ctx, bucketName, objectName,
-           bytes.NewReader(buffer.Bytes()), CreateObjectOptions{})
-            
-object, err := s.gnfdClient.HeadObject(ctx, bucketName, objectName)
-
-// (2) upload payload to SP  
-fileReader, err := os.Open(filePath)
-err = s.gnfdClient.PutObject(ctx, bucketName, objectName, txnHash, fileSize,
-        fileReader, PutObjectOption{})
-```
-
-3) get Object
-
-```go
-body, objectInfo, err := s.gnfdClient.GetObject(ctx, bucketName, objectName, sp.GetObjectOption{})
-objectBytes, err := io.ReadAll(body)
-```
-
-### Use Tendermint RPC Client
-
-```go
-client := NewTendermintClient("http://0.0.0.0:26750")
-abci, err := client.TmClient.ABCIInfo(context.Background())
-```
-
-There is an option with multiple providers available. Upon interaction with the blockchain, the provider with the highest
-block height will be chosen.
-
-```go
-gnfdClients := NewGnfdCompositClients(
-    []string{test.TEST_GRPC_ADDR, test.TEST_GRPC_ADDR2, test.TEST_GRPC_ADDR3},
-    []string{test.TEST_RPC_ADDR, test.TEST_RPC_ADDR2, test.TEST_RPC_ADDR3},
-    test.TEST_CHAIN_ID,
-    WithGrpcDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
-
-client, err := gnfdClients.GetClient()
-```
+- [Greenfield](https://github.com/bnb-chain/greenfield): the greenfield blockchain
+- [Greenfield-Contract](https://github.com/bnb-chain/greenfield-contracts): the cross chain contract for Greenfield that deployed on BSC network.
+- [Greenfield-Tendermint](https://github.com/bnb-chain/greenfield-tendermint): the consensus layer of Greenfield blockchain.
+- [Greenfield-Storage-Provider](https://github.com/bnb-chain/greenfield-storage-provider): the storage service infrastructures provided by either organizations or individuals.
+- [Greenfield-Relayer](https://github.com/bnb-chain/greenfield-relayer): the service that relay cross chain package to both chains.
+- [Greenfield-Cmd](https://github.com/bnb-chain/greenfield-cmd): the most powerful command line to interact with Greenfield system.
+- [Awesome Cosmos](https://github.com/cosmos/awesome-cosmos): Collection of Cosmos related resources which also fits Greenfield.

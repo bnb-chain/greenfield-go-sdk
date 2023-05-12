@@ -3,20 +3,18 @@ module github.com/bnb-chain/greenfield-go-sdk
 go 1.18
 
 require (
+	cosmossdk.io/errors v1.0.0-beta.7
 	cosmossdk.io/math v1.0.0-beta.3
-	github.com/bnb-chain/greenfield v0.0.10
-	github.com/bnb-chain/greenfield-common/go v0.0.0-20230407104542-ed19e3666522
+	github.com/bnb-chain/greenfield v0.1.2
+	github.com/bnb-chain/greenfield-common/go v0.0.0-20230512031838-33b0f124a4cf
 	github.com/cosmos/cosmos-sdk v0.46.4
-	github.com/ethereum/go-ethereum v1.10.19
-	github.com/evmos/ethermint v0.6.1-0.20220919141022-34226aa7b1fa
 	github.com/rs/zerolog v1.29.0
 	github.com/stretchr/testify v1.8.1
 	github.com/tendermint/tendermint v0.34.22
-	google.golang.org/grpc v1.53.0
+	google.golang.org/grpc v1.54.0
 )
 
 require (
-	cosmossdk.io/errors v1.0.0-beta.7 // indirect
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.1 // indirect
@@ -48,6 +46,8 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/dustin/go-humanize v1.0.1-0.20200219035652-afde56e7acac // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
+	github.com/ethereum/go-ethereum v1.10.19 // indirect
+	github.com/evmos/ethermint v0.6.1-0.20220919141022-34226aa7b1fa // indirect
 	github.com/ferranbt/fastssz v0.0.0-20210905181407-59cf6761a7d5 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-kit/kit v0.12.0 // indirect
@@ -124,12 +124,12 @@ require (
 	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/exp v0.0.0-20230131160201-f062dba9d201 // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/term v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/net v0.9.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/term v0.7.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923 // indirect
-	google.golang.org/protobuf v1.28.2-0.20220831092852-f930b1dc76e8 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -138,7 +138,8 @@ require (
 
 replace (
 	cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.13
+	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
+	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.1.1
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3
+	github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.4
 )
