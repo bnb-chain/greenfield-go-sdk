@@ -5,8 +5,8 @@ go 1.18
 require (
 	cosmossdk.io/errors v1.0.0-beta.7
 	cosmossdk.io/math v1.0.0-beta.3
-	github.com/bnb-chain/greenfield v0.0.10
-	github.com/bnb-chain/greenfield-common/go v0.0.0-20230407104542-ed19e3666522
+	github.com/bnb-chain/greenfield v0.1.2
+	github.com/bnb-chain/greenfield-common/go v0.0.0-20230512031838-33b0f124a4cf
 	github.com/cosmos/cosmos-sdk v0.46.4
 	github.com/rs/zerolog v1.29.0
 	github.com/stretchr/testify v1.8.1
@@ -138,8 +138,8 @@ require (
 
 replace (
 	cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230228075616-68ac309b432c
-	github.com/bnb-chain/greenfield => github.com/bnb-chain/greenfield v0.1.2
-	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.0.13
+	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
+	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.1.1
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.3
+	github.com/tendermint/tendermint => github.com/bnb-chain/greenfield-tendermint v0.0.4
 )

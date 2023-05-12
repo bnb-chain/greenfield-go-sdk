@@ -9,12 +9,11 @@ import (
 )
 
 func main() {
-	privateKey := "<Your own private key>"
 	account, err := types.NewAccountFromPrivateKey("test", privateKey)
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
 	}
-	cli, err := client.New("greenfield_9000-121", "http://localhost:26750", client.Option{DefaultAccount: account})
+	cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
