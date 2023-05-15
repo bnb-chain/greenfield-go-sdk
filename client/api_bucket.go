@@ -154,7 +154,13 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	return resp.TxResponse.TxHash, err
+	txnHash := resp.TxResponse.TxHash
+	_, err = c.WaitForTx(ctx, txnHash)
+	if err != nil {
+		return txnHash, err
+	}
+
+	return txnHash, nil
 }
 
 // DeleteBucket send DeleteBucket txn to greenfield chain and return txn hash
