@@ -15,14 +15,21 @@ permissions:
 jobs:
   golangci:
     name: golangci-lint
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ 1.19.x ]
+        os: [ ubuntu-20.04 ]
+    runs-on: ${{ matrix.os }}
+    env:
+      GOPRIVATE: github.com/bnb-chain
+      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: ${{ matrix.go-version }}
       - uses: actions/checkout@v3
 
-      - run: go env -w GOPRIVATE="github.com/bnb-chain/*"
+      - run: export GOPRIVATE="github.com/bnb-chain/*"
       - run: git config --global url."https://${{ secrets.GH_TOKEN }}@github.com".insteadOf "https://github.com"
 
       - uses: actions/cache@v3
@@ -47,6 +54,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: v1.50.0
+          version: latest
           skip-pkg-cache: true
           args: --timeout=99m
+          github-token: ${{ secrets.github_token }}
