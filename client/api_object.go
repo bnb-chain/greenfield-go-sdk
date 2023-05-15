@@ -568,7 +568,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName, maxKeys, startAfte
 	}
 
 	listObjectsResult.Objects = objectMetaList
-	listObjectsResult.KeyCount = uint64(len(objectMetaList))
+	listObjectsResult.KeyCount = strconv.Itoa(len(objectMetaList))
 	return listObjectsResult, nil
 }
 
