@@ -17,6 +17,7 @@ type CreateBucketOptions struct {
 	TxOpts         *gnfdsdktypes.TxOption
 	PaymentAddress string
 	ChargedQuota   uint64
+	IsAsyncMode    bool // indicate whether to create the bucket in asynchronous mode
 }
 
 type VoteProposalOptions struct {
@@ -89,6 +90,7 @@ type CreateObjectOptions struct {
 	SecondarySPAccs []sdk.AccAddress
 	ContentType     string
 	IsReplicaType   bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
+	IsAsyncMode     bool // indicate whether to create the object in asynchronous mode
 }
 
 // CreateGroupOptions  indicates the meta to construct createGroup msg

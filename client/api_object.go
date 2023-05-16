@@ -158,9 +158,11 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	}
 
 	txnHash := resp.TxResponse.TxHash
-	_, err = c.WaitForTx(ctx, txnHash)
-	if err != nil {
-		return txnHash, errors.New("failed to commit txn:" + err.Error())
+	if !opts.IsAsyncMode {
+		_, err = c.WaitForTx(ctx, txnHash)
+		if err != nil {
+			return txnHash, errors.New("failed to commit txn:" + err.Error())
+		}
 	}
 
 	return txnHash, nil
