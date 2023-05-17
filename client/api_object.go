@@ -156,7 +156,16 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	if err != nil {
 		return "", err
 	}
-	return resp.TxResponse.TxHash, err
+
+	txnHash := resp.TxResponse.TxHash
+	if !opts.IsAsyncMode {
+		_, err = c.WaitForTx(ctx, txnHash)
+		if err != nil {
+			return txnHash, errors.New("failed to commit txn:" + err.Error())
+		}
+	}
+
+	return txnHash, nil
 }
 
 // DeleteObject send DeleteBucket txn to greenfield chain and return txn hash

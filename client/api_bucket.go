@@ -154,7 +154,15 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	return resp.TxResponse.TxHash, err
+	txnHash := resp.TxResponse.TxHash
+	if !opts.IsAsyncMode {
+		_, err = c.WaitForTx(ctx, txnHash)
+		if err != nil {
+			return txnHash, errors.New("failed to commit txn:" + err.Error())
+		}
+	}
+
+	return txnHash, nil
 }
 
 // DeleteBucket send DeleteBucket txn to greenfield chain and return txn hash
