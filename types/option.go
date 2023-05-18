@@ -121,6 +121,11 @@ type ListReadRecordOptions struct {
 
 type ListObjectsOptions struct {
 	ShowRemovedObject bool
+	StartAfter        string
+	ContinuationToken string
+	Delimiter         string
+	Prefix            string
+	MaxKeys           uint64
 }
 
 type PutPolicyOption struct {

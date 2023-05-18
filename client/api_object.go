@@ -61,7 +61,7 @@ type Object interface {
 	// userAddr indicates the HEX-encoded string of the user address
 	IsObjectPermissionAllowed(ctx context.Context, userAddr string, bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error)
 
-	ListObjects(ctx context.Context, bucketName, maxKeys, startAfter, continuationToken, delimiter, prefix string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
+	ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
 	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
 
@@ -470,49 +470,48 @@ func (c *client) GetObjectPolicy(ctx context.Context, bucketName, objectName str
 }
 
 // ListObjects return object list of the specific bucket
-func (c *client) ListObjects(ctx context.Context, bucketName, maxKeys, startAfter, continuationToken, delimiter, prefix string, opts types.ListObjectsOptions) (types.ListObjectsResult, error) {
+func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.ListObjectsResult{}, err
 	}
 
-	if maxKeys != "" {
-		if maxKeysVal, err := utils.StringToUint64(maxKeys); err != nil || maxKeysVal == 0 {
+	if opts.MaxKeys == 0 {
+		return types.ListObjectsResult{}, fmt.Errorf("max-keys should be greater than 0")
+
+	}
+
+	if opts.StartAfter != "" {
+		if err := s3util.CheckValidObjectName(opts.StartAfter); err != nil {
 			return types.ListObjectsResult{}, err
 		}
 	}
 
-	if startAfter != "" {
-		if err := s3util.CheckValidObjectName(startAfter); err != nil {
-			return types.ListObjectsResult{}, err
-		}
-	}
-
-	if continuationToken != "" {
-		decodedContinuationToken, err := base64.StdEncoding.DecodeString(continuationToken)
+	if opts.ContinuationToken != "" {
+		decodedContinuationToken, err := base64.StdEncoding.DecodeString(opts.ContinuationToken)
 		if err != nil {
 			return types.ListObjectsResult{}, err
 		}
-		continuationToken = string(decodedContinuationToken)
+		opts.ContinuationToken = string(decodedContinuationToken)
 
-		if err = s3util.CheckValidObjectName(continuationToken); err != nil {
+		if err = s3util.CheckValidObjectName(opts.ContinuationToken); err != nil {
 			return types.ListObjectsResult{}, err
 		}
 
-		if !strings.HasPrefix(continuationToken, prefix) {
-			return types.ListObjectsResult{}, fmt.Errorf("continuationToken does not match the input prefix")
+		if !strings.HasPrefix(opts.ContinuationToken, opts.Prefix) {
+			return types.ListObjectsResult{}, fmt.Errorf("continuation-token does not match the input prefix")
 		}
 	}
 
-	if ok := utils.IsValidObjectPrefix(prefix); !ok {
+	if ok := utils.IsValidObjectPrefix(opts.Prefix); !ok {
 		return types.ListObjectsResult{}, fmt.Errorf("invalid object prefix")
 	}
 
 	params := url.Values{}
-	params.Set("max-keys", maxKeys)
-	params.Set("start-after", startAfter)
-	params.Set("continuation-token", continuationToken)
-	params.Set("delimiter", delimiter)
-	params.Set("prefix", prefix)
+	params.Set("max-keys", strconv.FormatUint(opts.MaxKeys, 10))
+	params.Set("start-after", opts.StartAfter)
+	params.Set("continuation-token", opts.ContinuationToken)
+	params.Set("delimiter", opts.Delimiter)
+	params.Set("prefix", opts.Prefix)
 	reqMeta := requestMeta{
 		urlValues:     params,
 		bucketName:    bucketName,
