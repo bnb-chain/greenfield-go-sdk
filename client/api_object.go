@@ -475,9 +475,9 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		return types.ListObjectsResult{}, err
 	}
 
+	const listObjectsDefaultMaxKeys = 50
 	if opts.MaxKeys == 0 {
-		return types.ListObjectsResult{}, fmt.Errorf("max-keys should be greater than 0")
-
+		opts.MaxKeys = listObjectsDefaultMaxKeys
 	}
 
 	if opts.StartAfter != "" {

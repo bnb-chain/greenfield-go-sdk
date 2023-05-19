@@ -145,7 +145,7 @@ type ListObjectsOptions struct {
 
 	// MaxKeys defines the maximum number of keys returned to the response body.
 	// If not specified, the default value is 50.
-	// The maximum allowed value is 1000.
+	// The maximum limit for returning objects is 1000
 	MaxKeys uint64
 }
 
