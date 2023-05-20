@@ -36,6 +36,7 @@ type Object interface {
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
+	CancelAllCreateObject(ctx context.Context, bucketName string, objectNameList []string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
 	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
@@ -185,6 +186,22 @@ func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName 
 
 	cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName)
 	return c.sendTxn(ctx, cancelCreateMsg, opt.TxOpts)
+}
+
+// CancelCreateObject send CancelCreateObject txn to greenfield chain
+func (c *client) CancelAllCreateObject(ctx context.Context, bucketName string, objectNameList []string, opt types.CancelCreateOption) (string, error) {
+	sdkMessages := make([]sdk.Msg, 0)
+
+	for _, objectName := range objectNameList {
+		if err := s3util.CheckValidObjectName(objectName); err != nil {
+			return "", err
+		}
+
+		cancelCreateMsg := storageTypes.NewMsgCancelCreateObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName)
+		sdkMessages = append(sdkMessages, cancelCreateMsg)
+	}
+
+	return c.sendTxnWithMultipleMessages(ctx, sdkMessages, opt.TxOpts)
 }
 
 // PutObject supports the second stage of uploading the object to bucket.

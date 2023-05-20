@@ -621,7 +621,7 @@ func (c *client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxO
 	return resp.TxResponse.TxHash, err
 }
 
-func (c *client) sendTxnWithMultipleMessages(ctx context.Context, opt *gnfdSdkTypes.TxOption, messages []sdk.Msg) (string, error) {
+func (c *client) sendTxnWithMultipleMessages(ctx context.Context, messages []sdk.Msg, opt *gnfdSdkTypes.TxOption) (string, error) {
 	for _, msg := range messages {
 		if err := msg.ValidateBasic(); err != nil {
 			return "", err
