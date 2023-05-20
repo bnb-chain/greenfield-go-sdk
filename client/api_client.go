@@ -621,6 +621,20 @@ func (c *client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxO
 	return resp.TxResponse.TxHash, err
 }
 
+func (c *client) sendTxnWithMultipleMessages(ctx context.Context, opt *gnfdSdkTypes.TxOption, messages []sdk.Msg) (string, error) {
+	for _, msg := range messages {
+		if err := msg.ValidateBasic(); err != nil {
+			return "", err
+		}
+	}
+
+	resp, err := c.chainClient.BroadcastTx(ctx, messages, opt)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, err
+}
+
 // GetDefaultAccount returns the account address of default account in client
 func (c *client) GetDefaultAccount() (*types.Account, error) {
 	if c.MustGetDefaultAccount() == nil {
