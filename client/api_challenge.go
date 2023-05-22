@@ -54,9 +54,9 @@ func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 		urlRelPath:    types.ChallengeUrl,
 		contentSHA256: types.EmptyStringSHA256,
 		challengeInfo: types.ChallengeInfo{
-			objectID,
-			pieceIndex,
-			redundancyIndex,
+			ObjectId:        objectID,
+			PieceIndex:      pieceIndex,
+			RedundancyIndex: redundancyIndex,
 		},
 	}
 
