@@ -47,7 +47,8 @@ type Object interface {
 	// HeadObjectByID query the objectInfo on chain by object id, return the object info if exists
 	// return err info if object not exist
 	HeadObjectByID(ctx context.Context, objID string) (*storageTypes.ObjectInfo, error)
-
+	// UpdateObjectVisibility update the visibility of the object
+	UpdateObjectVisibility(ctx context.Context, bucketName, objectName string, visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error)
 	// PutObjectPolicy apply object policy to the principal, return the txn hash
 	PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 		statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
@@ -697,4 +698,26 @@ func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectNa
 	}
 
 	return objectStatus, nil
+}
+
+func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectName string,
+	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error) {
+	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return "", fmt.Errorf("object:%s not exists: %s\n", objectName, err.Error())
+	}
+
+	if objectInfo.GetVisibility() == visibility {
+		return "", fmt.Errorf("the visibility of object:%s is already %s \n", objectName, visibility.String())
+	}
+
+	updateObjectMsg := storageTypes.NewMsgUpdateObjectInfo(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName, visibility)
+
+	// set the default txn broadcast mode as sync mode
+	if opt.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+		opt.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
+	}
+
+	return c.sendTxn(ctx, updateObjectMsg, opt.TxOpts)
 }

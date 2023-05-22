@@ -36,7 +36,7 @@ type Bucket interface {
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
-	UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOption) (string, error)
+	UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error)
 	UpdateBucketPaymentAddr(ctx context.Context, bucketName string, paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption) (string, error)
 
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
@@ -206,7 +206,7 @@ func (c *client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 }
 
 // UpdateBucketInfo update the bucket meta on chain, including read quota, payment address or visibility
-func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOption) (string, error) {
+func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err

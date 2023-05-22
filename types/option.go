@@ -54,13 +54,17 @@ type UpdatePaymentOption struct {
 	TxOpts *gnfdsdktypes.TxOption
 }
 
-// UpdateBucketOption indicates the meta to construct updateBucket msg of storage module
+// UpdateBucketOptions indicates the meta to construct updateBucket msg of storage module
 // PaymentAddress  indicates the HEX-encoded string of the payment address
-type UpdateBucketOption struct {
+type UpdateBucketOptions struct {
 	Visibility     storageTypes.VisibilityType
 	TxOpts         *gnfdsdktypes.TxOption
 	PaymentAddress string
 	ChargedQuota   *uint64
+}
+
+type UpdateObjectOption struct {
+	TxOpts *gnfdsdktypes.TxOption
 }
 
 type CancelCreateOption struct {
