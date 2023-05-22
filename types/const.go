@@ -46,5 +46,7 @@ const (
 	CreateObjectAction = "CreateObject"
 	CreateBucketAction = "CreateBucket"
 
-	ChallengeUrl = "challenge"
+	ChallengeUrl           = "challenge"
+	PrimaryRedundancyIndex = -1
+	MaxRedundancyIndex     = 5
 )

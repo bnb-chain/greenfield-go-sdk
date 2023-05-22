@@ -19,7 +19,9 @@ import (
 )
 
 type Challenge interface {
-	GetChallengeInfo(ctx context.Context, info types.ChallengeInfo, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error)
+	// GetChallengeInfo return the challenge hash and data results based on the objectID and index info
+	// If the sp endpoint or sp address info is not set in the GetChallengeInfoOptions, the SP endpoint will be routed by the redundancyIndex
+	GetChallengeInfo(ctx context.Context, objectID string, pieceIndex, redundancyIndex int, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error)
 	SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
 	AttestChallenge(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint, voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
 	LatestAttestedChallenges(ctx context.Context, req *challengetypes.QueryLatestAttestedChallengesRequest) ([]uint64, error)
@@ -29,23 +31,27 @@ type Challenge interface {
 
 // GetChallengeInfo  sends request to challenge and get challenge result info
 // The challenge info includes the piece data, piece hash roots and integrity hash corresponding to the accessed SP
-func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error) {
-	if info.ObjectId == "" {
+func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceIndex, redundancyIndex int, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error) {
+	if objectID == "" {
 		return types.ChallengeResult{}, errors.New("fail to get objectId")
 	}
 
-	if info.PieceIndex < 0 {
+	if pieceIndex < 0 {
 		return types.ChallengeResult{}, errors.New("index error, should be 0 to parityShards plus dataShards")
 	}
 
-	if info.RedundancyIndex < -1 || info.RedundancyIndex > 5 {
+	if redundancyIndex < types.PrimaryRedundancyIndex || redundancyIndex > types.MaxRedundancyIndex {
 		return types.ChallengeResult{}, errors.New("redundancy index invalid, the index should be -1 to 5")
 	}
 
 	reqMeta := requestMeta{
 		urlRelPath:    types.ChallengeUrl,
 		contentSHA256: types.EmptyStringSHA256,
-		challengeInfo: info,
+		challengeInfo: types.ChallengeInfo{
+			objectID,
+			pieceIndex,
+			redundancyIndex,
+		},
 	}
 
 	sendOpt := sendOptions{
@@ -78,13 +84,12 @@ func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo,
 		}
 	} else {
 		// get sp address info based on the redundancy index
-		objectInfo, err := c.HeadObjectByID(ctx, info.ObjectId)
+		objectInfo, err := c.HeadObjectByID(ctx, objectID)
 		if err != nil {
 			return types.ChallengeResult{}, err
 		}
 
-		index := info.RedundancyIndex
-		if info.RedundancyIndex == -1 {
+		if redundancyIndex == types.PrimaryRedundancyIndex {
 			// get endpoint of primary sp
 			endpoint, err = c.getSPUrlByBucket(objectInfo.BucketName)
 			if err != nil {
@@ -93,7 +98,7 @@ func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo,
 			}
 		} else {
 			// get endpoint of the secondary sp
-			secondarySP := objectInfo.SecondarySpAddresses[index]
+			secondarySP := objectInfo.SecondarySpAddresses[redundancyIndex]
 			endpoint, err = c.getSPUrlByAddr(secondarySP)
 			if err != nil {
 				log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
