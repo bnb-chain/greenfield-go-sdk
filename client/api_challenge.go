@@ -40,8 +40,14 @@ func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 		return types.ChallengeResult{}, errors.New("index error, should be 0 to parityShards plus dataShards")
 	}
 
-	if redundancyIndex < types.PrimaryRedundancyIndex || redundancyIndex > types.MaxRedundancyIndex {
-		return types.ChallengeResult{}, errors.New("redundancy index invalid, the index should be -1 to 5")
+	var err error
+	dataBlocks, parityBlocks, _, err := c.GetRedundancyParams()
+	if err != nil {
+		return types.ChallengeResult{}, errors.New("fail to get redundancy params:" + err.Error())
+	}
+	maxRedundancyIndex := int(dataBlocks+parityBlocks) - 1
+	if redundancyIndex < types.PrimaryRedundancyIndex || redundancyIndex > maxRedundancyIndex {
+		return types.ChallengeResult{}, fmt.Errorf("redundancy index invalid, the index should be %d to %d", types.PrimaryRedundancyIndex, maxRedundancyIndex)
 	}
 
 	reqMeta := requestMeta{
@@ -61,7 +67,6 @@ func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 	}
 
 	var endpoint *url.URL
-	var err error
 	if opts.Endpoint != "" {
 		var useHttps bool
 		if strings.Contains(opts.Endpoint, "https") {
