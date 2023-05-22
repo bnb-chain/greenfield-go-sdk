@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"cosmossdk.io/math"
@@ -18,7 +19,7 @@ import (
 )
 
 type Challenge interface {
-	GetChallengeInfo(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error)
+	GetChallengeInfo(ctx context.Context, info types.ChallengeInfo, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error)
 	SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
 	AttestChallenge(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint, voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error)
 	LatestAttestedChallenges(ctx context.Context, req *challengetypes.QueryLatestAttestedChallengesRequest) ([]uint64, error)
@@ -28,7 +29,7 @@ type Challenge interface {
 
 // GetChallengeInfo  sends request to challenge and get challenge result info
 // The challenge info includes the piece data, piece hash roots and integrity hash corresponding to the accessed SP
-func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo) (types.ChallengeResult, error) {
+func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error) {
 	if info.ObjectId == "" {
 		return types.ChallengeResult{}, errors.New("fail to get objectId")
 	}
@@ -37,8 +38,8 @@ func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo)
 		return types.ChallengeResult{}, errors.New("index error, should be 0 to parityShards plus dataShards")
 	}
 
-	if info.RedundancyIndex < -1 {
-		return types.ChallengeResult{}, errors.New("redundancy index error ")
+	if info.RedundancyIndex < -1 || info.RedundancyIndex > 5 {
+		return types.ChallengeResult{}, errors.New("redundancy index invalid, the index should be -1 to 5")
 	}
 
 	reqMeta := requestMeta{
@@ -53,16 +54,52 @@ func (c *client) GetChallengeInfo(ctx context.Context, info types.ChallengeInfo)
 		disableCloseBody: true,
 	}
 
-	objectInfo, err := c.HeadObjectByID(ctx, info.ObjectId)
-	if err != nil {
-		return types.ChallengeResult{}, err
-	}
+	var endpoint *url.URL
+	var err error
+	if opts.Endpoint != "" {
+		var useHttps bool
+		if strings.Contains(opts.Endpoint, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
 
-	bucketName := objectInfo.BucketName
-	endpoint, err := c.getSPUrlByBucket(bucketName)
-	if err != nil {
-		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
-		return types.ChallengeResult{}, err
+		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
+			return types.ChallengeResult{}, err
+		}
+	} else if opts.SPAddress != "" {
+		// get endpoint from sp address
+		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", opts.SPAddress, err))
+			return types.ChallengeResult{}, err
+		}
+	} else {
+		// get sp address info based on the redundancy index
+		objectInfo, err := c.HeadObjectByID(ctx, info.ObjectId)
+		if err != nil {
+			return types.ChallengeResult{}, err
+		}
+
+		index := info.RedundancyIndex
+		if info.RedundancyIndex == -1 {
+			// get endpoint of primary sp
+			endpoint, err = c.getSPUrlByBucket(objectInfo.BucketName)
+			if err != nil {
+				log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %v", objectInfo.BucketName, err))
+				return types.ChallengeResult{}, err
+			}
+		} else {
+			// get endpoint of the secondary sp
+			secondarySP := objectInfo.SecondarySpAddresses[index]
+			endpoint, err = c.getSPUrlByAddr(secondarySP)
+			if err != nil {
+				log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
+				return types.ChallengeResult{}, err
+			}
+		}
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)

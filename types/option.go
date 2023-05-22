@@ -185,6 +185,11 @@ type GetObjectOption struct {
 	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
 }
 
+type GetChallengeInfoOptions struct {
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
+}
+
 func (o *GetObjectOption) SetRange(start, end int64) error {
 	switch {
 	case 0 < start && end == 0:
