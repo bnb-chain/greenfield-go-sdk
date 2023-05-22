@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -483,7 +484,45 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		return types.ListObjectsResult{}, err
 	}
 
+	const listObjectsDefaultMaxKeys = 50
+	if opts.MaxKeys == 0 {
+		opts.MaxKeys = listObjectsDefaultMaxKeys
+	}
+
+	if opts.StartAfter != "" {
+		if err := s3util.CheckValidObjectName(opts.StartAfter); err != nil {
+			return types.ListObjectsResult{}, err
+		}
+	}
+
+	if opts.ContinuationToken != "" {
+		decodedContinuationToken, err := base64.StdEncoding.DecodeString(opts.ContinuationToken)
+		if err != nil {
+			return types.ListObjectsResult{}, err
+		}
+		opts.ContinuationToken = string(decodedContinuationToken)
+
+		if err = s3util.CheckValidObjectName(opts.ContinuationToken); err != nil {
+			return types.ListObjectsResult{}, err
+		}
+
+		if !strings.HasPrefix(opts.ContinuationToken, opts.Prefix) {
+			return types.ListObjectsResult{}, fmt.Errorf("continuation-token does not match the input prefix")
+		}
+	}
+
+	if ok := utils.IsValidObjectPrefix(opts.Prefix); !ok {
+		return types.ListObjectsResult{}, fmt.Errorf("invalid object prefix")
+	}
+
+	params := url.Values{}
+	params.Set("max-keys", strconv.FormatUint(opts.MaxKeys, 10))
+	params.Set("start-after", opts.StartAfter)
+	params.Set("continuation-token", opts.ContinuationToken)
+	params.Set("delimiter", opts.Delimiter)
+	params.Set("prefix", opts.Prefix)
 	reqMeta := requestMeta{
+		urlValues:     params,
 		bucketName:    bucketName,
 		contentSHA256: types.EmptyStringSHA256,
 	}
@@ -536,7 +575,9 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		objectMetaList = append(objectMetaList, objectInfo)
 	}
 
-	return types.ListObjectsResult{Objects: objectMetaList}, nil
+	listObjectsResult.Objects = objectMetaList
+	listObjectsResult.KeyCount = strconv.Itoa(len(objectMetaList))
+	return listObjectsResult, nil
 }
 
 // GetCreateObjectApproval returns the signature info for the approval of preCreating resources

@@ -71,7 +71,7 @@ func main() {
 	}
 
 	// list object
-	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{})
+	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{true, "", "", "/", "", 10})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo

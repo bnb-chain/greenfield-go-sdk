@@ -122,7 +122,33 @@ type ListReadRecordOptions struct {
 }
 
 type ListObjectsOptions struct {
+	// ShowRemovedObject determines whether to include objects that have been marked as removed in the list.
+	// If set to false, these objects will be skipped.
 	ShowRemovedObject bool
+
+	// StartAfter defines the starting object name for the listing of objects.
+	// The listing will start from the next object after the one named in this attribute.
+	StartAfter string
+
+	// ContinuationToken is the token returned from a previous list objects request to indicate where
+	// in the list of objects to resume the listing. This is used for pagination.
+	ContinuationToken string
+
+	// Delimiter is a character that is used to group keys.
+	// All keys that contain the same string between the prefix and the first occurrence of the delimiter
+	// are grouped under a single result element in common prefixes.
+	// It is used for grouping keys, currently only '/' is supported.
+	Delimiter string
+
+	// Prefix limits the response to keys that begin with the specified prefix.
+	// You can use prefixes to separate a bucket into different sets of keys in a way similar to how a file
+	// system uses folders.
+	Prefix string
+
+	// MaxKeys defines the maximum number of keys returned to the response body.
+	// If not specified, the default value is 50.
+	// The maximum limit for returning objects is 1000
+	MaxKeys uint64
 }
 
 type PutPolicyOption struct {
