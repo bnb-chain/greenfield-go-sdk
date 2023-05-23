@@ -58,6 +58,8 @@ func main() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{TxnHash: txnHash})
 	handleErr(err, "PutObject")
 
+	log.Printf("object: %s has been uploaded to SP\n", objectName)
+
 	waitObjectSeal(cli, bucketName, objectName)
 
 	// get object
@@ -85,6 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("txn fail")
 	}
+	log.Printf("object: %s has been deleted\n", objectName)
 
 }
 
