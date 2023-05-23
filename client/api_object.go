@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -46,7 +47,8 @@ type Object interface {
 	// HeadObjectByID query the objectInfo on chain by object id, return the object info if exists
 	// return err info if object not exist
 	HeadObjectByID(ctx context.Context, objID string) (*storageTypes.ObjectInfo, error)
-
+	// UpdateObjectVisibility update the visibility of the object
+	UpdateObjectVisibility(ctx context.Context, bucketName, objectName string, visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error)
 	// PutObjectPolicy apply object policy to the principal, return the txn hash
 	PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 		statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
@@ -81,8 +83,8 @@ func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 		return 0, 0, 0, err
 	}
 
-	params := queryResp.Params
-	return params.GetRedundantDataChunkNum(), params.GetRedundantParityChunkNum(), params.GetMaxSegmentSize(), nil
+	versionedParams := queryResp.Params.VersionedParams
+	return versionedParams.GetRedundantDataChunkNum(), versionedParams.GetRedundantParityChunkNum(), versionedParams.GetMaxSegmentSize(), nil
 }
 
 // ComputeHashRoots return the integrity hash, content size and the redundancy type of the file
@@ -148,7 +150,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 
 	// set the default txn broadcast mode as block mode
 	if opts.TxOpts == nil {
-		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
@@ -156,7 +158,16 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	if err != nil {
 		return "", err
 	}
-	return resp.TxResponse.TxHash, err
+
+	txnHash := resp.TxResponse.TxHash
+	if !opts.IsAsyncMode {
+		_, err = c.WaitForTx(ctx, txnHash)
+		if err != nil {
+			return txnHash, errors.New("failed to commit txn:" + err.Error())
+		}
+	}
+
+	return txnHash, nil
 }
 
 // DeleteObject send DeleteBucket txn to greenfield chain and return txn hash
@@ -474,7 +485,45 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		return types.ListObjectsResult{}, err
 	}
 
+	const listObjectsDefaultMaxKeys = 50
+	if opts.MaxKeys == 0 {
+		opts.MaxKeys = listObjectsDefaultMaxKeys
+	}
+
+	if opts.StartAfter != "" {
+		if err := s3util.CheckValidObjectName(opts.StartAfter); err != nil {
+			return types.ListObjectsResult{}, err
+		}
+	}
+
+	if opts.ContinuationToken != "" {
+		decodedContinuationToken, err := base64.StdEncoding.DecodeString(opts.ContinuationToken)
+		if err != nil {
+			return types.ListObjectsResult{}, err
+		}
+		opts.ContinuationToken = string(decodedContinuationToken)
+
+		if err = s3util.CheckValidObjectName(opts.ContinuationToken); err != nil {
+			return types.ListObjectsResult{}, err
+		}
+
+		if !strings.HasPrefix(opts.ContinuationToken, opts.Prefix) {
+			return types.ListObjectsResult{}, fmt.Errorf("continuation-token does not match the input prefix")
+		}
+	}
+
+	if ok := utils.IsValidObjectPrefix(opts.Prefix); !ok {
+		return types.ListObjectsResult{}, fmt.Errorf("invalid object prefix")
+	}
+
+	params := url.Values{}
+	params.Set("max-keys", strconv.FormatUint(opts.MaxKeys, 10))
+	params.Set("start-after", opts.StartAfter)
+	params.Set("continuation-token", opts.ContinuationToken)
+	params.Set("delimiter", opts.Delimiter)
+	params.Set("prefix", opts.Prefix)
 	reqMeta := requestMeta{
+		urlValues:     params,
 		bucketName:    bucketName,
 		contentSHA256: types.EmptyStringSHA256,
 	}
@@ -527,7 +576,9 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		objectMetaList = append(objectMetaList, objectInfo)
 	}
 
-	return types.ListObjectsResult{Objects: objectMetaList}, nil
+	listObjectsResult.Objects = objectMetaList
+	listObjectsResult.KeyCount = strconv.Itoa(len(objectMetaList))
+	return listObjectsResult, nil
 }
 
 // GetCreateObjectApproval returns the signature info for the approval of preCreating resources
@@ -647,4 +698,26 @@ func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectNa
 	}
 
 	return objectStatus, nil
+}
+
+func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectName string,
+	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error) {
+	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return "", fmt.Errorf("object:%s not exists: %s\n", objectName, err.Error())
+	}
+
+	if objectInfo.GetVisibility() == visibility {
+		return "", fmt.Errorf("the visibility of object:%s is already %s \n", objectName, visibility.String())
+	}
+
+	updateObjectMsg := storageTypes.NewMsgUpdateObjectInfo(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName, visibility)
+
+	// set the default txn broadcast mode as sync mode
+	if opt.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+		opt.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
+	}
+
+	return c.sendTxn(ctx, updateObjectMsg, opt.TxOpts)
 }

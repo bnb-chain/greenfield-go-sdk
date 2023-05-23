@@ -12,19 +12,21 @@ on:
       - develop
 
 env:
-  GreenfieldTag: v0.1.2
-  GreenfieldStorageProviderTag: v0.1.2-fix-6
+  GreenfieldTag: v0.2.1
+  GreenfieldStorageProviderTag: v0.2.1-test
   GOPRIVATE: github.com/bnb-chain
   GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
   MYSQL_USER: root
   MYSQL_PASSWORD: root
   MYSQL_ROOT_PASSWORD: root
+  MYSQL_IP: 127.0.0.1
+  MYSQL_PORT: 3306
 
 jobs:
   end-to-end-test:
     strategy:
       matrix:
-        go-version: [1.18.x]
+        go-version: [1.19.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -73,26 +75,21 @@ jobs:
       - name: Run MySQL
         run: |
           sudo /etc/init.d/mysql start
-          mysql -h 127.0.0.1 -P 3306 -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e 'CREATE DATABASE sp_0; CREATE DATABASE sp_1;CREATE DATABASE sp_2; CREATE DATABASE sp_3;CREATE DATABASE sp_4; CREATE DATABASE sp_5; CREATE DATABASE sp_6;'
+          mysql -h ${{ env.MYSQL_IP }} -P ${{ env.MYSQL_PORT }} -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }} -e 'CREATE DATABASE sp_0; CREATE DATABASE sp_1;CREATE DATABASE sp_2; CREATE DATABASE sp_3;CREATE DATABASE sp_4; CREATE DATABASE sp_5; CREATE DATABASE sp_6;'
       # Run Greenfield
       - name: Run Greenfield
         run: |
-          /bin/cp -rf ../greenfield-storage-provider/test/e2e/localup_env/greenfield_env ../greenfield/deployment/localup/.local
           cd ../greenfield
-          bash ./deployment/localup/localup.sh start 1 7
+          bash ./deployment/localup/localup.sh all 1 7
+          bash ./deployment/localup/localup.sh export_sps 1 7 > sp.json
+          cat sp.json
           cd ../greenfield-go-sdk
       # Run Greenfield-SP
       - name: Run Greenfield-SPs
         run: |
           cd ../greenfield-storage-provider
-          /bin/cp -rf test/e2e/localup_env/greenfield_sp_env deployment/localup/local_env
-          /bin/cp build/gnfd-sp deployment/localup/local_env/sp0/gnfd-sp0
-          /bin/cp build/gnfd-sp deployment/localup/local_env/sp1/gnfd-sp1
-          /bin/cp build/gnfd-sp deployment/localup/local_env/sp2/gnfd-sp2
-          /bin/cp build/gnfd-sp deployment/localup/local_env/sp3/gnfd-sp3
-          /bin/cp build/gnfd-sp deployment/localup/local_env/sp4/gnfd-sp4
-          /bin/cp build/gnfd-sp deployment/localup/local_env/sp5/gnfd-sp5
-          /bin/cp build/gnfd-sp deployment/localup/local_env/sp6/gnfd-sp6
+          bash ./deployment/localup/localup.sh --generate $GITHUB_WORKSPACE/../greenfield/sp.json ${{ env.MYSQL_USER }} ${{ env.MYSQL_PASSWORD }} ${{ env.MYSQL_IP }}:${{ env.MYSQL_PORT }}
+          bash ./deployment/localup/localup.sh --reset
           bash ./deployment/localup/localup.sh --start
           sleep 10
           ps -ef | grep gnfd-sp | wc -l

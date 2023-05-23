@@ -13,7 +13,7 @@ import (
 // it is the example of basic permission SDKs usage
 // the storage example need to run before permission examples to make sure the resources has been created
 func main() {
-	// you need to set the principal address in config.go to run this exampls
+	// you need to set the principal address in config.go to run this examples
 	if len(principal) < 42 {
 		log.Println("please set principal if you need run permission test")
 		return
@@ -42,6 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("txn fail")
 	}
+	log.Printf("put bucket %s policy sucessfully, principal is: %s.\n", bucketName, principal)
 
 	// get bucket policy
 	policyInfo, err := cli.GetBucketPolicy(ctx, bucketName, principal)
@@ -69,6 +70,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("txn fail")
 	}
+	log.Printf("put object: %s policy sucessfully, principal is: %s.\n", objectName, principal)
 
 	// verify permission
 	effect, err = cli.IsObjectPermissionAllowed(ctx, principal, bucketName, objectName, permTypes.ACTION_DELETE_OBJECT)

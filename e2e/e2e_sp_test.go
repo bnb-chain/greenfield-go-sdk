@@ -80,7 +80,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
 		types3.Description{Moniker: "test"},
-		types.CreateStorageProviderOptions{ProposalMetaData: "create"})
+		types.CreateStorageProviderOptions{ProposalMetaData: "create", ProposalTitle: "test", ProposalSummary: "test"})
 	s.Require().NoError(err)
 
 	createTx, err := s.Client.WaitForTx(s.ClientContext, txHash)

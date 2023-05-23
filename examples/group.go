@@ -51,11 +51,15 @@ func main() {
 		log.Fatalln("txn fail")
 	}
 
+	log.Printf("add group member: %s to group: %s successfully \n", groupMember, groupName)
+
 	// head group member
 	memIsExist := cli.HeadGroupMember(ctx, groupName, creator.GetAddress().String(), groupMember)
 	if !memIsExist {
 		log.Fatalf("head group member %s fail \n", groupMember)
 	}
+
+	log.Printf(" head member %s exist \n", groupMember)
 
 	// delete group
 	delTx, err := cli.DeleteGroup(ctx, groupName, types.DeleteGroupOption{})
@@ -64,4 +68,6 @@ func main() {
 	if err != nil {
 		log.Fatalln("txn fail")
 	}
+
+	log.Printf("group: %s has been deleted\n", groupName)
 }

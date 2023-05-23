@@ -36,7 +36,7 @@ type Bucket interface {
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
-	UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOption) (string, error)
+	UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error)
 	UpdateBucketPaymentAddr(ctx context.Context, bucketName string, paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption) (string, error)
 
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
@@ -145,7 +145,7 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 
 	// set the default txn broadcast mode as block mode
 	if opts.TxOpts == nil {
-		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
@@ -154,7 +154,15 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	return resp.TxResponse.TxHash, err
+	txnHash := resp.TxResponse.TxHash
+	if !opts.IsAsyncMode {
+		_, err = c.WaitForTx(ctx, txnHash)
+		if err != nil {
+			return txnHash, errors.New("failed to commit txn:" + err.Error())
+		}
+	}
+
+	return txnHash, nil
 }
 
 // DeleteBucket send DeleteBucket txn to greenfield chain and return txn hash
@@ -198,7 +206,7 @@ func (c *client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 }
 
 // UpdateBucketInfo update the bucket meta on chain, including read quota, payment address or visibility
-func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOption) (string, error) {
+func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
@@ -241,7 +249,7 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 
 	// set the default txn broadcast mode as block mode
 	if opts.TxOpts == nil {
-		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_BLOCK
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 

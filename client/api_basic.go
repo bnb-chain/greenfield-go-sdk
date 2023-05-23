@@ -7,11 +7,11 @@ import (
 
 	"cosmossdk.io/errors"
 	"github.com/bnb-chain/greenfield/sdk/types"
+	"github.com/cometbft/cometbft/proto/tendermint/p2p"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/types/tx"
-	"github.com/tendermint/tendermint/proto/tendermint/p2p"
 	"google.golang.org/grpc"
 )
 
@@ -23,6 +23,7 @@ type Basic interface {
 	GetLatestBlock(ctx context.Context) (*tmservice.Block, error)
 	GetSyncing(ctx context.Context) (bool, error)
 	GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error)
+
 	GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error)
 
 	WaitForBlockHeight(ctx context.Context, height int64) error

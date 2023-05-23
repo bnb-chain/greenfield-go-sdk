@@ -58,6 +58,8 @@ func main() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{TxnHash: txnHash})
 	handleErr(err, "PutObject")
 
+	log.Printf("object: %s has been uploaded to SP\n", objectName)
+
 	waitObjectSeal(cli, bucketName, objectName)
 
 	// get object
@@ -71,7 +73,7 @@ func main() {
 	}
 
 	// list object
-	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{})
+	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{true, "", "", "/", "", 10})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo
@@ -85,6 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("txn fail")
 	}
+	log.Printf("object: %s has been deleted\n", objectName)
 
 }
 
