@@ -49,7 +49,7 @@ type Group interface {
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
 func (c *client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
-	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.InitGroupMember)
+	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.InitGroupMember, opt.Extra)
 	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
 }
 

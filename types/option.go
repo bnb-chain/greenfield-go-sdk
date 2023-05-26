@@ -100,6 +100,7 @@ type CreateObjectOptions struct {
 // CreateGroupOptions  indicates the meta to construct createGroup msg
 type CreateGroupOptions struct {
 	InitGroupMember []sdk.AccAddress
+	Extra           string
 	TxOpts          *gnfdsdktypes.TxOption
 }
 
