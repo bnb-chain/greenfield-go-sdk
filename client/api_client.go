@@ -253,6 +253,15 @@ type sendOptions struct {
 	isAdminApi       bool        // indicate if it is an admin api request
 }
 
+// downloadSegmentHook is hook for test
+type downloadSegmentHook func(seg int64) error
+
+var DownloadSegmentHooker downloadSegmentHook = DefaultDownloadSegmentHook
+
+func DefaultDownloadSegmentHook(seg int64) error {
+	return nil
+}
+
 // newRequest constructs the http request, set url, body and headers
 func (c *client) newRequest(ctx context.Context, method string, meta requestMeta,
 	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL,

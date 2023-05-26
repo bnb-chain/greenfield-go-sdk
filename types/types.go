@@ -18,7 +18,7 @@ type Principal string
 type ObjectStat struct {
 	ObjectName  string
 	ContentType string
-	Size        int64
+	Size        int64 // Object size
 }
 
 // QueryPieceInfo indicates the challenge or recovery object piece info

@@ -3,7 +3,6 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"io"
 	"os"
 	"testing"
@@ -465,4 +464,155 @@ func (s *StorageTestSuite) Test_PutObject_BigObject_No_Resumable() {
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
+}
+
+// DownErrorHooker requests hook by downloadSegment
+func DownErrorHooker(segment int64) error {
+	if segment == 1 {
+		time.Sleep(time.Second)
+		return fmt.Errorf("ErrorHooker")
+	}
+	return nil
+}
+
+func (s *StorageTestSuite) Test_FGetObjectResumable_test() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
+
+	var buffer bytes.Buffer
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*1200; i++ {
+		line := types.RandStr(20)
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectInfo.ObjectName, objectName)
+	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	s.T().Log("---> PutObject and GetObject <---")
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	time.Sleep(10 * time.Second)
+	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	}
+
+	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOption{})
+	s.T().Logf("--->  object file :%s <---", fileName)
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOption{})
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	isSame, err := types.CompareFiles(fileName, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+}
+
+// TestDownloadRoutineWithRecovery multi-routine resumable download
+func (s *StorageTestSuite) TestFGetObjectResumableWithRecovery() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
+
+	var buffer bytes.Buffer
+	// Create 18 MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*20; i++ {
+		line := types.RandStr(1024)
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectInfo.ObjectName, objectName)
+	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	s.T().Log("---> PutObject and GetObject <---")
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	time.Sleep(10 * time.Second)
+	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	}
+
+	// Download a file with default checkpoint
+	client.DownloadSegmentHooker = DownErrorHooker
+	newFile := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("---> Create newfile:%s, <---", newFile)
+
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, newFile, types.GetObjectOption{})
+	s.Require().ErrorContains(err, "ErrorHooker")
+	client.DownloadSegmentHooker = client.DefaultDownloadSegmentHook
+
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, newFile, types.GetObjectOption{})
+	s.Require().NoError(err)
+	//download success, checkpoint file has been deleted
+
+	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOption{})
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	isSame, err := types.CompareFiles(newFile, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+
 }
