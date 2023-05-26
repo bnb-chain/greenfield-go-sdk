@@ -364,8 +364,12 @@ func (s *StorageTestSuite) Test_DownloadFileWithCpChoiceOptions() {
 	}
 
 	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	cp := types.CheckpointConfig{
+		IsEnable: true,
+		DirPath:  "./",
+	}
+	err = s.Client.GetObjectResumable(s.ClientContext, bucketName, objectName, types.GetObjectResumableOption{CpConfig: cp}, fileName)
 	s.T().Logf("--->  object file :%s <---", fileName)
-	err = s.Client.GetObjectResumable(s.ClientContext, bucketName, objectName, types.GetObjectResumableOption{}, fileName)
 	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
 	s.Require().NoError(err)
 
