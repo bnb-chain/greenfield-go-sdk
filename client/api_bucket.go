@@ -95,7 +95,7 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 	// fetch primary signed msg from sp response
 	signedRawMsg := resp.Header.Get(types.HTTPHeaderSignedMsg)
 	if signedRawMsg == "" {
-		return nil, errors.New("fail to fetch pre createObject signature")
+		return nil, errors.New("fail to fetch pre createBucket signature")
 	}
 
 	signedMsgBytes, err := hex.DecodeString(signedRawMsg)
