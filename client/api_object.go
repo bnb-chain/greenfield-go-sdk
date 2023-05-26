@@ -840,62 +840,60 @@ func DownloadWorker(id int, arg DownloadWorkerArg, jobs <-chan types.SegmentPiec
 			failed <- err
 			break
 		}
-
-		// Resolve options
-		s := fmt.Sprintf("bytes=%d-%d", seg.Start, seg.End)
-		opts := arg.Options.GetObjectOption
-		opts.Range = s
-
-		rd, _, err := arg.Client.GetObject(arg.Ctx, arg.BucketName, arg.ObjectName, opts)
-		if err != nil {
-			failed <- err
-			break
-		}
-		// TODO(chris)
 		func() {
+			// Resolve options
+			s := fmt.Sprintf("bytes=%d-%d", seg.Start, seg.End)
+			opts := arg.Options.GetObjectOption
+			opts.Range = s
+
+			rd, _, err := arg.Client.GetObject(arg.Ctx, arg.BucketName, arg.ObjectName, opts)
+			if err != nil {
+				failed <- err
+				return
+			}
+
+			select {
+			case <-die:
+				return
+			default:
+			}
+
 			defer rd.Close()
+
+			fd, err := os.OpenFile(arg.FilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, types.FilePermMode)
+			if err != nil {
+				failed <- err
+				return
+			}
+
+			newPosition, err := fd.Seek(seg.Start-seg.Offset, io.SeekStart)
+			if err != nil {
+				fd.Close()
+				failed <- err
+				return
+			}
+
+			startT := time.Now().UnixNano() / 1000 / 1000 / 1000
+
+			_, err = io.Copy(fd, rd)
+			log.Error().Msg(fmt.Sprintf("Range: %s, Seek, %d， new oofset %d", s, seg.Start-seg.Offset, newPosition))
+
+			endT := time.Now().UnixNano() / 1000 / 1000 / 1000
+			if err != nil {
+				// TODO(chris): request id
+				log.Error().Msg(fmt.Sprintf("download seg error,cost:%d second,seg number:%d,request id:%s,error:%s.\n", endT-startT, seg.Index, "0", err.Error()))
+				fd.Close()
+				failed <- err
+			}
+
+			// TODO(chris): crc
+			//if arg.EnableCRC {
+			//	//seg.CRC64 = crcCalc.Sum64()
+			//}
+
+			fd.Close()
+			results <- seg
 		}()
-
-		select {
-		case <-die:
-			return
-		default:
-		}
-
-		fd, err := os.OpenFile(arg.FilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, types.FilePermMode)
-		if err != nil {
-			failed <- err
-			break
-		}
-
-		newPosition, err := fd.Seek(seg.Start-seg.Offset, io.SeekStart)
-		if err != nil {
-			fd.Close()
-			failed <- err
-			break
-		}
-
-		startT := time.Now().UnixNano() / 1000 / 1000 / 1000
-
-		_, err = io.Copy(fd, rd)
-		log.Error().Msg(fmt.Sprintf("Range: %s, Seek, %d， new oofset %d", s, seg.Start-seg.Offset, newPosition))
-
-		endT := time.Now().UnixNano() / 1000 / 1000 / 1000
-		if err != nil {
-			// TODO(chris): request id
-			log.Error().Msg(fmt.Sprintf("download seg error,cost:%d second,seg number:%d,request id:%s,error:%s.\n", endT-startT, seg.Index, "0", err.Error()))
-			fd.Close()
-			failed <- err
-			break
-		}
-
-		// TODO(chris): crc
-		//if arg.EnableCRC {
-		//	//seg.CRC64 = crcCalc.Sum64()
-		//}
-
-		fd.Close()
-		results <- seg
 	}
 }
 
