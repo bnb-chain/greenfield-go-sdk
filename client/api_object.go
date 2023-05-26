@@ -343,6 +343,7 @@ func (c *client) GetObjectResumable(ctx context.Context, bucketName, objectName 
 
 	params, err := c.GetParams()
 	if err != nil {
+		return err
 	}
 	cpFilePath := types.GetDownloadCpFilePath(&opts.CpConfig, bucketName, objectName, "0", filePath)
 
@@ -404,7 +405,10 @@ func (c *client) GetObjectResumable(ctx context.Context, bucketName, objectName 
 			completed++
 			dcp.SegmentStat[seg.Index] = true
 			dcp.Segments[seg.Index].CRC64 = seg.CRC64
-			dcp.Dump(cpFilePath)
+			err := dcp.Dump(cpFilePath)
+			if err != nil {
+				return err
+			}
 			downBytes := seg.End - seg.Start + 1
 			completedBytes += downBytes
 		case err := <-failed:
@@ -418,13 +422,10 @@ func (c *client) GetObjectResumable(ctx context.Context, bucketName, objectName 
 	}
 
 	// TODO(chris) CRC
-	if dcp.EnableCRC {
-	}
+	//if dcp.EnableCRC {
+	//}
 
-	dcp.Complete(cpFilePath, tempFilePath)
-
-	return nil
-
+	return dcp.Complete(cpFilePath, tempFilePath)
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
@@ -842,7 +843,7 @@ func DownloadWorker(id int, arg DownloadWorkerArg, jobs <-chan types.SegmentPiec
 
 		// Resolve options
 		s := fmt.Sprintf("bytes=%d-%d", seg.Start, seg.End)
-		var opts types.GetObjectOption
+		opts := arg.Options.GetObjectOption
 		opts.Range = s
 
 		rd, _, err := arg.Client.GetObject(arg.Ctx, arg.BucketName, arg.ObjectName, opts)
@@ -850,8 +851,10 @@ func DownloadWorker(id int, arg DownloadWorkerArg, jobs <-chan types.SegmentPiec
 			failed <- err
 			break
 		}
-
-		defer rd.Close()
+		// TODO(chris)
+		func() {
+			defer rd.Close()
+		}()
 
 		select {
 		case <-die:
@@ -879,16 +882,17 @@ func DownloadWorker(id int, arg DownloadWorkerArg, jobs <-chan types.SegmentPiec
 
 		endT := time.Now().UnixNano() / 1000 / 1000 / 1000
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("download seg error,cost:%d second,seg number:%d,request id:%s,error:%s.\n", endT-startT, seg.Index, 0, err.Error()))
+			// TODO(chris): request id
+			log.Error().Msg(fmt.Sprintf("download seg error,cost:%d second,seg number:%d,request id:%s,error:%s.\n", endT-startT, seg.Index, "0", err.Error()))
 			fd.Close()
 			failed <- err
 			break
 		}
 
 		// TODO(chris): crc
-		if arg.EnableCRC {
-			//seg.CRC64 = crcCalc.Sum64()
-		}
+		//if arg.EnableCRC {
+		//	//seg.CRC64 = crcCalc.Sum64()
+		//}
 
 		fd.Close()
 		results <- seg

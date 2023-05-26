@@ -192,9 +192,9 @@ type GetObjectOption struct {
 
 // GetObjectResumableOption contains the options of getObject
 type GetObjectResumableOption struct {
-	getObjectOption GetObjectOption
+	GetObjectOption GetObjectOption
 	CpConfig        CheckpointConfig
-	routines        int
+	Routines        int
 }
 
 type GetChallengeInfoOptions struct {
