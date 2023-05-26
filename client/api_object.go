@@ -16,6 +16,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
@@ -40,6 +41,7 @@ type Object interface {
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
 	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
+	GetObjectResumable(ctx context.Context, bucketName, objectName string, opts types.GetObjectResumableOption, filePath string) error
 
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
@@ -85,6 +87,18 @@ func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 
 	versionedParams := queryResp.Params.VersionedParams
 	return versionedParams.GetRedundantDataChunkNum(), versionedParams.GetRedundantParityChunkNum(), versionedParams.GetMaxSegmentSize(), nil
+}
+
+// GetParams query and return the data shards, parity shards and segment size of redundancy
+// configuration on chain
+func (c *client) GetParams() (storageTypes.Params, error) {
+	query := storageTypes.QueryParamsRequest{}
+	queryResp, err := c.chainClient.StorageQueryClient.Params(context.Background(), &query)
+	if err != nil {
+		return storageTypes.Params{}, err
+	}
+
+	return queryResp.Params, nil
 }
 
 // ComputeHashRoots return the integrity hash, content size and the redundancy type of the file
@@ -319,6 +333,98 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 	}
 
 	return resp.Body, objStat, nil
+}
+
+// GetObjectResumable download s3 object payload and return the related object info
+func (c *client) GetObjectResumable(ctx context.Context, bucketName, objectName string,
+	opts types.GetObjectResumableOption, filePath string,
+) error {
+	tempFilePath := filePath + types.TempFileSuffix
+
+	params, err := c.GetParams()
+	if err != nil {
+	}
+	cpFilePath := types.GetDownloadCpFilePath(&opts.CpConfig, bucketName, objectName, "0", filePath)
+
+	// Load checkpoint data.
+	dcp := types.GetObjectCheckpoint{}
+	err = dcp.Load(cpFilePath)
+	if err != nil {
+		os.Remove(cpFilePath)
+	}
+
+	// Get the object detailed meta for object whole size
+	// must delete header:range to get whole object size
+	meta, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	// Load error or data invalid. Re-initialize the download.
+	// TODO(chris): uRange
+	valid, err := dcp.IsValid(meta, nil)
+	if err != nil || !valid {
+		if err = dcp.Prepare(meta, objectName, filePath, int64(params.VersionedParams.GetMaxSegmentSize()), nil); err != nil {
+			return err
+		}
+		os.Remove(cpFilePath)
+	}
+
+	// Create the file if not exists. Otherwise the parts download will overwrite it.
+	fd, err := os.OpenFile(tempFilePath, os.O_WRONLY|os.O_CREATE, types.FilePermMode)
+	if err != nil {
+		return err
+	}
+	fd.Close()
+
+	// Unfinished parts
+	parts := dcp.TodoSegments()
+	jobs := make(chan types.SegmentPiece, len(parts))
+	results := make(chan types.SegmentPiece, len(parts))
+	failed := make(chan error)
+	die := make(chan bool)
+
+	completedBytes := dcp.GetCompletedBytes()
+	// TODO(chris): event
+
+	// Start the download workers routine
+	arg := DownloadWorkerArg{Client: c, BucketName: bucketName, ObjectName: objectName, FilePath: tempFilePath, hook: DownloadSegmentHooker, Ctx: ctx, Options: &opts}
+	for w := 1; w <= 1; w++ {
+		go DownloadWorker(w, arg, jobs, results, failed, die)
+	}
+
+	// Concurrently downloads parts
+	go DownloadScheduler(jobs, parts)
+
+	// Wait for the parts download finished
+	completed := 0
+	for completed < len(parts) {
+		select {
+		case seg := <-results:
+			completed++
+			dcp.SegmentStat[seg.Index] = true
+			dcp.Segments[seg.Index].CRC64 = seg.CRC64
+			dcp.Dump(cpFilePath)
+			downBytes := seg.End - seg.Start + 1
+			completedBytes += downBytes
+		case err := <-failed:
+			close(die)
+			return err
+		}
+
+		if completed >= len(parts) {
+			break
+		}
+	}
+
+	// TODO(chris) CRC
+	if dcp.EnableCRC {
+	}
+
+	dcp.Complete(cpFilePath, tempFilePath)
+
+	return nil
+
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
@@ -724,4 +830,75 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 	}
 
 	return c.sendTxn(ctx, updateObjectMsg, opt.TxOpts)
+}
+
+// DownloadWorker download segment from sp
+func DownloadWorker(id int, arg DownloadWorkerArg, jobs <-chan types.SegmentPiece, results chan<- types.SegmentPiece, failed chan<- error, die <-chan bool) {
+	for seg := range jobs {
+		if err := arg.hook(seg); err != nil {
+			failed <- err
+			break
+		}
+
+		// Resolve options
+		s := fmt.Sprintf("bytes=%d-%d", seg.Start, seg.End)
+		var opts types.GetObjectOption
+		opts.Range = s
+
+		rd, _, err := arg.Client.GetObject(arg.Ctx, arg.BucketName, arg.ObjectName, opts)
+		if err != nil {
+			failed <- err
+			break
+		}
+
+		defer rd.Close()
+
+		select {
+		case <-die:
+			return
+		default:
+		}
+
+		fd, err := os.OpenFile(arg.FilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, types.FilePermMode)
+		if err != nil {
+			failed <- err
+			break
+		}
+
+		newPosition, err := fd.Seek(seg.Start-seg.Offset, io.SeekStart)
+		if err != nil {
+			fd.Close()
+			failed <- err
+			break
+		}
+
+		startT := time.Now().UnixNano() / 1000 / 1000 / 1000
+
+		_, err = io.Copy(fd, rd)
+		log.Error().Msg(fmt.Sprintf("Range: %s, Seek, %d， new oofset %d", s, seg.Start-seg.Offset, newPosition))
+
+		endT := time.Now().UnixNano() / 1000 / 1000 / 1000
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("download seg error,cost:%d second,seg number:%d,request id:%s,error:%s.\n", endT-startT, seg.Index, 0, err.Error()))
+			fd.Close()
+			failed <- err
+			break
+		}
+
+		// TODO(chris): crc
+		if arg.EnableCRC {
+			//seg.CRC64 = crcCalc.Sum64()
+		}
+
+		fd.Close()
+		results <- seg
+	}
+}
+
+// DownloadScheduler
+func DownloadScheduler(jobs chan types.SegmentPiece, segs []types.SegmentPiece) {
+	for _, seg := range segs {
+		jobs <- seg
+	}
+	close(jobs)
 }

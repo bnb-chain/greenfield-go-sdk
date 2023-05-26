@@ -25,6 +25,7 @@ const (
 	HTTPHeaderObjectId        = "X-Gnfd-Object-ID"
 	HTTPHeaderIntegrityHash   = "X-Gnfd-Integrity-Hash"
 	HTTPHeaderPieceHash       = "X-Gnfd-Piece-Hash"
+	HTTPHeaderLastModified    = "Last-Modified"
 
 	HTTPHeaderDate          = "X-Gnfd-Date"
 	HTTPHeaderEtag          = "ETag"

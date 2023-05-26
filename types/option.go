@@ -190,6 +190,13 @@ type GetObjectOption struct {
 	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
 }
 
+// GetObjectResumableOption contains the options of getObject
+type GetObjectResumableOption struct {
+	getObjectOption GetObjectOption
+	CpConfig        CheckpointConfig
+	routines        int
+}
+
 type GetChallengeInfoOptions struct {
 	Endpoint  string // indicates the endpoint of sp
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged

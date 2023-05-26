@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"fmt"
+	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"io"
 	"testing"
 	"time"
@@ -311,4 +312,220 @@ func (s *StorageTestSuite) Test_Group() {
 	if exist {
 		s.T().Logf("header groupMember: %s , exist", updateMembers[0])
 	}
+}
+
+func (s *StorageTestSuite) Test_DownloadFileWithCpChoiceOptions() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
+
+	var buffer bytes.Buffer
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*1200; i++ {
+		line := types.RandStr(20)
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectInfo.ObjectName, objectName)
+	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	s.T().Log("---> PutObject and GetObject <---")
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	time.Sleep(10 * time.Second)
+	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	}
+
+	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fileName)
+	err = s.Client.GetObjectResumable(s.ClientContext, bucketName, objectName, types.GetObjectResumableOption{}, fileName)
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOption{})
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	isSame, err := types.CompareFiles(fileName, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+}
+
+// DownErrorHooker requests hook by downloadPart
+func DownErrorHooker(part types.SegmentPiece) error {
+	if part.Index == 1 {
+		time.Sleep(time.Second)
+		return fmt.Errorf("ErrorHooker")
+	}
+	return nil
+}
+
+// TestDownloadRoutineWithRecovery multi-routine resumable download
+func (s *StorageTestSuite) TestDownloadRoutineWithRecovery() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
+
+	var buffer bytes.Buffer
+	// Create 18 MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*20; i++ {
+		line := types.RandStr(1024)
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectInfo.ObjectName, objectName)
+	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	s.T().Log("---> PutObject and GetObject <---")
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	time.Sleep(10 * time.Second)
+	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	}
+
+	// Download a file with default checkpoint
+	client.DownloadSegmentHooker = DownErrorHooker
+	newFile := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("---> Create newfile:%s, <---", newFile)
+
+	cp := types.CheckpointConfig{
+		IsEnable: true,
+		FilePath: newFile + ".cp",
+	}
+	err = s.Client.GetObjectResumable(s.ClientContext, bucketName, objectName, types.GetObjectResumableOption{CpConfig: cp}, newFile)
+	s.Require().ErrorContains(err, "ErrorHooker")
+	client.DownloadSegmentHooker = client.DefaultDownloadSegmentHook
+
+	// Check
+	dcp := types.GetObjectCheckpoint{}
+	err = dcp.Load(newFile + ".cp")
+	s.Require().NoError(err)
+	s.Require().Equal(dcp.Magic, types.DownloadCpMagic)
+	s.Require().Equal(dcp.FilePath, newFile)
+	s.Require().Equal(dcp.ObjStat.Size, int64(21155840))
+	s.Require().Equal(dcp.Object, objectName)
+	s.Require().Equal(len(dcp.Segments), 2)
+	s.Require().Equal(len(dcp.TodoSegments()), 1)
+	// TODO(chris): add MD5 LastModified Etag
+
+	err = s.Client.GetObjectResumable(s.ClientContext, bucketName, objectName, types.GetObjectResumableOption{CpConfig: cp}, newFile)
+	s.Require().NoError(err)
+	//download success, checkpoint file has been deleted
+	err = dcp.Load(newFile + ".cp")
+	s.Require().ErrorContains(err, "no such file or directory")
+
+	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOption{})
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	isSame, err := types.CompareFiles(newFile, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+
+}
+
+func (s *StorageTestSuite) TestDownloadRoutineWithRecovery2() {
+	bucketName := "jv2141dcdln"
+	objectName := "k5u5eaunb"
+
+	// Download a file with default checkpoint
+	client.DownloadSegmentHooker = DownErrorHooker
+	newFile := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("---> Create newfile:%s, <---", newFile)
+
+	cp := types.CheckpointConfig{
+		IsEnable: true,
+		FilePath: newFile + ".cp",
+	}
+	err := s.Client.GetObjectResumable(s.ClientContext, bucketName, objectName, types.GetObjectResumableOption{CpConfig: cp}, newFile)
+	s.Require().ErrorContains(err, "ErrorHooker")
+	client.DownloadSegmentHooker = client.DefaultDownloadSegmentHook
+
+	// Check
+	dcp := types.GetObjectCheckpoint{}
+	err = dcp.Load(newFile + ".cp")
+	s.Require().NoError(err)
+	s.Require().Equal(dcp.Magic, types.DownloadCpMagic)
+	s.Require().Equal(dcp.FilePath, newFile)
+	s.Require().Equal(dcp.ObjStat.Size, int64(21155840))
+	s.Require().Equal(dcp.Object, objectName)
+	s.Require().Equal(len(dcp.Segments), 2)
+	s.Require().Equal(len(dcp.TodoSegments()), 1)
+	// TODO(chris): add MD5 LastModified Etag
+
+	err = s.Client.GetObjectResumable(s.ClientContext, bucketName, objectName, types.GetObjectResumableOption{CpConfig: cp}, newFile)
+	s.Require().NoError(err)
+	//download success, checkpoint file has been deleted
+	err = dcp.Load(newFile + ".cp")
+	s.Require().NoError(err)
+
+	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOption{})
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	isSame, err := types.CompareFiles(newFile, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
 }
