@@ -371,17 +371,17 @@ func (c *client) GetObjectResumable(ctx context.Context, bucketName, objectName 
 		os.Remove(cpFilePath)
 	}
 
-	// Create the file if not exists. Otherwise the parts download will overwrite it.
+	// Create the file if not exists. Otherwise the segments download will overwrite it.
 	fd, err := os.OpenFile(tempFilePath, os.O_WRONLY|os.O_CREATE, types.FilePermMode)
 	if err != nil {
 		return err
 	}
 	fd.Close()
 
-	// Unfinished parts
-	parts := dcp.TodoSegments()
-	jobs := make(chan types.SegmentPiece, len(parts))
-	results := make(chan types.SegmentPiece, len(parts))
+	// Unfinished segments
+	segments := dcp.TodoSegments()
+	jobs := make(chan types.SegmentPiece, len(segments))
+	results := make(chan types.SegmentPiece, len(segments))
 	failed := make(chan error)
 	die := make(chan bool)
 
@@ -394,12 +394,12 @@ func (c *client) GetObjectResumable(ctx context.Context, bucketName, objectName 
 		go DownloadWorker(w, arg, jobs, results, failed, die)
 	}
 
-	// Concurrently downloads parts
-	go DownloadScheduler(jobs, parts)
+	// Concurrently downloads segments
+	go DownloadScheduler(jobs, segments)
 
-	// Wait for the parts download finished
+	// Wait for the segments download finished
 	completed := 0
-	for completed < len(parts) {
+	for completed < len(segments) {
 		select {
 		case seg := <-results:
 			completed++
@@ -416,7 +416,7 @@ func (c *client) GetObjectResumable(ctx context.Context, bucketName, objectName 
 			return err
 		}
 
-		if completed >= len(parts) {
+		if completed >= len(segments) {
 			break
 		}
 	}

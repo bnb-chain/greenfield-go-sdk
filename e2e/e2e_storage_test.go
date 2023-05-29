@@ -384,9 +384,9 @@ func (s *StorageTestSuite) Test_DownloadFileWithCpChoiceOptions() {
 	s.Require().NoError(err)
 }
 
-// DownErrorHooker requests hook by downloadPart
-func DownErrorHooker(part types.SegmentPiece) error {
-	if part.Index == 1 {
+// DownErrorHooker requests hook by downloadSegment
+func DownErrorHooker(segment types.SegmentPiece) error {
+	if segment.Index == 1 {
 		time.Sleep(time.Second)
 		return fmt.Errorf("ErrorHooker")
 	}
