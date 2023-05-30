@@ -44,6 +44,7 @@ type Client interface {
 	Distribution
 	CrossChain
 	FeeGrant
+	Executable
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
