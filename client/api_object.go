@@ -16,7 +16,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
@@ -161,7 +160,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, time.Second*30)
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), types.ContextTimeout)
 	defer cancel()
 
 	txnHash := resp.TxResponse.TxHash

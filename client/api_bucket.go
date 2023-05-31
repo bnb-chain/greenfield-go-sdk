@@ -154,7 +154,7 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, time.Second*30)
+	ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 	defer cancel()
 
 	var txnResponse *sdk.TxResponse
