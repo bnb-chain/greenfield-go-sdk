@@ -160,7 +160,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	ctxTimeout, cancel := context.WithTimeout(context.Background(), types.ContextTimeout)
+	ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 	defer cancel()
 
 	txnHash := resp.TxResponse.TxHash
