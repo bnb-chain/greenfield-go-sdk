@@ -16,6 +16,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
@@ -100,7 +101,8 @@ func (c *client) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTyp
 	return hashlib.ComputeIntegrityHash(reader, int64(segSize), int(dataBlocks), int(parityBlocks))
 }
 
-// CreateObject get approval of creating object and send createObject txn to greenfield chain
+// CreateObject get approval of creating object and send createObject txn to greenfield chain,
+// it returns the transaction hash value and error
 func (c *client) CreateObject(ctx context.Context, bucketName, objectName string,
 	reader io.Reader, opts types.CreateObjectOptions,
 ) (string, error) {
@@ -159,14 +161,20 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
 	txnHash := resp.TxResponse.TxHash
+	var txnResponse *sdk.TxResponse
 	if !opts.IsAsyncMode {
-		_, err = c.WaitForTx(ctx, txnHash)
+		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
-			return txnHash, errors.New("failed to commit txn:" + err.Error())
+			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
+		}
+		if txnResponse.Code != 0 {
+			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.Code)
 		}
 	}
-
 	return txnHash, nil
 }
 

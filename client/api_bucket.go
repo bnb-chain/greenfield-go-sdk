@@ -109,7 +109,7 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 	return &signedMsg, nil
 }
 
-// CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
+// CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain, it returns the transaction hash value and error
 func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error) {
 	address, err := sdk.AccAddressFromHexUnsafe(primaryAddr)
 	if err != nil {
@@ -154,11 +154,18 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	var txnResponse *sdk.TxResponse
 	txnHash := resp.TxResponse.TxHash
 	if !opts.IsAsyncMode {
-		_, err = c.WaitForTx(ctx, txnHash)
+		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
-			return txnHash, errors.New("failed to commit txn:" + err.Error())
+			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
+		}
+		if txnResponse.Code != 0 {
+			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.Code)
 		}
 	}
 
