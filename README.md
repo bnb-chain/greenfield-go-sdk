@@ -76,7 +76,7 @@ func main() {
 	rpcAddr := "https://gnfd-testnet-fullnode-tendermint-us.bnbchain.org:443"
 	chainId := "greenfield_5600-1"
 	
-	gnfdCLient, err := client.New(rpcAddr, chainId, client.Option{DefaultAccount: account})
+	gnfdCLient, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
