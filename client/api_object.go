@@ -160,12 +160,11 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
-	defer cancel()
-
 	txnHash := resp.TxResponse.TxHash
 	var txnResponse *sdk.TxResponse
 	if !opts.IsAsyncMode {
+		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
+		defer cancel()
 		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)

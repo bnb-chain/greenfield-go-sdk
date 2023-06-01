@@ -154,12 +154,12 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
-	defer cancel()
-
 	var txnResponse *sdk.TxResponse
 	txnHash := resp.TxResponse.TxHash
 	if !opts.IsAsyncMode {
+		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
+		defer cancel()
+
 		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
