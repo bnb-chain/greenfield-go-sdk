@@ -2,6 +2,7 @@ package types
 
 import (
 	"runtime"
+	"time"
 )
 
 const (
@@ -48,5 +49,6 @@ const (
 
 	ChallengeUrl           = "challenge"
 	PrimaryRedundancyIndex = -1
-	MaxRedundancyIndex     = 5
+
+	ContextTimeout = time.Second * 30
 )
