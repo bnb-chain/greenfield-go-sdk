@@ -109,7 +109,7 @@ func (s *StorageTestSuite) Test_Bucket() {
 	s.T().Logf("get bucket policy:%s\n", bucketPolicy.String())
 
 	s.T().Log("---> DeleteBucketPolicy <---")
-	deleteBucketPolicy, err := s.Client.DeleteBucketPolicy(s.ClientContext, bucketName, principal.GetAddress().String(), types.DeletePolicyOption{})
+	deleteBucketPolicy, err := s.Client.DeleteBucketPolicy(s.ClientContext, bucketName, principalStr, types.DeletePolicyOption{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, deleteBucketPolicy)
 	s.Require().NoError(err)
@@ -209,7 +209,10 @@ func (s *StorageTestSuite) Test_Object() {
 	s.T().Logf("get object policy:%s\n", objectPolicy.String())
 
 	s.T().Log("---> DeleteObjectPolicy <---")
-	deleteObjectPolicy, err := s.Client.DeleteObjectPolicy(s.ClientContext, bucketName, objectName, principal.GetAddress().String(), types.DeletePolicyOption{})
+
+	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	s.Require().NoError(err)
+	deleteObjectPolicy, err := s.Client.DeleteObjectPolicy(s.ClientContext, bucketName, objectName, principalStr, types.DeletePolicyOption{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, deleteObjectPolicy)
 	s.Require().NoError(err)
