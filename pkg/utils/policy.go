@@ -26,6 +26,7 @@ func NewStatement(actions []permTypes.ActionType, effect permTypes.Effect,
 	return statement
 }
 
+// NewPrincipalWithAccount return the marshaled Principal string which indicates the account
 func NewPrincipalWithAccount(principalAddr sdk.AccAddress) (types.Principal, error) {
 	p := permTypes.NewPrincipalWithAccount(principalAddr)
 	principalBytes, err := p.Marshal()
@@ -35,6 +36,7 @@ func NewPrincipalWithAccount(principalAddr sdk.AccAddress) (types.Principal, err
 	return types.Principal(principalBytes), nil
 }
 
+// NewPrincipalWithGroupId return the marshaled Principal string which indicates the group
 func NewPrincipalWithGroupId(groupId uint64) (types.Principal, error) {
 	p := permTypes.NewPrincipalWithGroup(sdkmath.NewUint(groupId))
 	principalBytes, err := p.Marshal()

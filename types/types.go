@@ -4,12 +4,11 @@ import (
 	"io"
 )
 
-type (
-	Principal string
-	TxnHash   string
-)
+// Principal indicates the marshaled Principal content of greenfield permission types,
+// user can generate it by NewPrincipalWithAccount or NewPrincipalWithGroupId method in utils
+type Principal string
 
-// ObjectInfo contains the metadata of downloaded objects
+// ObjectStat contains the metadata of downloaded objects
 type ObjectStat struct {
 	ObjectName  string
 	ContentType string

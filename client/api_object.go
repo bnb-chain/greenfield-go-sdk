@@ -53,8 +53,7 @@ type Object interface {
 	PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 		statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
 	// DeleteObjectPolicy delete the object policy of the principal
-	// principalAddr indicates the HEX-encoded string of the principal address
-	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string, opt types.DeletePolicyOption) (string, error)
+	DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error)
 	// GetObjectPolicy get the object policy info of the user specified by principalAddr.
 	// principalAddr indicates the HEX-encoded string of the principal address
 	GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string) (*permTypes.Policy, error)
@@ -429,14 +428,12 @@ func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName str
 }
 
 // DeleteObjectPolicy delete the object policy of the principal
-// principalAddr indicates the HEX-encoded string of the principal address
-func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string, opt types.DeletePolicyOption) (string, error) {
-	addr, err := sdk.AccAddressFromHexUnsafe(principalAddr)
-	if err != nil {
+func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error) {
+	principal := &permTypes.Principal{}
+	if err := principal.Unmarshal([]byte(principalStr)); err != nil {
 		return "", err
 	}
 
-	principal := permTypes.NewPrincipalWithAccount(addr)
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
 	return c.sendDelPolicyTxn(ctx, c.MustGetDefaultAccount().GetAddress(), resource.String(), principal, opt.TxOpts)
 }

@@ -41,11 +41,10 @@ type Bucket interface {
 
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
-
+	// PutBucketPolicy put the bucket policy to the principal
 	PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
 	// DeleteBucketPolicy delete the bucket policy of the principal
-	// principalAddr indicates the HEX-encoded string of the principal address
-	DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr string, opt types.DeletePolicyOption) (string, error)
+	DeleteBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error)
 	// GetBucketPolicy get the bucket policy info of the user specified by principalAddr.
 	// principalAddr indicates the HEX-encoded string of the principal address
 	GetBucketPolicy(ctx context.Context, bucketName string, principalAddr string) (*permTypes.Policy, error)
@@ -309,14 +308,12 @@ func (c *client) PutBucketPolicy(ctx context.Context, bucketName string, princip
 }
 
 // DeleteBucketPolicy delete the bucket policy of the principal
-func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, principalAddr string, opt types.DeletePolicyOption) (string, error) {
+func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
-	addr, err := sdk.AccAddressFromHexUnsafe(principalAddr)
-	if err != nil {
+	principal := &permTypes.Principal{}
+	if err := principal.Unmarshal([]byte(principalStr)); err != nil {
 		return "", err
 	}
-
-	principal := permTypes.NewPrincipalWithAccount(addr)
 
 	return c.sendDelPolicyTxn(ctx, c.MustGetDefaultAccount().GetAddress(), resource, principal, opt.TxOpts)
 }
