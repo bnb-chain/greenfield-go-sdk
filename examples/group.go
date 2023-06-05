@@ -61,6 +61,13 @@ func main() {
 
 	log.Printf(" head member %s exist \n", groupMember)
 
+	// list groups
+	groups, err := cli.ListGroupByNameAndPrefix(ctx, "e", "t", types.ListGroupsOptions{SourceType: "SOURCE_TYPE_ORIGIN", Limit: 10})
+	log.Println("list groups result:")
+	for _, group := range groups.Groups {
+		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
+	}
+
 	// delete group
 	delTx, err := cli.DeleteGroup(ctx, groupName, types.DeleteGroupOption{})
 	handleErr(err, "DeleteGroup")
