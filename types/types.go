@@ -2,6 +2,12 @@ package types
 
 import (
 	"io"
+	"math/rand"
+	"time"
+)
+
+var (
+	letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 )
 
 // Principal indicates the marshaled Principal content of greenfield permission types,
@@ -29,4 +35,13 @@ type ChallengeResult struct {
 	PieceData     io.ReadCloser
 	IntegrityHash string
 	PiecesHash    []string
+}
+
+func RandStr(n int) string {
+	b := make([]rune, n)
+	randMarker := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := range b {
+		b[i] = letters[randMarker.Intn(len(letters))]
+	}
+	return string(b)
 }

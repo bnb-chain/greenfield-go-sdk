@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -85,6 +86,28 @@ type Option struct {
 	Transport http.RoundTripper
 	// Host is the target sp server hostname
 	Host string
+}
+
+// ObjectPart container for particular part of an object.
+type ObjectPart struct {
+	// Part number identifies the part.
+	PartNumber int
+
+	// Date and time the part was uploaded.
+	LastModified time.Time
+
+	// Entity tag returned when the part was uploaded, usually md5sum
+	// of the part.
+	ETag string
+
+	// Size of the uploaded part data.
+	Size int64
+
+	// Checksum values of each part.
+	ChecksumCRC32  string
+	ChecksumCRC32C string
+	ChecksumSHA1   string
+	ChecksumSHA256 string
 }
 
 // New - instantiate greenfield chain with chain info, account info and options.
@@ -418,6 +441,18 @@ func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOpt
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (c *client) OptimalPartInfo(objectSize int64, configuredPartSize uint64) (totalPartsCount int, partSize int64, lastPartSize int64, err error) {
+	// TODO
+	partSizeFlt := float64(configuredPartSize)
+	// Total parts count.
+	totalPartsCount = int(math.Ceil(float64(objectSize) / partSizeFlt))
+	// Part size.
+	partSize = int64(partSizeFlt)
+	// Last part size.
+	lastPartSize = objectSize - int64(totalPartsCount-1)*partSize
+	return totalPartsCount, partSize, lastPartSize, nil
 }
 
 // generateURL constructs the target request url based on the parameters

@@ -37,6 +37,7 @@ type Object interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	putpObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
@@ -76,6 +77,8 @@ type Object interface {
 
 	// RecoverObjectBySecondary get piece data from secondary SPs and recovery the object in client
 	RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
+	// GetObjectResumableUploadOffset return the status of the uploading object
+	GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -89,6 +92,18 @@ func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 
 	versionedParams := queryResp.Params.VersionedParams
 	return versionedParams.GetRedundantDataChunkNum(), versionedParams.GetRedundantParityChunkNum(), versionedParams.GetMaxSegmentSize(), nil
+}
+
+// GetParams query and return the data shards, parity shards and segment size of redundancy
+// configuration on chain
+func (c *client) GetParams() (storageTypes.Params, error) {
+	query := storageTypes.QueryParamsRequest{}
+	queryResp, err := c.chainClient.StorageQueryClient.Params(context.Background(), &query)
+	if err != nil {
+		return storageTypes.Params{}, err
+	}
+
+	return queryResp.Params, nil
 }
 
 // ComputeHashRoots return the integrity hash, content size and the redundancy type of the file
@@ -217,6 +232,26 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 		return errors.New("object size should be more than 0")
 	}
 
+	// minPartSize: 16MB
+	partSize := opts.PartSize
+	if opts.PartSize == 0 {
+		partSize = types.MinPartSize
+	}
+
+	if objectSize >= 0 && objectSize < int64(partSize) || opts.DisableResumable {
+		return c.putObject(ctx, bucketName, objectName, objectSize, reader, opts)
+	}
+
+	return c.putpObjectResumable(ctx, bucketName, objectName, objectSize, reader, opts)
+}
+
+func (c *client) putObject(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
+) (err error) {
+	if objectSize <= 0 {
+		return errors.New("object size should be more than 0")
+	}
+
 	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
 		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
 		return err
@@ -260,6 +295,156 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	_, err = c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+//// UploadSegment defines upload Segment
+//type UploadSegment struct {
+//	Index  int    // Segment number, starting from 0
+//	Start  int64  // Start index
+//	End    int64  // End index
+//	Offset int64  // Offset
+//	CRC64  uint64 // CRC check value of Segment
+//}
+
+// UploadSegmentHook is for testing usage
+type uploadSegmentHook func(id int) error
+
+var UploadSegmentHooker uploadSegmentHook = DefaultUploadSegment
+
+func DefaultUploadSegment(id int) error {
+	return nil
+}
+
+func (c *client) putpObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
+) (err error) {
+
+	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
+		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
+		return err
+	}
+
+	offset, err := c.GetObjectResumableUploadOffset(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	// Total data read and written to server. should be equal to
+	// 'size' at the end of the call.
+	var totalUploadedSize int64
+
+	// Calculate the optimal parts info for a given size.
+	totalPartsCount, partSize, _, err := c.OptimalPartInfo(objectSize, opts.PartSize)
+	if err != nil {
+		return err
+	}
+
+	// Part number always starts with '1'.
+	partNumber := 1
+	startPartNumber := int(offset/opts.PartSize + 1)
+
+	// Create a buffer.
+	buf := make([]byte, partSize)
+	complete := false
+
+	// skip sucess segment TODO(chris): seek ?
+	for partNumber < startPartNumber {
+		length, rErr := utils.ReadFull(reader, buf)
+		if rErr == io.EOF && partNumber > 1 {
+			break
+		}
+		// Increment part number.
+		log.Info().Msg(fmt.Sprintf("skip partNumber:%d, length:%d", partNumber, length))
+		// Save successfully uploaded size.
+		totalUploadedSize += int64(length)
+		partNumber++
+	}
+
+	for partNumber <= totalPartsCount {
+		if partNumber == totalPartsCount {
+			complete = true
+		}
+		// hook for test
+		if err = UploadSegmentHooker(partNumber); err != nil {
+			return err
+		}
+		length, rErr := utils.ReadFull(reader, buf)
+		if rErr == io.EOF && partNumber > 1 {
+			break
+		}
+
+		if rErr != nil && rErr != io.ErrUnexpectedEOF && rErr != io.EOF {
+			return err
+		}
+
+		log.Info().Msg(fmt.Sprintf("partNumber:%d, length:%d", partNumber, length))
+
+		// Update progress reader appropriately to the latest offset
+		// as we read from the source.
+		rd := bytes.NewReader(buf[:length])
+
+		var contentType string
+		if opts.ContentType != "" {
+			contentType = opts.ContentType
+		} else {
+			contentType = types.ContentDefault
+		}
+
+		// Initialize url queries.
+		urlValues := make(url.Values)
+		urlValues.Set("offset", strconv.FormatInt(totalUploadedSize, 10))
+		urlValues.Set("complete", strconv.FormatBool(complete))
+		urlValues.Set("context", "")
+
+		reqMeta := requestMeta{
+			bucketName:    bucketName,
+			objectName:    objectName,
+			contentSHA256: types.EmptyStringSHA256,
+			contentLength: int64(length),
+			contentType:   contentType,
+			urlValues:     urlValues,
+		}
+
+		var sendOpt sendOptions
+		if opts.TxnHash != "" {
+			sendOpt = sendOptions{
+				method:  http.MethodPost,
+				body:    rd,
+				txnHash: opts.TxnHash,
+			}
+		} else {
+			sendOpt = sendOptions{
+				method: http.MethodPost,
+				body:   rd,
+			}
+		}
+
+		endpoint, err := c.getSPUrlByBucket(bucketName)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
+			return err
+		}
+
+		// Proceed to upload the part.
+		_, err = c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+		if err != nil {
+			return err
+		}
+
+		// Save successfully uploaded size.
+		totalUploadedSize += int64(length)
+
+		// Increment part number.
+		partNumber++
+
+		// For unknown size, Read EOF we break away.
+		// We do not have to upload till totalPartsCount.
+		if rErr == io.EOF {
+			break
+		}
 	}
 
 	return nil
@@ -988,6 +1173,70 @@ func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 	}
 
 	return status.ObjectStatus.String(), nil
+}
+
+// GetObjectResumableUploadOffset return the status of object including the uploading progress
+func (c *client) GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error) {
+	status, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return 0, err
+	}
+
+	// get object status from sp
+	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
+		uploadOffsetInfo, err := c.getObjectOffsetFromSP(ctx, bucketName, objectName)
+		if err != nil {
+			return 0, errors.New("fail to fetch object uploading offset from sp" + err.Error())
+		}
+		return uploadOffsetInfo.Offset, nil
+	}
+
+	// TODO(chris): may error
+	return 0, nil
+}
+
+func (c *client) getObjectOffsetFromSP(ctx context.Context, bucketName, objectName string) (types.UploadOffset, error) {
+	params := url.Values{}
+	params.Set("upload-context", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		bucketName:    bucketName,
+		objectName:    objectName,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getSPUrlByBucket(bucketName)
+	if err != nil {
+		return types.UploadOffset{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+
+	if err != nil {
+		// not exist
+		if find := strings.Contains(err.Error(), "no uploading record"); find {
+			return types.UploadOffset{Offset: 0}, nil
+		} else {
+			return types.UploadOffset{}, err
+		}
+	}
+
+	defer utils.CloseResponse(resp)
+
+	objectOffset := types.UploadOffset{}
+	// decode the xml content from response body
+	err = xml.NewDecoder(resp.Body).Decode(&objectOffset)
+	if err != nil {
+		return types.UploadOffset{}, err
+	}
+
+	return objectOffset, nil
 }
 
 func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectName string) (types.UploadProgress, error) {

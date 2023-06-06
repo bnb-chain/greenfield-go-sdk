@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"fmt"
+	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"io"
 	"os"
 	"testing"
@@ -356,5 +357,112 @@ func (s *StorageTestSuite) Test_Group() {
 	s.Require().Equal(true, exist)
 	if exist {
 		s.T().Logf("header groupMember: %s , exist", updateMembers[0])
+	}
+}
+
+// ErrorHooker is a UploadPart hook---it will fail the 2th segment's upload.
+func ErrorHooker(id int) error {
+	if id == 2 {
+		time.Sleep(time.Second)
+		return fmt.Errorf("ErrorHooker")
+	}
+	return nil
+}
+
+func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, object string, objectbody bytes.Buffer) {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	var buffer bytes.Buffer
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*1200; i++ {
+		line := types.RandStr(20)
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectInfo.ObjectName, objectName)
+	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	return bucketName, objectName, buffer
+}
+
+func (s *StorageTestSuite) Test_PutObject_With_Resumable() {
+	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
+	// resumable upload
+	s.T().Log("---> PutObject and GetObject <---")
+	// put an object(35M), the secondary segment will error
+	client.UploadSegmentHooker = ErrorHooker
+	err := s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+	s.Require().ErrorContains(err, "ErrorHooker")
+	client.UploadSegmentHooker = client.DefaultUploadSegment
+	offset, err := s.Client.GetObjectResumableUploadOffset(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(offset, uint64(16777216))
+
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	}
+
+	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOption{})
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(info.ObjectName, objectName)
+		objectBytes, err := io.ReadAll(ior)
+		s.Require().NoError(err)
+		s.Require().Equal(objectBytes, buffer.Bytes())
+	}
+}
+
+func (s *StorageTestSuite) Test_PutObject_BigObject_No_Resumable() {
+	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
+
+	s.T().Log("---> PutObject and GetObject <---")
+	err := s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	}
+
+	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOption{})
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(info.ObjectName, objectName)
+		objectBytes, err := io.ReadAll(ior)
+		s.Require().NoError(err)
+		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
 }
