@@ -60,7 +60,6 @@ type Object interface {
 	// IsObjectPermissionAllowed check if the permission of the object is allowed to the user
 	// userAddr indicates the HEX-encoded string of the user address
 	IsObjectPermissionAllowed(ctx context.Context, userAddr string, bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error)
-
 	ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
 	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
