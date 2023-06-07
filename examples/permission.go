@@ -8,6 +8,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // it is the example of basic permission SDKs usage
@@ -17,6 +18,15 @@ func main() {
 	if len(principal) < 42 {
 		log.Println("please set principal if you need run permission test")
 		return
+	}
+	granteeAddr, err := sdk.AccAddressFromHexUnsafe(principal)
+	if err != nil {
+		log.Fatalf("principal addr invalid %v", err)
+	}
+
+	principalStr, err := utils.NewPrincipalWithAccount(granteeAddr)
+	if err != nil {
+		log.Fatalf("fail to generate marshaled principal %v", err)
 	}
 
 	account, err := types.NewAccountFromPrivateKey("test", privateKey)
@@ -35,7 +45,8 @@ func main() {
 	}
 	ctx := context.Background()
 	statements := utils.NewStatement(bucketActions, permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
-	policyTx, err := cli.PutBucketPolicy(ctx, bucketName, principal, []*permTypes.Statement{&statements},
+
+	policyTx, err := cli.PutBucketPolicy(ctx, bucketName, principalStr, []*permTypes.Statement{&statements},
 		types.PutPolicyOption{})
 	handleErr(err, "PutBucketPolicy")
 	_, err = cli.WaitForTx(ctx, policyTx)
@@ -48,6 +59,10 @@ func main() {
 	policyInfo, err := cli.GetBucketPolicy(ctx, bucketName, principal)
 	handleErr(err, "GetBucketPolicy")
 	log.Printf("bucket: %s policy info:%s\n", bucketName, policyInfo.String())
+
+	// delete bucket policy
+	policyTx, err = cli.DeleteBucketPolicy(ctx, bucketName, principalStr, types.DeletePolicyOption{})
+	handleErr(err, "DeleteBucketPolicy")
 
 	// verify permission
 	effect, err := cli.IsBucketPermissionAllowed(ctx, principal, bucketName, permTypes.ACTION_DELETE_BUCKET)
@@ -79,4 +94,8 @@ func main() {
 	if effect != permTypes.EFFECT_ALLOW {
 		log.Fatalln("permission not allowed to:", principal)
 	}
+
+	// delete object permission
+	policyTx, err = cli.DeleteObjectPolicy(ctx, bucketName, objectName, principalStr, types.DeletePolicyOption{})
+	handleErr(err, "DeleteObjectPolicy")
 }
