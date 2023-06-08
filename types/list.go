@@ -60,6 +60,13 @@ type ListBucketsResult struct {
 	Buckets []*BucketMeta `json:"buckets"`
 }
 
+type ListGroupsResult struct {
+	// groups defines the response of group list
+	Groups []*GroupMeta `json:"groups"`
+	// count defines total groups amount
+	Count int64 `json:"count,string"`
+}
+
 // ObjectMeta is the structure for metadata service user object
 type ObjectMeta struct {
 	// object_info defines the information of the object.
@@ -162,4 +169,36 @@ type BucketInfo struct {
 	BillingInfo storageType.BillingInfo `json:"billing_info"`
 	// bucket_status define the status of the bucket.
 	BucketStatus storageType.BucketStatus `json:"bucket_status"`
+}
+
+// GroupMeta is the structure for group information
+type GroupMeta struct {
+	// group defines the basic group info
+	Group *GroupInfo `json:"group"`
+	// operator defines operator address of group
+	Operator string `json:"operator"`
+	// create_at defines the block number when the group created
+	CreateAt int64 `json:"create_at,string"`
+	// create_time defines the timestamp when the group created
+	CreateTime int64 `json:"create_time,string"`
+	// update_at defines the block number when the group updated
+	UpdateAt int64 `json:"update_at,string"`
+	// update_time defines the timestamp when the group updated
+	UpdateTime int64 `json:"update_time,string"`
+	// removed defines the group is deleted or not
+	Removed bool `json:"removed"`
+}
+
+// GroupInfo differ from GroupInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
+type GroupInfo struct {
+	// owner is the owner of the group. It can not changed once it created.
+	Owner string `json:"owner"`
+	// group_name is the name of group which is unique under an account.
+	GroupName string `json:"group_name"`
+	// source_type
+	SourceType storageType.SourceType `json:"source_type"`
+	// id is the unique identifier of group
+	Id storageType.Uint `json:"id"`
+	// extra is used to store extra info for the group
+	Extra string `json:"extra"`
 }
