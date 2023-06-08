@@ -57,9 +57,13 @@ type Group interface {
 	GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error)
 	// GetGroupPolicy get the group policy info of the user specified by principalAddr
 	GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error)
-	// ListGroupByNameAndPrefix get the group list by name and prefix
+	// ListGroup get the group list by name and prefix.
+	// prefix is the start of the search pattern. The system will only return groups that start with this prefix.
+	// name is the ending of the search pattern.
+	// if you search with 'app%coin', the system will return groups that start with 'app' and have 'coin' anywhere in the rest of the string,
+	// like 'applicationcoin', 'app_bitcoin', 'app123coinabc', etc.
 	// it providers fuzzy searches by inputting a specific name and prefix
-	ListGroupByNameAndPrefix(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
+	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
 }
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
@@ -243,8 +247,8 @@ func (c *client) GetGroupPolicy(ctx context.Context, groupName string, principal
 	return queryPolicyResp.Policy, nil
 }
 
-// ListGroupByNameAndPrefix get the group list by name and prefix
-func (c *client) ListGroupByNameAndPrefix(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error) {
+// ListGroup get the group list by name and prefix
+func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error) {
 	const (
 		MaximumGetGroupListLimit  = 1000
 		MaximumGetGroupListOffset = 100000
