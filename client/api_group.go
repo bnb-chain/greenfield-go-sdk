@@ -55,6 +55,8 @@ type Group interface {
 	// GetObjectPolicyOfGroup get the object policy info of the group specified by group id
 	// it queries an object policy that grants permission to a group
 	GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error)
+	// GetGroupPolicy get the group policy info of the user specified by principalAddr
+	GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error)
 	// ListGroupByNameAndPrefix get the group list by name and prefix
 	// it providers fuzzy searches by inputting a specific name and prefix
 	ListGroupByNameAndPrefix(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
@@ -217,6 +219,28 @@ func (c *client) DeleteGroupPolicy(ctx context.Context, groupName string, princi
 	principal := permTypes.NewPrincipalWithAccount(addr)
 
 	return c.sendDelPolicyTxn(ctx, sender, resource, principal, opt.TxOpts)
+}
+
+// GetGroupPolicy get the group policy info of the user specified by principalAddr
+func (c *client) GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error) {
+	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
+	if err != nil {
+		return nil, err
+	}
+	sender := c.MustGetDefaultAccount().GetAddress()
+	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
+
+	queryPolicy := storageTypes.QueryPolicyForAccountRequest{
+		Resource:         resource,
+		PrincipalAddress: principalAddr,
+	}
+
+	queryPolicyResp, err := c.chainClient.QueryPolicyForAccount(ctx, &queryPolicy)
+	if err != nil {
+		return nil, err
+	}
+
+	return queryPolicyResp.Policy, nil
 }
 
 // ListGroupByNameAndPrefix get the group list by name and prefix
