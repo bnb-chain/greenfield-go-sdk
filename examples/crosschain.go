@@ -63,7 +63,7 @@ func mirrorBucket(cli client.Client, ctx context.Context) {
 	log.Println("bucket info:", bucketInfo.String())
 
 	// mirror bucket
-	txResp, err := cli.MirrorBucket(ctx, bucketInfo.Id, gnfdSdkTypes.TxOption{})
+	txResp, err := cli.MirrorBucket(ctx, bucketInfo.Id, bucketName, gnfdSdkTypes.TxOption{})
 	handleErr(err, "MirrorBucket")
 	waitForTx, _ = cli.WaitForTx(ctx, txResp.TxHash)
 	log.Printf("Wait for tx: %s", waitForTx.String())

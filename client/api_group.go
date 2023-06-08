@@ -2,7 +2,14 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -10,6 +17,9 @@ import (
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/rs/zerolog/log"
+
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 )
 
 type Group interface {
@@ -45,6 +55,13 @@ type Group interface {
 	// GetObjectPolicyOfGroup get the object policy info of the group specified by group id
 	// it queries an object policy that grants permission to a group
 	GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error)
+	// GetGroupPolicy get the group policy info of the user specified by principalAddr
+	GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error)
+	// ListGroup get the group list by name and prefix.
+	// prefix is the start of the search pattern. The system will only return groups that start with this prefix.
+	// name is the ending of the search pattern.
+	// it providers fuzzy searches by inputting a specific name and prefix
+	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
 }
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
@@ -204,4 +221,109 @@ func (c *client) DeleteGroupPolicy(ctx context.Context, groupName string, princi
 	principal := permTypes.NewPrincipalWithAccount(addr)
 
 	return c.sendDelPolicyTxn(ctx, sender, resource, principal, opt.TxOpts)
+}
+
+// GetGroupPolicy get the group policy info of the user specified by principalAddr
+func (c *client) GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error) {
+	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
+	if err != nil {
+		return nil, err
+	}
+	sender := c.MustGetDefaultAccount().GetAddress()
+	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
+
+	queryPolicy := storageTypes.QueryPolicyForAccountRequest{
+		Resource:         resource,
+		PrincipalAddress: principalAddr,
+	}
+
+	queryPolicyResp, err := c.chainClient.QueryPolicyForAccount(ctx, &queryPolicy)
+	if err != nil {
+		return nil, err
+	}
+
+	return queryPolicyResp.Policy, nil
+}
+
+// ListGroup get the group list by name and prefix
+func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error) {
+	const (
+		MaximumGetGroupListLimit  = 1000
+		MaximumGetGroupListOffset = 100000
+		DefaultGetGroupListLimit  = 50
+	)
+
+	if name == "" {
+		return types.ListGroupsResult{}, nil
+	}
+
+	if prefix == "" {
+		return types.ListGroupsResult{}, nil
+	}
+
+	if opts.Limit < 0 {
+		return types.ListGroupsResult{}, nil
+	} else if opts.Limit > 1000 {
+		opts.Limit = MaximumGetGroupListLimit
+	} else if opts.Limit == 0 {
+		opts.Limit = DefaultGetGroupListLimit
+	}
+
+	if opts.Offset < 0 || opts.Offset > MaximumGetGroupListOffset {
+		return types.ListGroupsResult{}, nil
+	}
+
+	if opts.SourceType != "" {
+		if _, ok := storageTypes.SourceType_value[opts.SourceType]; !ok {
+			return types.ListGroupsResult{}, nil
+		}
+	}
+
+	params := url.Values{}
+	params.Set("group-query", "")
+	params.Set("name", name)
+	params.Set("prefix", prefix)
+	params.Set("source-type", opts.SourceType)
+	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
+	params.Set("offset", strconv.FormatInt(opts.Offset, 10))
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getInServiceSP()
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		return types.ListGroupsResult{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		log.Error().Msg("the list of groups failed: " + err.Error())
+		return types.ListGroupsResult{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msg("the list of groups failed: " + err.Error())
+		return types.ListGroupsResult{}, err
+	}
+
+	listGroupsResult := types.ListGroupsResult{}
+	bufStr := buf.String()
+	err = json.Unmarshal([]byte(bufStr), &listGroupsResult)
+	if err != nil && listGroupsResult.Groups == nil {
+		log.Error().Msg("the list of groups failed: " + err.Error())
+		return types.ListGroupsResult{}, err
+	}
+
+	return listGroupsResult, nil
 }

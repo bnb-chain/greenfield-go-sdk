@@ -195,6 +195,12 @@ type GetChallengeInfoOptions struct {
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+type ListGroupsOptions struct {
+	SourceType string
+	Limit      int64
+	Offset     int64
+}
+
 func (o *GetObjectOption) SetRange(start, end int64) error {
 	switch {
 	case 0 < start && end == 0:
