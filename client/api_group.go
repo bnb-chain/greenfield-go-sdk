@@ -60,8 +60,6 @@ type Group interface {
 	// ListGroup get the group list by name and prefix.
 	// prefix is the start of the search pattern. The system will only return groups that start with this prefix.
 	// name is the ending of the search pattern.
-	// if you search with 'app%coin', the system will return groups that start with 'app' and have 'coin' anywhere in the rest of the string,
-	// like 'applicationcoin', 'app_bitcoin', 'app123coinabc', etc.
 	// it providers fuzzy searches by inputting a specific name and prefix
 	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
 }
