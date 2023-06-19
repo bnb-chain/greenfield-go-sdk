@@ -88,28 +88,6 @@ type Option struct {
 	Host string
 }
 
-// ObjectPart container for particular part of an object.
-type ObjectPart struct {
-	// Part number identifies the part.
-	PartNumber int
-
-	// Date and time the part was uploaded.
-	LastModified time.Time
-
-	// Entity tag returned when the part was uploaded, usually md5sum
-	// of the part.
-	ETag string
-
-	// Size of the uploaded part data.
-	Size int64
-
-	// Checksum values of each part.
-	ChecksumCRC32  string
-	ChecksumCRC32C string
-	ChecksumSHA1   string
-	ChecksumSHA256 string
-}
-
 // New - instantiate greenfield chain with chain info, account info and options.
 // endpoint indicates the rpc address of greenfield
 func New(chainID string, endpoint string, option Option) (Client, error) {
@@ -452,8 +430,7 @@ func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOpt
 	return resp, nil
 }
 
-func (c *client) OptimalPartInfo(objectSize int64, configuredPartSize uint64) (totalPartsCount int, partSize int64, lastPartSize int64, err error) {
-	// TODO
+func (c *client) SplitPartInfo(objectSize int64, configuredPartSize uint64) (totalPartsCount int, partSize int64, lastPartSize int64, err error) {
 	partSizeFlt := float64(configuredPartSize)
 	// Total parts count.
 	totalPartsCount = int(math.Ceil(float64(objectSize) / partSizeFlt))

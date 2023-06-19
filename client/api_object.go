@@ -301,15 +301,6 @@ func (c *client) putObject(ctx context.Context, bucketName, objectName string, o
 	return nil
 }
 
-//// UploadSegment defines upload Segment
-//type UploadSegment struct {
-//	Index  int    // Segment number, starting from 0
-//	Start  int64  // Start index
-//	End    int64  // End index
-//	Offset int64  // Offset
-//	CRC64  uint64 // CRC check value of Segment
-//}
-
 // UploadSegmentHook is for testing usage
 type uploadSegmentHook func(id int) error
 
@@ -338,7 +329,7 @@ func (c *client) putpObjectResumable(ctx context.Context, bucketName, objectName
 	var totalUploadedSize int64
 
 	// Calculate the optimal parts info for a given size.
-	totalPartsCount, partSize, _, err := c.OptimalPartInfo(objectSize, opts.PartSize)
+	totalPartsCount, partSize, _, err := c.SplitPartInfo(objectSize, opts.PartSize)
 	if err != nil {
 		return err
 	}
@@ -358,7 +349,7 @@ func (c *client) putpObjectResumable(ctx context.Context, bucketName, objectName
 			break
 		}
 		// Increment part number.
-		log.Info().Msg(fmt.Sprintf("skip partNumber:%d, length:%d", partNumber, length))
+		log.Debug().Msg(fmt.Sprintf("skip partNumber:%d, length:%d", partNumber, length))
 		// Save successfully uploaded size.
 		totalUploadedSize += int64(length)
 		partNumber++
@@ -381,7 +372,7 @@ func (c *client) putpObjectResumable(ctx context.Context, bucketName, objectName
 			return err
 		}
 
-		log.Info().Msg(fmt.Sprintf("partNumber:%d, length:%d", partNumber, length))
+		log.Debug().Msg(fmt.Sprintf("partNumber:%d, length:%d", partNumber, length))
 
 		// Update progress reader appropriately to the latest offset
 		// as we read from the source.
@@ -398,7 +389,6 @@ func (c *client) putpObjectResumable(ctx context.Context, bucketName, objectName
 		urlValues := make(url.Values)
 		urlValues.Set("offset", strconv.FormatInt(totalUploadedSize, 10))
 		urlValues.Set("complete", strconv.FormatBool(complete))
-		urlValues.Set("context", "")
 
 		reqMeta := requestMeta{
 			bucketName:    bucketName,
@@ -755,7 +745,6 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 	}
 	segmentSize = int64(params.GetMaxSegmentSize())
 
-	// 获取文件信息
 	fileInfo, err := os.Stat(tempFilePath)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file or directory") {
@@ -764,27 +753,22 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 			return err
 		}
 	} else {
-		// 获取当前文件大小
 		fileSize := fileInfo.Size()
-		fmt.Printf("当前文件大小: %d bytes\n", fileSize)
-
 		startOffset = (fileSize / segmentSize) * segmentSize
 
-		// 按指定大小截断文件
+		// truncated file to segment size integer multiples
 		if uint64(fileSize)%params.GetMaxSegmentSize() != 0 {
 			file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0644)
 			if err != nil {
-				fmt.Println(err)
 				return err
 			}
 			defer file.Close()
 
 			err = file.Truncate(startOffset)
 			if err != nil {
-				fmt.Println(err)
 				return err
 			}
-			fmt.Printf("文件已截断至指定大小.%d\n", startOffset)
+			log.Debug().Msgf("The file was truncated to the specified size.%d\n", startOffset)
 			// TODO(chris): verify file's segment
 		}
 	}
@@ -828,7 +812,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		defer rd.Close()
 
 		_, err = io.Copy(fd, rd)
-		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, Seek, %d, new ofset %d", s, offset))
+		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, current offset: %d", s, offset))
 		endT := time.Now().UnixNano() / 1000 / 1000 / 1000
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("get seg error,cost:%d second,seg number:%d,error:%s.\n", endT-startT, segNum, err.Error()))
@@ -1307,6 +1291,7 @@ func (c *client) GetObjectResumableUploadOffset(ctx context.Context, bucketName,
 		if err != nil {
 			return 0, errors.New("fail to fetch object uploading offset from sp" + err.Error())
 		}
+		log.Debug().Msgf("get object resumable upload offset %d from sp", uploadOffsetInfo.Offset)
 		return uploadOffsetInfo.Offset, nil
 	}
 

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"os"
 	"runtime"
 	"time"
 )
@@ -63,4 +64,7 @@ const (
 	// MinPartSize - minimum part size 16MiB per object after which
 	// putObject behaves internally as multipart.
 	MinPartSize = 1024 * 1024 * 16
+
+	TempFileSuffix = ".temp"           // Temp file suffix
+	FilePermMode   = os.FileMode(0664) // Default file permission
 )

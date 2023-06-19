@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"fmt"
+	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"io"
 	"os"
 	"testing"
@@ -514,7 +515,7 @@ func (s *StorageTestSuite) Test_FGetObjectResumable_test() {
 
 	s.T().Log("---> PutObject and GetObject <---")
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{DisableResumable: true})
 	s.Require().NoError(err)
 
 	time.Sleep(10 * time.Second)
@@ -581,7 +582,7 @@ func (s *StorageTestSuite) TestFGetObjectResumableWithRecovery() {
 
 	s.T().Log("---> PutObject and GetObject <---")
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{DisableResumable: true})
 	s.Require().NoError(err)
 
 	time.Sleep(10 * time.Second)
