@@ -42,6 +42,7 @@ type Object interface {
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
 	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
 	GetObjectResumable(ctx context.Context, bucketName, objectName string, opts types.GetObjectResumableOption, filePath string) error
+	FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
 
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
@@ -455,6 +456,99 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 	fd.Close()
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// FGetObjectResumable download s3 object payload and return the related object info
+func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error {
+	tempFilePath := filePath + types.TempFileSuffix
+
+	var (
+		startOffset  int64
+		segmentSize  int64
+		segments     int64
+		completed    int64
+		objectOption types.GetObjectOption
+	)
+
+	params, err := c.GetParams()
+	if err != nil {
+		return err
+	}
+	segmentSize = int64(params.GetMaxSegmentSize())
+
+	// 获取文件信息
+	fileInfo, err := os.Stat(tempFilePath)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	// 获取当前文件大小
+	fileSize := fileInfo.Size()
+	fmt.Printf("当前文件大小: %d bytes\n", fileSize)
+
+	// 按指定大小截断文件
+	if uint64(fileSize)%params.GetMaxSegmentSize() != 0 {
+		file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0644)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		defer file.Close()
+
+		startOffset = (fileSize / segmentSize) * segmentSize
+		err = file.Truncate(startOffset)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		fmt.Printf("文件已截断至指定大小.%d\n", startOffset)
+
+		// TODO(chris): verify file's segment
+	}
+
+	// Get the object detailed meta for object whole size
+	// must delete header:range to get whole object size
+	meta, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	segments = int64(meta.PayloadSize) / segmentSize
+
+	// Create the file if not exists. Otherwise the segments download will overwrite it.
+	fd, err := os.OpenFile(tempFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, types.FilePermMode)
+	if err != nil {
+		return err
+	}
+	fd.Close()
+
+	// Wait for the segments download finished
+	completed = startOffset / segmentSize
+	for completed < segments {
+		s := fmt.Sprintf("bytes=%d-%d", startOffset, startOffset+segmentSize)
+		objectOption.Range = s
+
+		rd, _, err := c.GetObject(ctx, bucketName, objectName, objectOption)
+		if err != nil {
+			return err
+		}
+		defer rd.Close()
+
+		_, err = io.Copy(fd, rd)
+		log.Error().Msg(fmt.Sprintf("Range: %s, Seek, %d， new oofset %d", s, startOffset))
+		//endT := time.Now().UnixNano() / 1000 / 1000 / 1000
+		if err != nil {
+			// TODO(chris): request id
+			//log.Error().Msg(fmt.Sprintf("download seg error,cost:%d second,seg number:%d,request id:%s,error:%s.\n", endT-startT, seg.Index, "0", err.Error()))
+			fd.Close()
+		}
+
+		startOffset += segmentSize
+		completed++
 	}
 
 	return nil
