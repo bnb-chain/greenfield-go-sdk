@@ -100,4 +100,9 @@ jobs:
       - name: start e2e
         run: |
           make e2e_test
+          cd ../greenfield-storage-provider
+          ps -ef | grep gnfd-sp | wc -l
+          tail -n 2000 deployment/localup/local_env/sp0/gnfd-sp.log
+          tail -n 2000 deployment/localup/local_env/sp1/gnfd-sp.log
+          tail -n 2000 deployment/localup/local_env/sp2/gnfd-sp.log
           cd ..
