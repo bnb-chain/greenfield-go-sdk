@@ -470,23 +470,18 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 
 			recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
 			if err != nil {
+				log.Error().Msg(fmt.Sprintf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error()))
 				return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
 			}
-			// append recoverySegData to the file specified by filePath
-			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
 
 			_, err = f.Write(recoverySegData)
 			if err != nil {
 				return err
 			}
+			log.Printf(fmt.Sprintf("finish recovery object:%s segment id:%d ", objectName, segmentIdx))
 		}
 	}
 
-	// return any necessary error or nil if successful
 	return nil
 }
 

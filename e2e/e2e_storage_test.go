@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -180,6 +181,21 @@ func (s *StorageTestSuite) Test_Object() {
 		objectBytes, err := io.ReadAll(ior)
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
+	}
+
+	s.T().Log("---> RecoveryObject <---")
+	filePath := "downloadfile"
+	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, types.GetObjectOption{})
+	s.Require().NoError(err)
+	if err == nil {
+		content, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			fmt.Println("can not read download file:", err)
+			return
+		}
+
+		s.Require().NoError(err)
+		s.Require().Equal(content, buffer.Bytes())
 	}
 
 	s.T().Log("---> PutObjectPolicy <---")
