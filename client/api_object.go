@@ -391,7 +391,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	if err != nil {
 		return err
 	}
-	ecPieceCount := dataBlocks + parityBlocks - 1
+	ecPieceCount := dataBlocks + parityBlocks
 	minRecoveryPieces := dataBlocks
 
 	// TODO support range download recovery
@@ -400,7 +400,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		return err
 	}
 
-	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo)
+	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo, int(ecPieceCount))
 	if err != nil {
 		return err
 	}
@@ -420,7 +420,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		var total int32
 		doneTaskNum := uint32(0)
 		segmentSize := utils.GetSegmentSize(objectInfo.PayloadSize, uint32(segmentIdx), maxSegmentSize)
-		for ecIdx := 0; ecIdx <= int(ecPieceCount); ecIdx++ {
+		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
 			recoveryDataSources[ecIdx] = nil
 			total++
 			go func(secondaryIndex int) {
@@ -429,6 +429,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					PieceIndex:      segmentIdx,
 					RedundancyIndex: ecIdx,
 				}
+				fmt.Printf("send request to sp: %s \n", secondaryEndpoints[secondaryIndex])
 				// call getSecondaryPieceData to retrieve recovery data for the segment
 				resBody, err := c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
 				if err == nil {
@@ -463,7 +464,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					}
 				case <-quitCh: // all the task finish
 					if doneTaskNum < minRecoveryPieces { // finish task num not enough
-						return fmt.Errorf("get piece from secondary not enough %d, err: %s", doneTaskNum, err)
+						return fmt.Errorf("get piece from secondary not enough %d", doneTaskNum)
 					}
 				}
 			}
@@ -492,11 +493,13 @@ func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageT
 		return nil, err
 	}
 
-	secondaryEndpointList := make([]string, 0)
-	for _, info := range spList {
-		for _, addr := range secondarySPAddrs {
+	secondaryEndpointList := make([]string, len(secondarySPAddrs))
+
+	for _, addr := range secondarySPAddrs {
+		for _, info := range spList {
 			if addr == info.GetOperatorAddress() {
 				secondaryEndpointList = append(secondaryEndpointList, info.Endpoint)
+				fmt.Printf("get seondary sp: %s \n", secondaryEndpointList)
 			}
 		}
 	}
@@ -567,6 +570,7 @@ func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectNa
 		}
 	}
 
+	fmt.Printf("send request to endpoint: %s", endpoint)
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return nil, err
