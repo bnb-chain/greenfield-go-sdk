@@ -404,6 +404,8 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 	s.Require().Equal(objectInfo.ObjectName, objectName)
 	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
+	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
+
 	return bucketName, objectName, buffer
 }
 
@@ -442,7 +444,7 @@ func (s *StorageTestSuite) Test_PutObject_With_Resumable() {
 	}
 }
 
-func (s *StorageTestSuite) Test_PutObject_BigObject_No_Resumable() {
+func (s *StorageTestSuite) Test_PutObject_BigObject_Without_Resumable() {
 	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
 
 	s.T().Log("---> PutObject and GetObject <---")
@@ -450,7 +452,7 @@ func (s *StorageTestSuite) Test_PutObject_BigObject_No_Resumable() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
 	s.Require().NoError(err)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
@@ -476,50 +478,16 @@ func DownErrorHooker(segment int64) error {
 	return nil
 }
 
-func (s *StorageTestSuite) Test_FGetObjectResumable_test() {
-	bucketName := storageTestUtil.GenRandomBucketName()
-	objectName := storageTestUtil.GenRandomObjectName()
-
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
-	s.Require().NoError(err)
-
-	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
-	s.Require().NoError(err)
-
-	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
-	}
-
-	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
-
-	var buffer bytes.Buffer
-	// Create 1MiB content where each line contains 1024 characters.
-	for i := 0; i < 1024*1200; i++ {
-		line := types.RandStr(20)
-		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
-	}
-
-	s.T().Log("---> CreateObject and HeadObject <---")
-	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
-	s.Require().NoError(err)
-	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
-	s.Require().NoError(err)
-
-	time.Sleep(5 * time.Second)
-	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-	s.Require().NoError(err)
-	s.Require().Equal(objectInfo.ObjectName, objectName)
-	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+func (s *StorageTestSuite) Test_FGetObjectResumable_No_Resumable() {
+	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
 
 	s.T().Log("---> PutObject and GetObject <---")
-	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+	err := s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{DisableResumable: true})
 	s.Require().NoError(err)
 
 	time.Sleep(10 * time.Second)
-	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
 		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
@@ -543,50 +511,16 @@ func (s *StorageTestSuite) Test_FGetObjectResumable_test() {
 }
 
 // TestDownloadRoutineWithRecovery multi-routine resumable download
-func (s *StorageTestSuite) TestFGetObjectResumableWithRecovery() {
-	bucketName := storageTestUtil.GenRandomBucketName()
-	objectName := storageTestUtil.GenRandomObjectName()
-
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
-	s.Require().NoError(err)
-
-	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
-	s.Require().NoError(err)
-
-	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
-	}
-
-	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
-
-	var buffer bytes.Buffer
-	// Create 18 MiB content where each line contains 1024 characters.
-	for i := 0; i < 1024*20; i++ {
-		line := types.RandStr(1024)
-		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
-	}
-
-	s.T().Log("---> CreateObject and HeadObject <---")
-	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
-	s.Require().NoError(err)
-	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
-	s.Require().NoError(err)
-
-	time.Sleep(5 * time.Second)
-	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-	s.Require().NoError(err)
-	s.Require().Equal(objectInfo.ObjectName, objectName)
-	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+func (s *StorageTestSuite) TestFGetObjectResumable_With_Resumable() {
+	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
 
 	s.T().Log("---> PutObject and GetObject <---")
-	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+	err := s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{DisableResumable: true})
 	s.Require().NoError(err)
 
 	time.Sleep(10 * time.Second)
-	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
 		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
