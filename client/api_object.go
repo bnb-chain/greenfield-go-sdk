@@ -37,13 +37,13 @@ type Object interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
-	putpObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
 	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOptions) (io.ReadCloser, types.ObjectStat, error)
 	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
-	FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
+	FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
 
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
@@ -233,17 +233,26 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 		return errors.New("object size should be more than 0")
 	}
 
+	params, err := c.GetParams()
+	if err != nil {
+		return err
+	}
 	// minPartSize: 16MB
 	partSize := opts.PartSize
 	if opts.PartSize == 0 {
 		partSize = types.MinPartSize
 	}
+	if partSize%params.GetMaxSegmentSize() != 0 {
+		return errors.New("part size should be an integer multiple of the segment size")
+	}
 
-	if objectSize >= 0 && objectSize < int64(partSize) || opts.DisableResumable {
+	// upload an entire object to the storage provider in a single request
+	if objectSize < int64(partSize) || opts.DisableResumable {
 		return c.putObject(ctx, bucketName, objectName, objectSize, reader, opts)
 	}
 
-	return c.putpObjectResumable(ctx, bucketName, objectName, objectSize, reader, opts)
+	// resumableupload
+	return c.putObjectResumable(ctx, bucketName, objectName, objectSize, reader, opts)
 }
 
 func (c *client) putObject(ctx context.Context, bucketName, objectName string, objectSize int64,
@@ -310,10 +319,9 @@ func DefaultUploadSegment(id int) error {
 	return nil
 }
 
-func (c *client) putpObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
+func (c *client) putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
-
 	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
 		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
 		return err
@@ -342,7 +350,7 @@ func (c *client) putpObjectResumable(ctx context.Context, bucketName, objectName
 	buf := make([]byte, partSize)
 	complete := false
 
-	// skip sucess segment TODO(chris): seek ?
+	//  TODO(chris): Skip successful segments or add a verification file check.
 	for partNumber < startPartNumber {
 		length, rErr := utils.ReadFull(reader, buf)
 		if rErr == io.EOF && partNumber > 1 {
@@ -359,7 +367,6 @@ func (c *client) putpObjectResumable(ctx context.Context, bucketName, objectName
 		if partNumber == totalPartsCount {
 			complete = true
 		}
-		// hook for test
 		if err = UploadSegmentHooker(partNumber); err != nil {
 			return err
 		}
@@ -729,13 +736,13 @@ func GetSegmentEnd(begin int64, total int64, per int64) int64 {
 }
 
 // FGetObjectResumable download s3 object payload and return the related object info
-func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error {
+func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
 	tempFilePath := filePath + types.TempFileSuffix
 
 	var (
 		startOffset  int64
 		segmentSize  int64
-		objectOption types.GetObjectOption
+		objectOption types.GetObjectOptions
 		segNum       int64
 	)
 
