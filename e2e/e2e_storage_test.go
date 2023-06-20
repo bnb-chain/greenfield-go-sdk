@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -188,7 +188,7 @@ func (s *StorageTestSuite) Test_Object() {
 	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, types.GetObjectOption{})
 	s.Require().NoError(err)
 	if err == nil {
-		content, err := ioutil.ReadFile(filePath)
+		content, err := os.ReadFile(filePath)
 		if err != nil {
 			fmt.Println("can not read download file:", err)
 			return

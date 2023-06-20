@@ -219,7 +219,6 @@ type requestMeta struct {
 	contentSHA256    string // hex encoded sha256sum
 	pieceInfo        types.QueryPieceInfo
 	userAddress      string
-	segmentIndex     int
 }
 
 // SendOptions -  options to use to send the http message
