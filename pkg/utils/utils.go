@@ -210,3 +210,35 @@ func IsValidObjectPrefix(prefix string) bool {
 	}
 	return true
 }
+
+func GetSegmentSize(payloadSize uint64, segmentIdx uint32, maxSegmentSize uint64) int64 {
+	segmentCount := GetSegmentCount(payloadSize, maxSegmentSize)
+	if segmentCount == 1 {
+		return int64(payloadSize)
+	} else if segmentIdx == segmentCount-1 {
+		return int64(payloadSize) - (int64(segmentCount)-1)*int64(maxSegmentSize)
+	} else {
+		return int64(maxSegmentSize)
+	}
+}
+
+func GetECPieceSize(payloadSize uint64, segmentIdx uint32, maxSegmentSize uint64, dataChunkNum uint32) int64 {
+	segmentSize := GetSegmentSize(payloadSize, segmentIdx, maxSegmentSize)
+
+	pieceSize := segmentSize / int64(dataChunkNum)
+	// EC padding will cause the EC pieces to have one extra byte if it cannot be evenly divided.
+	// for example, the segment size is 15, the ec piece size should be 15/4 + 1 = 4
+	if segmentSize > 0 && segmentSize%int64(dataChunkNum) != 0 {
+		pieceSize++
+	}
+
+	return pieceSize
+}
+
+func GetSegmentCount(payloadSize uint64, maxSegmentSize uint64) uint32 {
+	count := payloadSize / maxSegmentSize
+	if payloadSize%maxSegmentSize > 0 {
+		count++
+	}
+	return uint32(count)
+}

@@ -16,9 +16,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
+	"github.com/bnb-chain/greenfield-common/go/redundancy"
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
@@ -27,9 +31,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
-
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 type Object interface {
@@ -70,9 +71,11 @@ type Object interface {
 	// CreateFolder creates an empty object used as folder.
 	// objectName must ending with a forward slash (/) character
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
-
 	// GetObjectUploadProgress return the status of the uploading object
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
+
+	// RecoverObjectBySecondary get piece data from secondary SPs and recovery the object in client
+	RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -380,6 +383,201 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 	}
 
 	return nil
+}
+
+func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error {
+	// compute segment count
+	dataBlocks, parityBlocks, maxSegmentSize, err := c.GetRedundancyParams()
+	if err != nil {
+		return err
+	}
+	ecPieceCount := dataBlocks + parityBlocks - 1
+	minRecoveryPieces := dataBlocks
+
+	// TODO support range download recovery
+	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	var recoveryDataSources = make([][]byte, len(secondaryEndpoints))
+	segmentCount := utils.GetSegmentCount(objectInfo.PayloadSize, maxSegmentSize)
+	// iterate over segment indices and recover one by one
+	for segmentIdx := 0; segmentIdx < int(segmentCount); segmentIdx++ {
+		doneCh := make(chan bool, len(secondaryEndpoints))
+		quitCh := make(chan bool)
+		var total int32
+		doneTaskNum := uint32(0)
+		segmentSize := utils.GetSegmentSize(objectInfo.PayloadSize, uint32(segmentIdx), maxSegmentSize)
+		for ecIdx := 0; ecIdx <= int(ecPieceCount); ecIdx++ {
+			recoveryDataSources[ecIdx] = nil
+			total++
+			go func(secondaryIndex int) {
+				pieceInfo := types.QueryPieceInfo{
+					ObjectId:        strconv.FormatUint(objectInfo.Id.Uint64(), 10),
+					PieceIndex:      segmentIdx,
+					RedundancyIndex: ecIdx,
+				}
+				// call getSecondaryPieceData to retrieve recovery data for the segment
+				resBody, err := c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
+				if err == nil {
+					// convert recoveryData to byte
+					pieceData, err := io.ReadAll(resBody)
+					if err != nil {
+						log.Error().Msg("read body err:" + err.Error())
+						if atomic.AddInt32(&total, -1) == 0 {
+							quitCh <- true
+						}
+						return
+					}
+					recoveryDataSources[secondaryIndex] = pieceData
+					doneCh <- true
+				}
+				defer resBody.Close()
+				// finish all the task, send signal to quitCh
+				if atomic.AddInt32(&total, -1) == 0 {
+					quitCh <- true
+				}
+			}(ecIdx)
+
+			// process the recovery data as needed
+		loop:
+			for {
+				select {
+				case <-doneCh:
+					doneTaskNum++
+					// it is enough to recovery data with minRecoveryPieces EC data, no need to wait
+					if doneTaskNum >= minRecoveryPieces {
+						break loop
+					}
+				case <-quitCh: // all the task finish
+					if doneTaskNum < minRecoveryPieces { // finish task num not enough
+						return fmt.Errorf("get piece from secondary not enough %d, err: %s", doneTaskNum, err)
+					}
+				}
+			}
+
+			recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
+			if err != nil {
+				return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
+			}
+			// append recoverySegData to the file specified by filePath
+			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			_, err = f.Write(recoverySegData)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// return any necessary error or nil if successful
+	return nil
+}
+
+func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageTypes.ObjectInfo) ([]string, error) {
+	secondarySPAddrs := objectInfo.GetSecondarySpAddresses()
+	spList, err := c.ListStorageProviders(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	secondaryEndpointList := make([]string, 0)
+	for _, info := range spList {
+		for _, addr := range secondarySPAddrs {
+			if addr == info.GetOperatorAddress() {
+				secondaryEndpointList = append(secondaryEndpointList, info.Endpoint)
+			}
+		}
+	}
+
+	return secondaryEndpointList, nil
+}
+
+func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectName string, pieceInfo types.QueryPieceInfo, opts types.GetSecondaryPieceOptions) (io.ReadCloser, error) {
+	var err error
+	dataBlocks, parityBlocks, _, err := c.GetRedundancyParams()
+	if err != nil {
+		return nil, errors.New("fail to get redundancy params:" + err.Error())
+	}
+	maxRedundancyIndex := int(dataBlocks+parityBlocks) - 1
+	if pieceInfo.RedundancyIndex > maxRedundancyIndex || pieceInfo.RedundancyIndex < 0 {
+		return nil, fmt.Errorf("redundancy index invalid, the index should be %d to %d", 0, maxRedundancyIndex)
+	}
+
+	params := url.Values{}
+	params.Set("get-piece", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		bucketName:    bucketName,
+		objectName:    objectName,
+		contentSHA256: types.EmptyStringSHA256,
+		pieceInfo:     pieceInfo,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	var endpoint *url.URL
+	if opts.Endpoint != "" {
+		var useHttps bool
+		if strings.Contains(opts.Endpoint, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
+
+		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
+			return nil, err
+		}
+	} else if opts.SPAddress != "" {
+		// get endpoint from sp address
+		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by secondary sp address: %s failed, err: %v", opts.SPAddress, err))
+			return nil, err
+		}
+	} else {
+		// get secondary sp address info based on the redundancy index
+		objectInfo, err := c.HeadObjectByID(ctx, pieceInfo.ObjectId)
+		if err != nil {
+			return nil, err
+		}
+
+		secondarySP := objectInfo.SecondarySpAddresses[pieceInfo.RedundancyIndex]
+		endpoint, err = c.getSPUrlByAddr(secondarySP)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
+			return nil, err
+		}
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, nil
 }
 
 // getObjInfo generates objectInfo base on the response http header content

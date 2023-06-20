@@ -53,7 +53,7 @@ func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 	reqMeta := requestMeta{
 		urlRelPath:    types.ChallengeUrl,
 		contentSHA256: types.EmptyStringSHA256,
-		challengeInfo: types.ChallengeInfo{
+		pieceInfo: types.QueryPieceInfo{
 			ObjectId:        objectID,
 			PieceIndex:      pieceIndex,
 			RedundancyIndex: redundancyIndex,
