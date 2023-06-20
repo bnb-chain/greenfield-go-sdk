@@ -59,7 +59,8 @@ type client struct {
 	// The HTTP client is used to send HTTP requests to the greenfield blockchain and sp
 	httpClient *http.Client
 	// Service provider endpoints
-	spEndpoints map[string]*url.URL
+	spIDEndpoints      map[uint32]*url.URL
+	spAddressEndpoints map[string]*url.URL
 	// The default account to use when sending transactions.
 	defaultAccount *types.Account
 	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
@@ -112,12 +113,12 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	}
 
 	// fetch sp endpoints info from chain
-	spInfo, err := c.getSPUrlList()
+	spIDInfo, _, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
 
-	c.spEndpoints = spInfo
+	c.spIDEndpoints = spIDInfo
 	return &c, nil
 }
 
@@ -141,38 +142,38 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 		return nil, err
 	}
 
-	primarySP := bucketInfo.GetPrimarySpAddress()
-	if _, ok := c.spEndpoints[primarySP]; ok {
-		return c.spEndpoints[primarySP], nil
+	primarySPID := bucketInfo.GetPrimarySpId()
+	if _, ok := c.spIDEndpoints[primarySPID]; ok {
+		return c.spIDEndpoints[primarySPID], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.getSPUrlList()
+	newSpInfo, _, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := newSpInfo[primarySP]; ok {
-		c.spEndpoints = newSpInfo
-		return newSpInfo[primarySP], nil
+	if _, ok := newSpInfo[primarySPID]; ok {
+		c.spIDEndpoints = newSpInfo
+		return newSpInfo[primarySPID], nil
 	}
 
-	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", primarySP)
+	return nil, fmt.Errorf("the SP endpoint %d not exists on chain", primarySPID)
 }
 
 // getSPUrlByAddr route url of the sp from sp address
 func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
-	if _, ok := c.spEndpoints[address]; ok {
-		return c.spEndpoints[address], nil
+	if _, ok := c.spAddressEndpoints[address]; ok {
+		return c.spAddressEndpoints[address], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.getSPUrlList()
+	_, newSpAddressInfo, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := newSpInfo[address]; ok {
-		c.spEndpoints = newSpInfo
-		return newSpInfo[address], nil
+	if _, ok := newSpAddressInfo[address]; ok {
+		c.spAddressEndpoints = newSpAddressInfo
+		return newSpAddressInfo[address], nil
 	}
 
 	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", address)

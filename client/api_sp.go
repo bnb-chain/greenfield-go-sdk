@@ -83,11 +83,11 @@ func (c *client) ListStorageProviders(ctx context.Context, isInService bool) ([]
 
 // GetStorageProviderInfo return the sp info with the sp chain address
 func (c *client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
-	request := &spTypes.QueryStorageProviderRequest{
-		SpAddress: SPAddr.String(),
+	request := &spTypes.QueryStorageProviderByOperatorAddressRequest{
+		OperatorAddress: SPAddr.String(),
 	}
 
-	gnfdRep, err := c.chainClient.StorageProvider(ctx, request)
+	gnfdRep, err := c.chainClient.StorageProviderByOperatorAddress(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -95,18 +95,19 @@ func (c *client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddre
 	return gnfdRep.StorageProvider, nil
 }
 
-func (c *client) getSPUrlList() (map[string]*url.URL, error) {
+func (c *client) getSPUrlList() (map[uint32]*url.URL, map[string]*url.URL, error) {
 	ctx := context.Background()
-	spInfo := make(map[string]*url.URL, 0)
+	spIDInfo := make(map[uint32]*url.URL, 0)
+	spAddressInfo := make(map[string]*url.URL, 0)
 	request := &spTypes.QueryStorageProvidersRequest{}
 	gnfdRep, err := c.chainClient.StorageProviders(ctx, request)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	spList := gnfdRep.GetSps()
 	if len(spList) == 0 {
-		return nil, errors.New("no SP found on chain")
+		return nil, nil, errors.New("no SP found on chain")
 	}
 
 	for _, info := range spList {
@@ -119,12 +120,13 @@ func (c *client) getSPUrlList() (map[string]*url.URL, error) {
 
 		urlInfo, urlErr := utils.GetEndpointURL(info.Endpoint, useHttps)
 		if urlErr != nil {
-			return nil, urlErr
+			return nil, nil, urlErr
 		}
-		spInfo[info.GetOperator().String()] = urlInfo
+		spIDInfo[info.GetId()] = urlInfo
+		spAddressInfo[info.GetOperatorAddress()] = urlInfo
 	}
 
-	return spInfo, nil
+	return spIDInfo, spAddressInfo, nil
 }
 
 // CreateStorageProvider will submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
@@ -169,6 +171,8 @@ func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 		opts.ReadPrice,
 		opts.FreeReadQuota,
 		opts.StorePrice,
+		// TODO:
+		"",
 	)
 	if err != nil {
 		return 0, "", err
