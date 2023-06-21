@@ -411,46 +411,45 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	}
 	defer f.Close()
 
+	doneTaskNum := uint32(0)
 	var recoveryDataSources = make([][]byte, len(secondaryEndpoints))
 	segmentCount := utils.GetSegmentCount(objectInfo.PayloadSize, maxSegmentSize)
 	// iterate over segment indices and recover one by one
 	for segmentIdx := 0; segmentIdx < int(segmentCount); segmentIdx++ {
 		doneCh := make(chan bool, len(secondaryEndpoints))
 		quitCh := make(chan bool)
-		var total int32
-		doneTaskNum := uint32(0)
 		segmentSize := utils.GetSegmentSize(objectInfo.PayloadSize, uint32(segmentIdx), maxSegmentSize)
 		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
 			recoveryDataSources[ecIdx] = nil
-			total++
 			go func(secondaryIndex int) {
+				defer func() {
+					fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
+					// finish all the task, send signal to quitCh
+					if atomic.AddUint32(&ecPieceCount, -1) == 0 {
+						quitCh <- true
+					}
+				}()
 				pieceInfo := types.QueryPieceInfo{
 					ObjectId:        strconv.FormatUint(objectInfo.Id.Uint64(), 10),
 					PieceIndex:      segmentIdx,
 					RedundancyIndex: ecIdx,
 				}
-				fmt.Printf("send request to sp: %s \n", secondaryEndpoints[secondaryIndex])
+				fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], ecIdx)
 				// call getSecondaryPieceData to retrieve recovery data for the segment
 				resBody, err := c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
+				defer resBody.Close()
 				if err == nil {
 					// convert recoveryData to byte
 					pieceData, err := io.ReadAll(resBody)
 					if err != nil {
 						log.Error().Msg("read body err:" + err.Error())
-						if atomic.AddInt32(&total, -1) == 0 {
-							quitCh <- true
-						}
 						return
 					}
 					recoveryDataSources[secondaryIndex] = pieceData
 					fmt.Printf("get one piece from sp: %s , piece length:%d \n", secondaryEndpoints[secondaryIndex], len(pieceData))
 					doneCh <- true
 				}
-				defer resBody.Close()
-				// finish all the task, send signal to quitCh
-				if atomic.AddInt32(&total, -1) == 0 {
-					quitCh <- true
-				}
+
 			}(ecIdx)
 
 			// process the recovery data as needed
@@ -505,6 +504,7 @@ func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageT
 		}
 	}
 
+	fmt.Printf("secondEndpont first: %s, len: %d \n", secondaryEndpointList[0], len(secondaryEndpointList))
 	return secondaryEndpointList, nil
 }
 
@@ -549,6 +549,7 @@ func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectNa
 			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
 			return nil, err
 		}
+		fmt.Printf("get endpoint1: %s \n", endpoint)
 	} else if opts.SPAddress != "" {
 		// get endpoint from sp address
 		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
@@ -569,9 +570,10 @@ func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectNa
 			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
 			return nil, err
 		}
+		fmt.Printf("get endpoint2: %s \n", endpoint)
 	}
 
-	fmt.Printf("send request to endpoint: %s", endpoint)
+	fmt.Printf("send request to endpoint: %s \n", endpoint)
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return nil, err
