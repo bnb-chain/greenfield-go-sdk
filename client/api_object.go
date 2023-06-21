@@ -400,7 +400,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		return err
 	}
 
-	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo, int(ecPieceCount))
+	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo)
 	if err != nil {
 		return err
 	}
@@ -443,6 +443,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 						return
 					}
 					recoveryDataSources[secondaryIndex] = pieceData
+					fmt.Printf("get one piece from sp: %s , piece length:%d \n", secondaryEndpoints[secondaryIndex], len(pieceData))
 					doneCh <- true
 				}
 				defer resBody.Close()
