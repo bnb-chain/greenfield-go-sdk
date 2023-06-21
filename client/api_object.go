@@ -533,6 +533,7 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 
 		endSegmentIdx = int(rangeEnd / int64(maxSegmentSize))
 		diffEndOffset = int(int64(endSegmentIdx+1)*int64(maxSegmentSize) - rangeEnd)
+		log.Printf("startSet %d, diffStartOffset %d,  endSegmentIdx %d, diffEndOffset %d,", startSegmentIdx, diffStartOffset, endSegmentIdx, diffEndOffset)
 	} else {
 		startSegmentIdx = 0
 		endSegmentIdx = int(segmentCount - 1)
