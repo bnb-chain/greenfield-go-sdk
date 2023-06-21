@@ -263,10 +263,6 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 }
 
 func (c *client) headSPObjectInfo(ctx context.Context, bucketName, objectName string) error {
-	_, err := c.HeadObject(ctx, bucketName, objectName)
-	if err != nil {
-		return fmt.Errorf("fail to get object info on chain: %s", err.Error())
-	}
 	backoffDelay := types.HeadBackOffDelay
 	for retry := 0; retry < types.MaxHeadTryTime; retry++ {
 		_, err := c.getObjectStatusFromSP(ctx, bucketName, objectName)
