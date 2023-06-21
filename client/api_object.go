@@ -433,9 +433,9 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 				pieceInfo := types.QueryPieceInfo{
 					ObjectId:        strconv.FormatUint(objectInfo.Id.Uint64(), 10),
 					PieceIndex:      segmentIdx,
-					RedundancyIndex: ecIdx,
+					RedundancyIndex: secondaryIndex,
 				}
-				fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], ecIdx)
+				fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], secondaryIndex)
 				// call getSecondaryPieceData to retrieve recovery data for the segment
 				resBody, err := c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
 				if err == nil {
