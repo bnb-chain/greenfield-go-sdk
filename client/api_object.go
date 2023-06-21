@@ -448,41 +448,42 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					recoveryDataSources[secondaryIndex] = pieceData
 					fmt.Printf("get one piece from sp: %s , piece length:%d \n", secondaryEndpoints[secondaryIndex], len(pieceData))
 					doneCh <- true
+				} else {
+					log.Error().Msg("get piece from secondary SP error:" + err.Error())
 				}
-				log.Error().Msg("get piece from secondary SP error:" + err.Error())
 				defer resBody.Close()
 
 			}(ecIdx)
-
-			// process the recovery data as needed
-		loop:
-			for {
-				select {
-				case <-doneCh:
-					doneTaskNum++
-					// it is enough to recovery data with minRecoveryPieces EC data, no need to wait
-					if doneTaskNum >= minRecoveryPieces {
-						break loop
-					}
-				case <-quitCh: // all the task finish
-					if doneTaskNum < minRecoveryPieces { // finish task num not enough
-						return fmt.Errorf("get piece from secondary not enough %d", doneTaskNum)
-					}
+		}
+		// process the recovery data as needed
+	loop:
+		for {
+			select {
+			case <-doneCh:
+				doneTaskNum++
+				// it is enough to recovery data with minRecoveryPieces EC data, no need to wait
+				if doneTaskNum >= minRecoveryPieces {
+					break loop
+				}
+			case <-quitCh: // all the task finish
+				if doneTaskNum < minRecoveryPieces { // finish task num not enough
+					return fmt.Errorf("get piece from secondary not enough %d", doneTaskNum)
 				}
 			}
-
-			recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
-			if err != nil {
-				log.Error().Msg(fmt.Sprintf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error()))
-				return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
-			}
-
-			_, err = f.Write(recoverySegData)
-			if err != nil {
-				return err
-			}
-			log.Printf(fmt.Sprintf("finish recovery object:%s segment id:%d ", objectName, segmentIdx))
 		}
+
+		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error()))
+			return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
+		}
+
+		_, err = f.Write(recoverySegData)
+		if err != nil {
+			return err
+		}
+		log.Printf(fmt.Sprintf("finish recovery object:%s segment id:%d ", objectName, segmentIdx))
+
 	}
 
 	return nil
