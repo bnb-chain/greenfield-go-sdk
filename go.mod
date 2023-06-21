@@ -145,5 +145,9 @@ replace (
 	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.23.0
 	github.com/cometbft/cometbft => github.com/bnb-chain/greenfield-cometbft v0.0.1
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
+<<<<<<< HEAD
 	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.2.3-0.20230626091810-fa69f41ddfc5
+=======
+	github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.2.2-0.20230621023735-30a6d7310906
+>>>>>>> df71448 (build: update cosmos sdk version)
 )
