@@ -215,6 +215,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	}
 
 	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
+		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
 		return err
 	}
 
@@ -264,7 +265,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 func (c *client) headSPObjectInfo(ctx context.Context, bucketName, objectName string) error {
 	_, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
-		//	return err
+		return fmt.Errorf("fail to get object info on chain: %s", err.Error())
 	}
 	backoffDelay := types.HeadBackOffDelay
 	for retry := 0; retry < types.MaxHeadTryTime; retry++ {
@@ -272,12 +273,11 @@ func (c *client) headSPObjectInfo(ctx context.Context, bucketName, objectName st
 		if err == nil {
 			return nil
 		}
-
-		if !strings.Contains(err.Error(), "No Such Object") {
+		// if the error is not "no such object", ignore it
+		if !strings.Contains(strings.ToLower(err.Error()), types.NoSuchObjectErr) {
 			return nil
 		}
-		log.Printf("SP head result  " + err.Error())
-		log.Printf("SP head result : no such object ")
+
 		if retry == types.MaxHeadTryTime-1 {
 			return fmt.Errorf(" sp failed to head info of the object: %s, please try putObject later", objectName)
 		}
