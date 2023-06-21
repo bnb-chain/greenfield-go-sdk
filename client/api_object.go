@@ -513,9 +513,9 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 		startSegmentIdx      int
 		endSegmentIdx        int
 	)
-	segmentCount := int(utils.GetSegmentCount(payloadSize, maxSegmentSize) - 1)
+	segmentCount := utils.GetSegmentCount(payloadSize, maxSegmentSize)
 	if opts.Range == "" {
-		return 0, segmentCount - 1, 0, 0, nil
+		return 0, int(segmentCount - 1), 0, 0, nil
 	}
 
 	isRange, rangeStart, rangeEnd := utils.ParseRange(rangeInfo)
@@ -535,7 +535,7 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 		diffEndOffset = int(rangeEnd - int64(endSegmentIdx)*int64(maxSegmentSize))
 	} else {
 		startSegmentIdx = 0
-		endSegmentIdx = segmentCount
+		endSegmentIdx = int(segmentCount - 1)
 	}
 
 	return startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, nil
@@ -549,7 +549,6 @@ func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageT
 	}
 
 	secondaryEndpointList := make([]string, len(secondarySPAddrs))
-
 	for idx, addr := range secondarySPAddrs {
 		for _, info := range spList {
 			if addr == info.GetOperatorAddress() {
