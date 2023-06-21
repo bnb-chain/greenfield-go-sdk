@@ -415,6 +415,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	var recoveryDataSources = make([][]byte, len(secondaryEndpoints))
 	segmentCount := utils.GetSegmentCount(objectInfo.PayloadSize, maxSegmentSize)
 	// iterate over segment indices and recover one by one
+	totalTaskNum := int32(ecPieceCount)
 	for segmentIdx := 0; segmentIdx < int(segmentCount); segmentIdx++ {
 		doneCh := make(chan bool, len(secondaryEndpoints))
 		quitCh := make(chan bool)
@@ -425,7 +426,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 				defer func() {
 					fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
 					// finish all the task, send signal to quitCh
-					if atomic.AddUint32(&ecPieceCount, -1) == 0 {
+					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
 						quitCh <- true
 					}
 				}()
