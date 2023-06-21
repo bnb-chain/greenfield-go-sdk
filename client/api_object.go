@@ -412,7 +412,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	defer f.Close()
 
 	doneTaskNum := uint32(0)
-	var recoveryDataSources = make([][]byte, len(secondaryEndpoints))
+	var recoveryDataSources = make([][]byte, ecPieceCount)
 	segmentCount := utils.GetSegmentCount(objectInfo.PayloadSize, maxSegmentSize)
 	// iterate over segment indices and recover one by one
 	totalTaskNum := int32(ecPieceCount)
@@ -497,11 +497,10 @@ func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageT
 
 	secondaryEndpointList := make([]string, len(secondarySPAddrs))
 
-	for _, addr := range secondarySPAddrs {
+	for idx, addr := range secondarySPAddrs {
 		for _, info := range spList {
 			if addr == info.GetOperatorAddress() {
-				secondaryEndpointList = append(secondaryEndpointList, info.Endpoint)
-				fmt.Printf("get seondary sp: %s \n", secondaryEndpointList)
+				secondaryEndpointList[idx] = info.Endpoint
 			}
 		}
 	}
