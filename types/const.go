@@ -54,4 +54,6 @@ const (
 	MaxHeadTryTime   = 4
 	HeadBackOffDelay = time.Millisecond * 500
 	NoSuchObjectErr  = "no such object"
+
+	GetConnectionFail = "connection refused"
 )

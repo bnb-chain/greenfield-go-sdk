@@ -198,6 +198,27 @@ func (s *StorageTestSuite) Test_Object() {
 		s.Require().Equal(content, buffer.Bytes())
 	}
 
+	s.T().Log("---> RecoveryObject Range <---")
+	filePath = "downloadfileRange"
+	opt := types.GetObjectOption{}
+	rangeStart := 100 * 2024
+	rangeEnd := 10 * 1024 * 1024
+	err = opt.SetRange(int64(rangeStart), int64(rangeEnd))
+	s.Require().NoError(err)
+	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, opt)
+	s.Require().NoError(err)
+	if err == nil {
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			fmt.Println("can not read download file:", err)
+			return
+		}
+
+		s.Require().NoError(err)
+		originalBytes := buffer.Bytes()[rangeStart:rangeEnd]
+		s.Require().Equal(content, originalBytes)
+	}
+
 	s.T().Log("---> PutObjectPolicy <---")
 	principal, _, err := types.NewAccount("principal")
 	s.Require().NoError(err)

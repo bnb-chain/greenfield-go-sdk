@@ -372,6 +372,9 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 
 	body, _, err := c.GetObject(ctx, bucketName, objectName, opts)
 	if err != nil {
+		if strings.Contains(err.Error(), types.GetConnectionFail) {
+			return c.RecoverObjectBySecondary(ctx, bucketName, objectName, filePath, opts)
+		}
 		return err
 	}
 	defer body.Close()
@@ -394,8 +397,12 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	ecPieceCount := dataBlocks + parityBlocks
 	minRecoveryPieces := dataBlocks
 
-	// TODO support range download recovery
 	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectInfo.PayloadSize, maxSegmentSize, opts)
 	if err != nil {
 		return err
 	}
@@ -411,15 +418,13 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	}
 	defer f.Close()
 
-	doneTaskNum := uint32(0)
-	var recoveryDataSources = make([][]byte, ecPieceCount)
-	segmentCount := utils.GetSegmentCount(objectInfo.PayloadSize, maxSegmentSize)
 	// iterate over segment indices and recover one by one
-	totalTaskNum := int32(ecPieceCount)
-	for segmentIdx := 0; segmentIdx < int(segmentCount); segmentIdx++ {
+	for segmentIdx := startSegmentIdx; segmentIdx <= endSegmentIdx; segmentIdx++ {
 		doneCh := make(chan bool, len(secondaryEndpoints))
 		quitCh := make(chan bool)
-		segmentSize := utils.GetSegmentSize(objectInfo.PayloadSize, uint32(segmentIdx), maxSegmentSize)
+		totalTaskNum := int32(ecPieceCount)
+		doneTaskNum := uint32(0)
+		var recoveryDataSources = make([][]byte, ecPieceCount)
 		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
 			recoveryDataSources[ecIdx] = nil
 			go func(secondaryIndex int) {
@@ -455,7 +460,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 
 			}(ecIdx)
 		}
-		// process the recovery data as needed
+
 	loop:
 		for {
 			select {
@@ -472,10 +477,20 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			}
 		}
 
+		segmentSize := utils.GetSegmentSize(objectInfo.PayloadSize, uint32(segmentIdx), maxSegmentSize)
+		// decode the original segment data from the piece data
 		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error()))
 			return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
+		}
+		// deal with range recovery
+		if segmentIdx == startSegmentIdx && diffStartOffset > 0 {
+			recoverySegData = recoverySegData[diffStartOffset:]
+		}
+
+		if segmentIdx == endSegmentIdx && diffEndOffset > 0 {
+			recoverySegData = recoverySegData[:len(recoverySegData)-diffEndOffset]
 		}
 
 		_, err = f.Write(recoverySegData)
@@ -487,6 +502,43 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	}
 
 	return nil
+}
+
+func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.GetObjectOption) (int, int, int, int, error) {
+	var (
+		rangeStart, rangeEnd int64
+		rangeInfo            string
+		diffStartOffset      int
+		diffEndOffset        int
+		startSegmentIdx      int
+		endSegmentIdx        int
+	)
+	segmentCount := int(utils.GetSegmentCount(payloadSize, maxSegmentSize) - 1)
+	if opts.Range == "" {
+		return 0, segmentCount - 1, 0, 0, nil
+	}
+
+	isRange, rangeStart, rangeEnd := utils.ParseRange(rangeInfo)
+	if isRange && (rangeEnd < 0 || rangeEnd >= int64(payloadSize)) {
+		return 0, 0, 0, 0, errors.New("invalid range: " + rangeInfo)
+	}
+
+	if isRange && (rangeStart < 0 || rangeEnd < 0 || rangeStart > rangeEnd) {
+		return 0, 0, 0, 0, errors.New("invalid range: " + rangeInfo)
+	}
+
+	if isRange {
+		startSegmentIdx = int(rangeStart / int64(maxSegmentSize))
+		diffStartOffset = int(rangeStart - int64(startSegmentIdx)*int64(maxSegmentSize))
+
+		endSegmentIdx = int(rangeEnd / int64(maxSegmentSize))
+		diffEndOffset = int(rangeEnd - int64(endSegmentIdx)*int64(maxSegmentSize))
+	} else {
+		startSegmentIdx = 0
+		endSegmentIdx = segmentCount
+	}
+
+	return startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, nil
 }
 
 func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageTypes.ObjectInfo) ([]string, error) {
