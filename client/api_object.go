@@ -438,7 +438,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 				fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], ecIdx)
 				// call getSecondaryPieceData to retrieve recovery data for the segment
 				resBody, err := c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
-				defer resBody.Close()
 				if err == nil {
 					// convert recoveryData to byte
 					pieceData, err := io.ReadAll(resBody)
@@ -450,6 +449,8 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					fmt.Printf("get one piece from sp: %s , piece length:%d \n", secondaryEndpoints[secondaryIndex], len(pieceData))
 					doneCh <- true
 				}
+				log.Error().Msg("get piece from secondary SP error:" + err.Error())
+				defer resBody.Close()
 
 			}(ecIdx)
 
