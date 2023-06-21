@@ -520,7 +520,7 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 
 	isRange, rangeStart, rangeEnd := utils.ParseRange(rangeInfo)
 	if isRange && (rangeEnd < 0 || rangeEnd >= int64(payloadSize)) {
-		return 0, 0, 0, 0, errors.New("invalid range: " + rangeInfo)
+		rangeEnd = int64(payloadSize) - 1
 	}
 
 	if isRange && (rangeStart < 0 || rangeEnd < 0 || rangeStart > rangeEnd) {
@@ -532,7 +532,7 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 		diffStartOffset = int(rangeStart - int64(startSegmentIdx)*int64(maxSegmentSize))
 
 		endSegmentIdx = int(rangeEnd / int64(maxSegmentSize))
-		diffEndOffset = int(rangeEnd - int64(endSegmentIdx)*int64(maxSegmentSize))
+		diffEndOffset = int(int64(endSegmentIdx+1)*int64(maxSegmentSize) - rangeEnd)
 	} else {
 		startSegmentIdx = 0
 		endSegmentIdx = int(segmentCount - 1)
