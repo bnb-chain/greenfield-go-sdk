@@ -428,11 +428,15 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
 			recoveryDataSources[ecIdx] = nil
 			go func(secondaryIndex int) {
+				var responseBody io.ReadCloser
 				defer func() {
 					fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
 					// finish all the task, send signal to quitCh
 					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
 						quitCh <- true
+					}
+					if responseBody != nil {
+						responseBody.Close()
 					}
 				}()
 				pieceInfo := types.QueryPieceInfo{
@@ -442,10 +446,10 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 				}
 				fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], secondaryIndex)
 				// call getSecondaryPieceData to retrieve recovery data for the segment
-				resBody, err := c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
+				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
 				if err == nil {
 					// convert recoveryData to byte
-					pieceData, err := io.ReadAll(resBody)
+					pieceData, err := io.ReadAll(responseBody)
 					if err != nil {
 						log.Error().Msg("read body err:" + err.Error())
 						return
@@ -456,7 +460,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 				} else {
 					log.Error().Msg("get piece from secondary SP error:" + err.Error())
 				}
-				defer resBody.Close()
 
 			}(ecIdx)
 		}
