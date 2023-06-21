@@ -50,5 +50,7 @@ const (
 	ChallengeUrl           = "challenge"
 	PrimaryRedundancyIndex = -1
 
-	ContextTimeout = time.Second * 30
+	ContextTimeout   = time.Second * 30
+	MaxHeadTryTime   = 4
+	HeadBackOffDelay = time.Millisecond * 500
 )

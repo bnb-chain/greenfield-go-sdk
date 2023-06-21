@@ -16,6 +16,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
@@ -213,6 +214,10 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 		return errors.New("object size should be more than 0")
 	}
 
+	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
+		return err
+	}
+
 	var contentType string
 	if opts.ContentType != "" {
 		contentType = opts.ContentType
@@ -251,6 +256,34 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	_, err = c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (c *client) headSPObjectInfo(ctx context.Context, bucketName, objectName string) error {
+	_, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		//	return err
+	}
+	backoffDelay := types.HeadBackOffDelay
+	for retry := 0; retry < types.MaxHeadTryTime; retry++ {
+		_, err := c.getObjectStatusFromSP(ctx, bucketName, objectName)
+		if err == nil {
+			return nil
+		}
+
+		if !strings.Contains(err.Error(), "No Such Object") {
+			return nil
+		}
+		log.Printf("SP head result  " + err.Error())
+		log.Printf("SP head result : no such object ")
+		if retry == types.MaxHeadTryTime-1 {
+			return fmt.Errorf(" sp failed to head info of the object: %s, please try putObject later", objectName)
+		}
+
+		time.Sleep(backoffDelay)
+		backoffDelay *= 2
 	}
 
 	return nil
@@ -654,8 +687,7 @@ func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 	}
 
 	// get object status from sp
-	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED &&
-		status.ObjectStatus != storageTypes.OBJECT_STATUS_SEALED {
+	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
 		uploadProgressInfo, err := c.getObjectStatusFromSP(ctx, bucketName, objectName)
 		if err != nil {
 			return "", errors.New("fail to fetch object uploading progress from sp" + err.Error())
