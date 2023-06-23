@@ -402,7 +402,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		return err
 	}
 
-	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectInfo.PayloadSize, maxSegmentSize, opts)
+	startSegmentIdx, endSegmentIdx, diffStartOffset, _, err := checkGetObjectRange(objectInfo.PayloadSize, maxSegmentSize, opts)
 	if err != nil {
 		return err
 	}
@@ -430,7 +430,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			go func(secondaryIndex int) {
 				var responseBody io.ReadCloser
 				defer func() {
-					fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
+					// fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
 					// finish all the task, send signal to quitCh
 					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
 						quitCh <- true
@@ -444,7 +444,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					PieceIndex:      segmentIdx,
 					RedundancyIndex: secondaryIndex,
 				}
-				fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], secondaryIndex)
+				//fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], secondaryIndex)
 				// call getSecondaryPieceData to retrieve recovery data for the segment
 				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
 				if err == nil {
@@ -455,7 +455,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 						return
 					}
 					recoveryDataSources[secondaryIndex] = pieceData
-					fmt.Printf("get one piece from sp: %s , piece length:%d \n", secondaryEndpoints[secondaryIndex], len(pieceData))
+					//	fmt.Printf("get one piece from sp: %s , piece length:%d \n", secondaryEndpoints[secondaryIndex], len(pieceData))
 					doneCh <- true
 				} else {
 					log.Error().Msg("get piece from secondary SP error:" + err.Error())
@@ -487,32 +487,36 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			log.Error().Msg(fmt.Sprintf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error()))
 			return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
 		}
+
+		fmt.Printf("recovery one segment , piece length:%d ", len(recoverySegData))
 		// deal with range recovery
 		if segmentIdx == startSegmentIdx && diffStartOffset > 0 {
 			recoverySegData = recoverySegData[diffStartOffset:]
+			log.Printf("first segment diff offset %d \n", diffStartOffset)
 		}
 
-		if segmentIdx == endSegmentIdx && diffEndOffset > 0 {
-			recoverySegData = recoverySegData[:len(recoverySegData)-diffEndOffset]
-		}
-
+		/*
+			if segmentIdx == endSegmentIdx && diffEndOffset > 0 {
+				originLen := int64(len(recoverySegData))
+				recoverySegData = recoverySegData[:originLen-diffEndOffset]
+				log.Printf("last segment diff offset %d \n", diffEndOffset)
+			}
+		*/
 		_, err = f.Write(recoverySegData)
 		if err != nil {
 			return err
 		}
 		log.Printf(fmt.Sprintf("finish recovery object:%s segment id:%d ", objectName, segmentIdx))
-
 	}
 
 	return nil
 }
 
-func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.GetObjectOption) (int, int, int, int, error) {
+func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.GetObjectOption) (int, int, int64, int64, error) {
 	var (
 		rangeStart, rangeEnd int64
-		rangeInfo            string
-		diffStartOffset      int
-		diffEndOffset        int
+		diffStartOffset      int64
+		diffEndOffset        int64
 		startSegmentIdx      int
 		endSegmentIdx        int
 	)
@@ -521,27 +525,31 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 		return 0, int(segmentCount - 1), 0, 0, nil
 	}
 
-	isRange, rangeStart, rangeEnd := utils.ParseRange(rangeInfo)
+	isRange, rangeStart, rangeEnd := utils.ParseRange(opts.Range)
 	if isRange && (rangeEnd < 0 || rangeEnd >= int64(payloadSize)) {
 		rangeEnd = int64(payloadSize) - 1
+		log.Printf("range End should be :%d \n", rangeEnd)
 	}
 
 	if isRange && (rangeStart < 0 || rangeEnd < 0 || rangeStart > rangeEnd) {
-		return 0, 0, 0, 0, errors.New("invalid range: " + rangeInfo)
+		return 0, 0, 0, 0, errors.New("invalid range: " + opts.Range)
 	}
 
 	if isRange {
 		startSegmentIdx = int(rangeStart / int64(maxSegmentSize))
-		diffStartOffset = int(rangeStart - int64(startSegmentIdx)*int64(maxSegmentSize))
+		diffStartOffset = rangeStart - int64(startSegmentIdx)*int64(maxSegmentSize)
 
 		endSegmentIdx = int(rangeEnd / int64(maxSegmentSize))
-		diffEndOffset = int(int64(endSegmentIdx+1)*int64(maxSegmentSize) - rangeEnd)
-		log.Printf("startSet %d, diffStartOffset %d,  endSegmentIdx %d, diffEndOffset %d,", startSegmentIdx, diffStartOffset, endSegmentIdx, diffEndOffset)
+		if uint32(endSegmentIdx) > segmentCount-1 {
+			log.Error().Msg("endSegmentIdx error")
+		}
+		diffEndOffset = int64(endSegmentIdx+1)*int64(maxSegmentSize) - rangeEnd
 	} else {
 		startSegmentIdx = 0
 		endSegmentIdx = int(segmentCount - 1)
 	}
 
+	log.Printf("startSet %d, diffStartOffset %d,  endSegmentIdx %d, diffEndOffset %d,", startSegmentIdx, diffStartOffset, endSegmentIdx, diffEndOffset)
 	return startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, nil
 }
 
@@ -606,7 +614,6 @@ func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectNa
 			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
 			return nil, err
 		}
-		fmt.Printf("get endpoint1: %s \n", endpoint)
 	} else if opts.SPAddress != "" {
 		// get endpoint from sp address
 		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
@@ -627,10 +634,8 @@ func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectNa
 			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
 			return nil, err
 		}
-		fmt.Printf("get endpoint2: %s \n", endpoint)
 	}
 
-	fmt.Printf("send request to endpoint: %s \n", endpoint)
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return nil, err
