@@ -431,6 +431,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		quitCh := make(chan bool)
 		totalTaskNum := int32(ecPieceCount)
 		doneTaskNum := uint32(0)
+		downLoadPieceSize := 0
 		var recoveryDataSources = make([][]byte, ecPieceCount)
 
 		segmentSize := utils.GetSegmentSize(objectSize, uint32(segmentIdx), maxSegmentSize)
@@ -438,11 +439,14 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			recoveryDataSources[ecIdx] = nil
 			go func(secondaryIndex int) {
 				var responseBody io.ReadCloser
+				var pieceData []byte
 				defer func() {
 					// fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
 					// finish all the task, send signal to quitCh
 					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
 						quitCh <- true
+						downLoadPieceSize = len(pieceData)
+						fmt.Println("download piece data length:", downLoadPieceSize)
 					}
 					if responseBody != nil {
 						responseBody.Close()
@@ -457,7 +461,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
 				if err == nil {
 					// convert recoveryData to byte
-					pieceData, err := io.ReadAll(responseBody)
+					pieceData, err = io.ReadAll(responseBody)
 					if err != nil {
 						log.Error().Msg("read body err:" + err.Error())
 						return
@@ -484,6 +488,10 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			case <-quitCh: // all the task finish
 				if doneTaskNum < minRecoveryPieces { // finish task num not enough
 					return fmt.Errorf("get piece from secondary not enough %d", doneTaskNum)
+				}
+				ecTotalSize := int64(uint32(downLoadPieceSize) * dataBlocks)
+				if ecTotalSize  < segmentSize || ecTotalSize > segmentSize+4{
+					return fmt.Errorf("get secondary piece data length error")
 				}
 			}
 		}
