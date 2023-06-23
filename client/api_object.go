@@ -31,6 +31,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/genproto/googleapis/api/visibility"
 )
 
 type Object interface {
@@ -412,6 +413,12 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		return err
 	}
 
+
+	_, err = os.Stat(filePath)
+	if err == nil {
+		return errors.New("download file already exist:" + filePath)
+	}
+
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
@@ -489,14 +496,17 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
 		}
 
-		fmt.Printf("recovery one segment , piece length:%d ", len(recoverySegData))
+		fmt.Printf("recovery one segment , piece length:%d ", len(recoverySegData)
+		isFirstSeg := segmentIdx == startSegmentIdx && diffStartOffset > 0
+		isLastSeg := segmentIdx == endSegmentIdx && diffEndOffset > 0
+
 		// deal with range recovery
-		if segmentIdx == startSegmentIdx && diffStartOffset > 0 {
+		if isFirstSeg && isLastSeg {
+			recoverySegData = recoverySegData[diffStartOffset:segmentSize-diffEndOffset]
+		} else if isFirstSeg {
 			recoverySegData = recoverySegData[diffStartOffset:]
 			log.Printf("first segment diff offset %d \n", diffStartOffset)
-		}
-
-		if segmentIdx == endSegmentIdx && diffEndOffset > 0 {
+		} else if isLastSeg {
 			recoverySegData = recoverySegData[:segmentSize-diffEndOffset]
 			log.Printf("last segment diff offset %d \n", diffEndOffset)
 		}
