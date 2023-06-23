@@ -402,7 +402,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		return err
 	}
 	objectSize := objectInfo.PayloadSize
-
 	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectSize, maxSegmentSize, opts)
 	if err != nil {
 		return err
@@ -426,6 +425,8 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		totalTaskNum := int32(ecPieceCount)
 		doneTaskNum := uint32(0)
 		var recoveryDataSources = make([][]byte, ecPieceCount)
+
+		segmentSize := utils.GetSegmentSize(objectSize, uint32(segmentIdx), maxSegmentSize)
 		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
 			recoveryDataSources[ecIdx] = nil
 			go func(secondaryIndex int) {
@@ -481,7 +482,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			}
 		}
 
-		segmentSize := utils.GetSegmentSize(objectInfo.PayloadSize, uint32(segmentIdx), maxSegmentSize)
 		// decode the original segment data from the piece data
 		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
 		if err != nil {
@@ -497,8 +497,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		}
 
 		if segmentIdx == endSegmentIdx && diffEndOffset > 0 {
-			originLen := int64(len(recoverySegData))
-			recoverySegData = recoverySegData[:originLen-diffEndOffset]
+			recoverySegData = recoverySegData[:segmentSize-diffEndOffset]
 			log.Printf("last segment diff offset %d \n", diffEndOffset)
 		}
 
@@ -528,7 +527,6 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 	isRange, rangeStart, rangeEnd := utils.ParseRange(opts.Range)
 	if isRange && (rangeEnd < 0 || rangeEnd >= int64(payloadSize)) {
 		rangeEnd = int64(payloadSize) - 1
-		log.Printf("range End should be :%d \n", rangeEnd)
 	}
 
 	if isRange && (rangeStart < 0 || rangeEnd < 0 || rangeStart > rangeEnd) {
@@ -540,10 +538,13 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 		diffStartOffset = rangeStart - int64(startSegmentIdx)*int64(maxSegmentSize)
 
 		endSegmentIdx = int(rangeEnd / int64(maxSegmentSize))
-		if uint32(endSegmentIdx) > segmentCount-1 {
-			log.Error().Msg("endSegmentIdx error")
+		endSegSize := utils.GetSegmentSize(payloadSize, uint32(endSegmentIdx), maxSegmentSize)
+		diffEndOffset = int64(endSegmentIdx)*int64(maxSegmentSize) + endSegSize - rangeEnd
+
+		if diffEndOffset > endSegSize {
+			log.Error().Msg("compute end segment diff offset error ")
+			return 0, 0, 0, 0, errors.New("compute end segment diff offset error ")
 		}
-		diffEndOffset = int64(endSegmentIdx+1)*int64(maxSegmentSize) - rangeEnd
 	} else {
 		startSegmentIdx = 0
 		endSegmentIdx = int(segmentCount - 1)
