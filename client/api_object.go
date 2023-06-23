@@ -401,8 +401,9 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	if err != nil {
 		return err
 	}
+	objectSize := objectInfo.PayloadSize
 
-	startSegmentIdx, endSegmentIdx, diffStartOffset, _, err := checkGetObjectRange(objectInfo.PayloadSize, maxSegmentSize, opts)
+	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectSize, maxSegmentSize, opts)
 	if err != nil {
 		return err
 	}
@@ -444,7 +445,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					PieceIndex:      segmentIdx,
 					RedundancyIndex: secondaryIndex,
 				}
-				//fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], secondaryIndex)
+				fmt.Printf("send request to sp: %s, index %d ,\n", secondaryEndpoints[secondaryIndex], secondaryIndex)
 				// call getSecondaryPieceData to retrieve recovery data for the segment
 				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
 				if err == nil {
@@ -495,13 +496,12 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			log.Printf("first segment diff offset %d \n", diffStartOffset)
 		}
 
-		/*
-			if segmentIdx == endSegmentIdx && diffEndOffset > 0 {
-				originLen := int64(len(recoverySegData))
-				recoverySegData = recoverySegData[:originLen-diffEndOffset]
-				log.Printf("last segment diff offset %d \n", diffEndOffset)
-			}
-		*/
+		if segmentIdx == endSegmentIdx && diffEndOffset > 0 {
+			originLen := int64(len(recoverySegData))
+			recoverySegData = recoverySegData[:originLen-diffEndOffset]
+			log.Printf("last segment diff offset %d \n", diffEndOffset)
+		}
+
 		_, err = f.Write(recoverySegData)
 		if err != nil {
 			return err
