@@ -1408,6 +1408,8 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 }
 
 // ListObjectsByObjectID list objects by object ids
+// By inputting a collection of object IDs, we can retrieve the corresponding object data.
+// If the object is nonexistent or has been deleted, a null value will be returned
 func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error) {
 	const MaximumListObjectsSize = 1000
 	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
