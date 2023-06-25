@@ -79,16 +79,7 @@ func main() {
 		i := obj.ObjectInfo
 		log.Printf("object: %s, status: %s\n", i.ObjectName, i.ObjectStatus)
 	}
-
-	// delete object
-	delTx, err := cli.DeleteObject(ctx, bucketName, objectName, types.DeleteObjectOption{})
-	handleErr(err, "DeleteObject")
-	_, err = cli.WaitForTx(ctx, delTx)
-	if err != nil {
-		log.Fatalln("txn fail")
-	}
-	log.Printf("object: %s has been deleted\n", objectName)
-
+	
 }
 
 func waitObjectSeal(cli client.Client, bucketName, objectName string) {
