@@ -60,10 +60,6 @@ func main() {
 	handleErr(err, "GetBucketPolicy")
 	log.Printf("bucket: %s policy info:%s\n", bucketName, policyInfo.String())
 
-	// delete bucket policy
-	policyTx, err = cli.DeleteBucketPolicy(ctx, bucketName, principalStr, types.DeletePolicyOption{})
-	handleErr(err, "DeleteBucketPolicy")
-
 	// verify permission
 	effect, err := cli.IsBucketPermissionAllowed(ctx, principal, bucketName, permTypes.ACTION_DELETE_BUCKET)
 	handleErr(err, "IsBucketPermissionAllowed")
@@ -72,13 +68,21 @@ func main() {
 		log.Fatalln("permission not allowed to:", principal)
 	}
 
+	// delete bucket policy
+	policyTx, err = cli.DeleteBucketPolicy(ctx, bucketName, principalStr, types.DeletePolicyOption{})
+	handleErr(err, "DeleteBucketPolicy")
+	_, err = cli.WaitForTx(ctx, policyTx)
+	if err != nil {
+		log.Fatalln("txn fail")
+	}
+
 	// put object policy
 	objectActions := []permTypes.ActionType{
 		permTypes.ACTION_DELETE_OBJECT,
 		permTypes.ACTION_GET_OBJECT,
 	}
 	statements = utils.NewStatement(objectActions, permTypes.EFFECT_ALLOW, nil, types.NewStatementOptions{})
-	policyTx, err = cli.PutObjectPolicy(ctx, bucketName, objectName, principal, []*permTypes.Statement{&statements},
+	policyTx, err = cli.PutObjectPolicy(ctx, bucketName, objectName, principalStr, []*permTypes.Statement{&statements},
 		types.PutPolicyOption{})
 	handleErr(err, "PutObjectPolicy")
 	_, err = cli.WaitForTx(ctx, policyTx)
@@ -86,6 +90,11 @@ func main() {
 		log.Fatalln("txn fail")
 	}
 	log.Printf("put object: %s policy sucessfully, principal is: %s.\n", objectName, principal)
+
+	// get object policy
+	policyInfo, err = cli.GetObjectPolicy(ctx, bucketName, objectName, principal)
+	handleErr(err, "GetObjectPolicy")
+	log.Printf("object: %s policy info:%s\n", bucketName, policyInfo.String())
 
 	// verify permission
 	effect, err = cli.IsObjectPermissionAllowed(ctx, principal, bucketName, objectName, permTypes.ACTION_DELETE_OBJECT)
