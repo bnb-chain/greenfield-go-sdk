@@ -360,14 +360,9 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 	if err == nil {
 		// If the destination exists and is a directory.
 		if st.IsDir() {
-			return errors.New("fileName is a directory.")
+			return errors.New("download file path is a directory")
 		}
-	}
-
-	// If file exist, open it in append mode
-	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o660)
-	if err != nil {
-		return err
+		return errors.New("download file already exist")
 	}
 
 	backoffDelay := types.DownloadBackOffDelay
@@ -395,6 +390,12 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 	}
 
 	defer body.Close()
+
+	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o660)
+	if err != nil {
+		return err
+	}
+	
 	_, err = io.Copy(fd, body)
 	fd.Close()
 	if err != nil {
