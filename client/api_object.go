@@ -372,17 +372,20 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 		if err == nil {
 			break
 		}
-
 		body.Close()
-		// connect the primary SP failed, try again
-		if strings.Contains(err.Error(), types.GetConnectionFail) && opts.SupportRecovery {
-			continue
-		} else {
+
+		connectedFail := strings.Contains(err.Error(), types.GetConnectionFail)
+		if err != nil && !connectedFail {
 			return err
 		}
-		// connect failed for 3 times, try to download piece from secondary SP
-		if retry == types.MaxDownloadTryTime-1 {
-			return c.RecoverObjectBySecondary(ctx, bucketName, objectName, filePath, opts)
+
+		// connect the primary SP failed, try again
+		if opts.SupportRecovery {
+			// connect failed for 3 times, try to download piece from secondary SP
+			if retry == types.MaxDownloadTryTime-1 {
+				return c.RecoverObjectBySecondary(ctx, bucketName, objectName, filePath, opts)
+			}
+			continue
 		}
 
 		time.Sleep(backoffDelay)
@@ -472,6 +475,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					RedundancyIndex: secondaryIndex,
 				}
 				// call getSecondaryPieceData to retrieve recovery data for the segment
+				// TODO check if it is better with downloading data chunks first
 				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
 				if err == nil {
 					// convert recoveryData to byte
