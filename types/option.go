@@ -188,7 +188,7 @@ type PutObjectOptions struct {
 // GetObjectOptions contains the options of getObject
 type GetObjectOptions struct {
 	Range           string `url:"-" header:"Range,omitempty"` // support for downloading partial data
-	SupportRecovery bool
+	SupportRecovery bool   // support recover data from secondary SPs if primary SP not in service
 }
 
 type GetChallengeInfoOptions struct {
