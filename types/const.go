@@ -56,4 +56,7 @@ const (
 	NoSuchObjectErr  = "no such object"
 
 	GetConnectionFail = "connection refused"
+
+	MaxDownloadTryTime   = 3
+	DownloadBackOffDelay = time.Millisecond * 500
 )

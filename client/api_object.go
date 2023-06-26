@@ -370,15 +370,31 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 		return err
 	}
 
-	body, _, err := c.GetObject(ctx, bucketName, objectName, opts)
-	if err != nil {
+	backoffDelay := types.DownloadBackOffDelay
+	var body io.ReadCloser
+	for retry := 0; retry < types.MaxDownloadTryTime; retry++ {
+		body, _, err = c.GetObject(ctx, bucketName, objectName, opts)
+		if err == nil {
+			break
+		}
+
+		body.Close()
+		// connect the primary SP failed, try again
 		if strings.Contains(err.Error(), types.GetConnectionFail) {
+			continue
+		} else {
+			return err
+		}
+		// connect failed for 3 times, try to download piece from secondary SP
+		if retry == types.MaxDownloadTryTime-1 {
 			return c.RecoverObjectBySecondary(ctx, bucketName, objectName, filePath, opts)
 		}
-		return err
-	}
-	defer body.Close()
 
+		time.Sleep(backoffDelay)
+		backoffDelay *= 2
+	}
+
+	defer body.Close()
 	_, err = io.Copy(fd, body)
 	fd.Close()
 	if err != nil {
@@ -444,7 +460,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
 						quitCh <- true
 						downLoadPieceSize = len(pieceData)
-						fmt.Println("download piece data length:", downLoadPieceSize)
 					}
 					if responseBody != nil {
 						responseBody.Close()
@@ -465,7 +480,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 						return
 					}
 					recoveryDataSources[secondaryIndex] = pieceData
-					fmt.Printf("get one piece from sp: %s , piece length:%d \n", secondaryEndpoints[secondaryIndex], len(pieceData))
 					doneCh <- true
 				} else {
 					log.Error().Msg("get piece from secondary SP error:" + err.Error())
@@ -494,7 +508,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			}
 		}
 
-		fmt.Printf("to recovery segment len:%d, index:%d,\n", segmentSize, segmentIdx)
 		// decode the original segment data from the piece data
 		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
 		if err != nil {
@@ -502,7 +515,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
 		}
 
-		fmt.Printf("recovery one segment , piece length:%d ", len(recoverySegData))
 		isFirstSeg := segmentIdx == startSegmentIdx && diffStartOffset > 0
 		isLastSeg := segmentIdx == endSegmentIdx && diffEndOffset > 0
 
