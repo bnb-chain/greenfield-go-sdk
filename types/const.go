@@ -22,7 +22,7 @@ const (
 	HTTPHeaderSignedMsg       = "X-Gnfd-Signed-Msg"
 	HTTPHeaderPieceIndex      = "X-Gnfd-Piece-Index"
 	HTTPHeaderRedundancyIndex = "X-Gnfd-Redundancy-Index"
-	HTTPHeaderObjectId        = "X-Gnfd-Object-ID"
+	HTTPHeaderObjectID        = "X-Gnfd-Object-ID"
 	HTTPHeaderIntegrityHash   = "X-Gnfd-Integrity-Hash"
 	HTTPHeaderPieceHash       = "X-Gnfd-Piece-Hash"
 
@@ -54,4 +54,9 @@ const (
 	MaxHeadTryTime   = 4
 	HeadBackOffDelay = time.Millisecond * 500
 	NoSuchObjectErr  = "no such object"
+
+	GetConnectionFail = "connection refused"
+
+	MaxDownloadTryTime   = 3
+	DownloadBackOffDelay = time.Millisecond * 500
 )

@@ -16,9 +16,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
+	"github.com/bnb-chain/greenfield-common/go/redundancy"
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
@@ -27,9 +31,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
-
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 type Object interface {
@@ -39,8 +40,8 @@ type Object interface {
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
-	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
-	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
+	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOptions) (io.ReadCloser, types.ObjectStat, error)
+	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
 
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
@@ -70,9 +71,11 @@ type Object interface {
 	// CreateFolder creates an empty object used as folder.
 	// objectName must ending with a forward slash (/) character
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
-
 	// GetObjectUploadProgress return the status of the uploading object
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
+
+	// RecoverObjectBySecondary get piece data from secondary SPs and recovery the object in client
+	RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -305,7 +308,7 @@ func (c *client) FPutObject(ctx context.Context, bucketName, objectName, filePat
 
 // GetObject download s3 object payload and return the related object info
 func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
-	opts types.GetObjectOption,
+	opts types.GetObjectOptions,
 ) (io.ReadCloser, types.ObjectStat, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, types.ObjectStat{}, err
@@ -351,27 +354,50 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error {
+func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {
 		// If the destination exists and is a directory.
 		if st.IsDir() {
-			return errors.New("fileName is a directory.")
+			return errors.New("download file path is a directory")
 		}
+		return errors.New("download file already exist")
 	}
 
-	// If file exist, open it in append mode
+	backoffDelay := types.DownloadBackOffDelay
+	var body io.ReadCloser
+	for retry := 0; retry < types.MaxDownloadTryTime; retry++ {
+		body, _, err = c.GetObject(ctx, bucketName, objectName, opts)
+		if err == nil {
+			break
+		}
+		body.Close()
+
+		connectedFail := strings.Contains(err.Error(), types.GetConnectionFail)
+		if err != nil && !connectedFail {
+			return err
+		}
+
+		// connect the primary SP failed, try again
+		if opts.SupportRecovery {
+			// connect failed for 3 times, try to download piece from secondary SP
+			if retry == types.MaxDownloadTryTime-1 {
+				return c.RecoverObjectBySecondary(ctx, bucketName, objectName, filePath, opts)
+			}
+			continue
+		}
+
+		time.Sleep(backoffDelay)
+		backoffDelay *= 2
+	}
+
+	defer body.Close()
+
 	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o660)
 	if err != nil {
 		return err
 	}
-
-	body, _, err := c.GetObject(ctx, bucketName, objectName, opts)
-	if err != nil {
-		return err
-	}
-	defer body.Close()
 
 	_, err = io.Copy(fd, body)
 	fd.Close()
@@ -380,6 +406,276 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 	}
 
 	return nil
+}
+
+func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
+	// compute segment count
+	dataBlocks, parityBlocks, maxSegmentSize, err := c.GetRedundancyParams()
+	if err != nil {
+		return err
+	}
+	ecPieceCount := dataBlocks + parityBlocks
+	minRecoveryPieces := dataBlocks
+
+	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+	objectSize := objectInfo.PayloadSize
+	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectSize, maxSegmentSize, opts)
+	if err != nil {
+		return err
+	}
+
+	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(filePath)
+	if err == nil {
+		return errors.New("download file already exist:" + filePath)
+	}
+
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// iterate over segment indices and recover one by one
+	for segmentIdx := startSegmentIdx; segmentIdx <= endSegmentIdx; segmentIdx++ {
+		doneCh := make(chan bool, len(secondaryEndpoints))
+		quitCh := make(chan bool)
+		totalTaskNum := int32(ecPieceCount)
+		doneTaskNum := uint32(0)
+		downLoadPieceSize := 0
+		var recoveryDataSources = make([][]byte, ecPieceCount)
+
+		segmentSize := utils.GetSegmentSize(objectSize, uint32(segmentIdx), maxSegmentSize)
+		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
+			recoveryDataSources[ecIdx] = nil
+			go func(secondaryIndex int) {
+				var responseBody io.ReadCloser
+				var pieceData []byte
+				defer func() {
+					// fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
+					// finish all the task, send signal to quitCh
+					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
+						quitCh <- true
+						downLoadPieceSize = len(pieceData)
+					}
+					if responseBody != nil {
+						responseBody.Close()
+					}
+				}()
+				pieceInfo := types.QueryPieceInfo{
+					ObjectId:        strconv.FormatUint(objectInfo.Id.Uint64(), 10),
+					PieceIndex:      segmentIdx,
+					RedundancyIndex: secondaryIndex,
+				}
+				// call getSecondaryPieceData to retrieve recovery data for the segment
+				// TODO check if it is better with downloading data chunks first
+				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
+				if err == nil {
+					// convert recoveryData to byte
+					pieceData, err = io.ReadAll(responseBody)
+					if err != nil {
+						log.Error().Msg("read body err:" + err.Error())
+						return
+					}
+					recoveryDataSources[secondaryIndex] = pieceData
+					doneCh <- true
+				} else {
+					log.Error().Msg("get piece from secondary SP error:" + err.Error())
+				}
+
+			}(ecIdx)
+		}
+
+	loop:
+		for {
+			select {
+			case <-doneCh:
+				doneTaskNum++
+				// it is enough to recovery data with minRecoveryPieces EC data, no need to wait
+				if doneTaskNum >= minRecoveryPieces {
+					break loop
+				}
+			case <-quitCh: // all the task finish
+				if doneTaskNum < minRecoveryPieces { // finish task num not enough
+					return fmt.Errorf("get piece from secondary not enough %d", doneTaskNum)
+				}
+				ecTotalSize := int64(uint32(downLoadPieceSize) * dataBlocks)
+				if ecTotalSize < segmentSize || ecTotalSize > segmentSize+4 {
+					return fmt.Errorf("get secondary piece data length error")
+				}
+			}
+		}
+
+		// decode the original segment data from the piece data
+		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error()))
+			return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
+		}
+
+		isFirstSeg := segmentIdx == startSegmentIdx && diffStartOffset > 0
+		isLastSeg := segmentIdx == endSegmentIdx && diffEndOffset > 0
+
+		// deal with range recovery
+		if isFirstSeg && isLastSeg {
+			recoverySegData = recoverySegData[diffStartOffset : segmentSize-diffEndOffset]
+		} else if isFirstSeg {
+			recoverySegData = recoverySegData[diffStartOffset:]
+			log.Printf("first segment diff offset %d \n", diffStartOffset)
+		} else if isLastSeg {
+			recoverySegData = recoverySegData[:segmentSize-diffEndOffset]
+			log.Printf("last segment diff offset %d \n", diffEndOffset)
+		}
+
+		_, err = f.Write(recoverySegData)
+		if err != nil {
+			return err
+		}
+		log.Printf(fmt.Sprintf("finish recovery object:%s segment id:%d ", objectName, segmentIdx))
+	}
+
+	return nil
+}
+
+func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.GetObjectOptions) (int, int, int64, int64, error) {
+	var (
+		rangeStart, rangeEnd int64
+		diffStartOffset      int64
+		diffEndOffset        int64
+		startSegmentIdx      int
+		endSegmentIdx        int
+	)
+	segmentCount := utils.GetSegmentCount(payloadSize, maxSegmentSize)
+	if opts.Range == "" {
+		return 0, int(segmentCount - 1), 0, 0, nil
+	}
+
+	isRange, rangeStart, rangeEnd := utils.ParseRange(opts.Range)
+	if isRange && (rangeEnd < 0 || rangeEnd >= int64(payloadSize)) {
+		rangeEnd = int64(payloadSize) - 1
+	}
+
+	if isRange && (rangeStart < 0 || rangeEnd < 0 || rangeStart > rangeEnd) {
+		return 0, 0, 0, 0, errors.New("invalid range: " + opts.Range)
+	}
+
+	if isRange {
+		startSegmentIdx = int(rangeStart / int64(maxSegmentSize))
+		diffStartOffset = rangeStart - int64(startSegmentIdx)*int64(maxSegmentSize)
+
+		endSegmentIdx = int(rangeEnd / int64(maxSegmentSize))
+		endSegSize := utils.GetSegmentSize(payloadSize, uint32(endSegmentIdx), maxSegmentSize)
+		diffEndOffset = int64(endSegmentIdx)*int64(maxSegmentSize) + endSegSize - rangeEnd - 1
+
+		if diffEndOffset > endSegSize {
+			log.Error().Msg("compute end segment diff offset error ")
+			return 0, 0, 0, 0, errors.New("compute end segment diff offset error ")
+		}
+	} else {
+		startSegmentIdx = 0
+		endSegmentIdx = int(segmentCount - 1)
+	}
+
+	log.Printf("startSet %d, diffStartOffset %d,  endSegmentIdx %d, diffEndOffset %d,", startSegmentIdx, diffStartOffset, endSegmentIdx, diffEndOffset)
+	return startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, nil
+}
+
+func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageTypes.ObjectInfo) ([]string, error) {
+	secondarySPAddrs := objectInfo.GetSecondarySpAddresses()
+	spList, err := c.ListStorageProviders(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	secondaryEndpointList := make([]string, len(secondarySPAddrs))
+	for idx, addr := range secondarySPAddrs {
+		for _, info := range spList {
+			if addr == info.GetOperatorAddress() {
+				secondaryEndpointList[idx] = info.Endpoint
+			}
+		}
+	}
+
+	fmt.Printf("secondEndpont first: %s, len: %d \n", secondaryEndpointList[0], len(secondaryEndpointList))
+	return secondaryEndpointList, nil
+}
+
+func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectName string, pieceInfo types.QueryPieceInfo, opts types.GetSecondaryPieceOptions) (io.ReadCloser, error) {
+	var err error
+	dataBlocks, parityBlocks, _, err := c.GetRedundancyParams()
+	if err != nil {
+		return nil, errors.New("fail to get redundancy params:" + err.Error())
+	}
+	maxRedundancyIndex := int(dataBlocks+parityBlocks) - 1
+	if pieceInfo.RedundancyIndex > maxRedundancyIndex || pieceInfo.RedundancyIndex < 0 {
+		return nil, fmt.Errorf("redundancy index invalid, the index should be %d to %d", 0, maxRedundancyIndex)
+	}
+
+	params := url.Values{}
+	params.Set("get-piece", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		bucketName:    bucketName,
+		objectName:    objectName,
+		contentSHA256: types.EmptyStringSHA256,
+		pieceInfo:     pieceInfo,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	var endpoint *url.URL
+	if opts.Endpoint != "" {
+		var useHttps bool
+		if strings.Contains(opts.Endpoint, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
+
+		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
+			return nil, err
+		}
+	} else if opts.SPAddress != "" {
+		// get endpoint from sp address
+		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by secondary sp address: %s failed, err: %v", opts.SPAddress, err))
+			return nil, err
+		}
+	} else {
+		// get secondary sp address info based on the redundancy index
+		objectInfo, err := c.HeadObjectByID(ctx, pieceInfo.ObjectId)
+		if err != nil {
+			return nil, err
+		}
+
+		secondarySP := objectInfo.SecondarySpAddresses[pieceInfo.RedundancyIndex]
+		endpoint, err = c.getSPUrlByAddr(secondarySP)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
+			return nil, err
+		}
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, nil
 }
 
 // getObjInfo generates objectInfo base on the response http header content

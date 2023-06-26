@@ -217,7 +217,7 @@ type requestMeta struct {
 	contentLength    int64
 	contentMD5Base64 string // base64 encoded md5sum
 	contentSHA256    string // hex encoded sha256sum
-	challengeInfo    types.ChallengeInfo
+	pieceInfo        types.QueryPieceInfo
 	userAddress      string
 }
 
@@ -311,20 +311,18 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 		req.Header.Set(types.HTTPHeaderRange, meta.rangeInfo)
 	}
 
-	if isAdminAPi {
-		// set challenge headers
-		// if challengeInfo.ObjectId is not empty, other field should be set as well
-		if meta.challengeInfo.ObjectId != "" {
-			info := meta.challengeInfo
-			req.Header.Set(types.HTTPHeaderObjectId, info.ObjectId)
-			req.Header.Set(types.HTTPHeaderRedundancyIndex, strconv.Itoa(info.RedundancyIndex))
-			req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
-		}
+	// if pieceInfo.ObjectId is not empty, other field should be set as well
+	if meta.pieceInfo.ObjectId != "" {
+		info := meta.pieceInfo
+		req.Header.Set(types.HTTPHeaderObjectID, info.ObjectId)
+		req.Header.Set(types.HTTPHeaderRedundancyIndex, strconv.Itoa(info.RedundancyIndex))
+		req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
+	}
 
+	if isAdminAPi {
 		if meta.txnMsg != "" {
 			req.Header.Set(types.HTTPHeaderUnsignedMsg, meta.txnMsg)
 		}
-
 	} else {
 		// set request host
 		if c.host != "" {

@@ -15,10 +15,10 @@ type ObjectStat struct {
 	Size        int64
 }
 
-// ChallengeInfo indicates the challenge object info
+// QueryPieceInfo indicates the challenge or recovery object piece info
 // RedundancyIndex if it is primary sp, the value should be -1，
 // else it indicates the index of secondary sp
-type ChallengeInfo struct {
+type QueryPieceInfo struct {
 	ObjectId        string
 	PieceIndex      int
 	RedundancyIndex int

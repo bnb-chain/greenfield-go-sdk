@@ -185,12 +185,18 @@ type PutObjectOptions struct {
 	TxnHash     string
 }
 
-// GetObjectOption contains the options of getObject
-type GetObjectOption struct {
-	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+// GetObjectOptions contains the options of getObject
+type GetObjectOptions struct {
+	Range           string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+	SupportRecovery bool   // support recover data from secondary SPs if primary SP not in service
 }
 
 type GetChallengeInfoOptions struct {
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
+}
+
+type GetSecondaryPieceOptions struct {
 	Endpoint  string // indicates the endpoint of sp
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
@@ -201,7 +207,7 @@ type ListGroupsOptions struct {
 	Offset     int64
 }
 
-func (o *GetObjectOption) SetRange(start, end int64) error {
+func (o *GetObjectOptions) SetRange(start, end int64) error {
 	switch {
 	case 0 < start && end == 0:
 		// `bytes=N-`.

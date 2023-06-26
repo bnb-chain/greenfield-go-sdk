@@ -210,3 +210,77 @@ func IsValidObjectPrefix(prefix string) bool {
 	}
 	return true
 }
+
+func GetSegmentSize(payloadSize uint64, segmentIdx uint32, maxSegmentSize uint64) int64 {
+	segmentCount := GetSegmentCount(payloadSize, maxSegmentSize)
+	if segmentCount == 1 {
+		return int64(payloadSize)
+	} else if segmentIdx == segmentCount-1 {
+		return int64(payloadSize) - (int64(segmentCount)-1)*int64(maxSegmentSize)
+	} else {
+		return int64(maxSegmentSize)
+	}
+}
+
+func GetECPieceSize(payloadSize uint64, segmentIdx uint32, maxSegmentSize uint64, dataChunkNum uint32) int64 {
+	segmentSize := GetSegmentSize(payloadSize, segmentIdx, maxSegmentSize)
+
+	pieceSize := segmentSize / int64(dataChunkNum)
+	// EC padding will cause the EC pieces to have one extra byte if it cannot be evenly divided.
+	// for example, the segment size is 15, the ec piece size should be 15/4 + 1 = 4
+	if segmentSize > 0 && segmentSize%int64(dataChunkNum) != 0 {
+		pieceSize++
+	}
+
+	return pieceSize
+}
+
+func GetSegmentCount(payloadSize uint64, maxSegmentSize uint64) uint32 {
+	count := payloadSize / maxSegmentSize
+	if payloadSize%maxSegmentSize > 0 {
+		count++
+	}
+	return uint32(count)
+}
+
+func ParseRange(rangeStr string) (bool, int64, int64) {
+	if rangeStr == "" {
+		return false, -1, -1
+	}
+	rangeStr = strings.ToLower(rangeStr)
+	rangeStr = strings.ReplaceAll(rangeStr, " ", "")
+	if !strings.HasPrefix(rangeStr, "bytes=") {
+		return false, -1, -1
+	}
+	rangeStr = rangeStr[len("bytes="):]
+	if strings.HasSuffix(rangeStr, "-") {
+		rangeStr = rangeStr[:len(rangeStr)-1]
+		rangeStart, err := stringToUint64(rangeStr)
+		if err != nil {
+			return false, -1, -1
+		}
+		return true, int64(rangeStart), -1
+	}
+	pair := strings.Split(rangeStr, "-")
+	if len(pair) == 2 {
+		rangeStart, err := stringToUint64(pair[0])
+		if err != nil {
+			return false, -1, -1
+		}
+		rangeEnd, err := stringToUint64(pair[1])
+		if err != nil {
+			return false, -1, -1
+		}
+		return true, int64(rangeStart), int64(rangeEnd)
+	}
+	return false, -1, -1
+}
+
+// StringToUint64 converts string to uint64
+func stringToUint64(str string) (uint64, error) {
+	ui64, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return ui64, nil
+}
