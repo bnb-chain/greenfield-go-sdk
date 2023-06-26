@@ -314,7 +314,7 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	// if pieceInfo.ObjectId is not empty, other field should be set as well
 	if meta.pieceInfo.ObjectId != "" {
 		info := meta.pieceInfo
-		req.Header.Set(types.HTTPHeaderObjectId, info.ObjectId)
+		req.Header.Set(types.HTTPHeaderObjectID, info.ObjectId)
 		req.Header.Set(types.HTTPHeaderRedundancyIndex, strconv.Itoa(info.RedundancyIndex))
 		req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
 	}
