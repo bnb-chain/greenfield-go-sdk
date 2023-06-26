@@ -174,7 +174,7 @@ func (s *StorageTestSuite) Test_Object() {
 		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 	}
 
-	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOption{})
+	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
 	s.Require().NoError(err)
 	if err == nil {
 		s.Require().Equal(info.ObjectName, objectName)
@@ -185,7 +185,7 @@ func (s *StorageTestSuite) Test_Object() {
 
 	s.T().Log("---> RecoveryObject <---")
 	filePath := "downloadfile"
-	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, types.GetObjectOption{})
+	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, types.GetObjectOptions{})
 	s.Require().NoError(err)
 	if err == nil {
 		content, err := os.ReadFile(filePath)
@@ -200,7 +200,7 @@ func (s *StorageTestSuite) Test_Object() {
 
 	s.T().Log("---> RecoveryObject Range <---")
 	filePath = "downloadfileRange"
-	opt := types.GetObjectOption{}
+	opt := types.GetObjectOptions{}
 	rangeStart := 100 * 2024
 	rangeEnd := 10 * 1024 * 1024
 	err = opt.SetRange(int64(rangeStart), int64(rangeEnd))

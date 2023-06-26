@@ -63,7 +63,7 @@ func main() {
 	waitObjectSeal(cli, bucketName, objectName)
 
 	// get object
-	reader, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
+	reader, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOptions{})
 	handleErr(err, "GetObject")
 	log.Printf("get object %s successfully, size %d \n", info.ObjectName, info.Size)
 	handleErr(err, "GetObject")
@@ -79,7 +79,7 @@ func main() {
 		i := obj.ObjectInfo
 		log.Printf("object: %s, status: %s\n", i.ObjectName, i.ObjectStatus)
 	}
-	
+
 }
 
 func waitObjectSeal(cli client.Client, bucketName, objectName string) {

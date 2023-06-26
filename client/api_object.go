@@ -40,8 +40,8 @@ type Object interface {
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
-	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
-	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
+	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOptions) (io.ReadCloser, types.ObjectStat, error)
+	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
 
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
@@ -75,7 +75,7 @@ type Object interface {
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
 
 	// RecoverObjectBySecondary get piece data from secondary SPs and recovery the object in client
-	RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
+	RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -308,7 +308,7 @@ func (c *client) FPutObject(ctx context.Context, bucketName, objectName, filePat
 
 // GetObject download s3 object payload and return the related object info
 func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
-	opts types.GetObjectOption,
+	opts types.GetObjectOptions,
 ) (io.ReadCloser, types.ObjectStat, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, types.ObjectStat{}, err
@@ -354,7 +354,7 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error {
+func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {
@@ -375,7 +375,7 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 
 		body.Close()
 		// connect the primary SP failed, try again
-		if strings.Contains(err.Error(), types.GetConnectionFail) {
+		if strings.Contains(err.Error(), types.GetConnectionFail) && opts.SupportRecovery {
 			continue
 		} else {
 			return err
@@ -395,7 +395,7 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = io.Copy(fd, body)
 	fd.Close()
 	if err != nil {
@@ -405,7 +405,7 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 	return nil
 }
 
-func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error {
+func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
 	// compute segment count
 	dataBlocks, parityBlocks, maxSegmentSize, err := c.GetRedundancyParams()
 	if err != nil {
@@ -540,7 +540,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	return nil
 }
 
-func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.GetObjectOption) (int, int, int64, int64, error) {
+func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.GetObjectOptions) (int, int, int64, int64, error) {
 	var (
 		rangeStart, rangeEnd int64
 		diffStartOffset      int64

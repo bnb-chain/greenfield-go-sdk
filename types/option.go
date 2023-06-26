@@ -185,9 +185,10 @@ type PutObjectOptions struct {
 	TxnHash     string
 }
 
-// GetObjectOption contains the options of getObject
-type GetObjectOption struct {
-	Range string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+// GetObjectOptions contains the options of getObject
+type GetObjectOptions struct {
+	Range           string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+	SupportRecovery bool
 }
 
 type GetChallengeInfoOptions struct {
@@ -206,7 +207,7 @@ type ListGroupsOptions struct {
 	Offset     int64
 }
 
-func (o *GetObjectOption) SetRange(start, end int64) error {
+func (o *GetObjectOptions) SetRange(start, end int64) error {
 	switch {
 	case 0 < start && end == 0:
 		// `bytes=N-`.
