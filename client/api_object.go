@@ -453,6 +453,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		var recoveryDataSources = make([][]byte, ecPieceCount)
 
 		segmentSize := utils.GetSegmentSize(objectSize, uint32(segmentIdx), maxSegmentSize)
+		ecPieceSize := utils.GetECPieceSize(objectSize, uint32(segmentIdx), maxSegmentSize, dataBlocks)
 		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
 			recoveryDataSources[ecIdx] = nil
 			go func(secondaryIndex int) {
@@ -463,7 +464,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					// finish all the task, send signal to quitCh
 					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
 						quitCh <- true
-						downLoadPieceSize = len(pieceData)
 					}
 					if responseBody != nil {
 						responseBody.Close()
@@ -484,8 +484,11 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 						log.Error().Msg("read body err:" + err.Error())
 						return
 					}
-					recoveryDataSources[secondaryIndex] = pieceData
-					doneCh <- true
+					if int64(len(pieceData)) == ecPieceSize {
+						recoveryDataSources[secondaryIndex] = pieceData
+						doneCh <- true
+						downLoadPieceSize = len(pieceData)
+					}
 				} else {
 					log.Error().Msg("get piece from secondary SP error:" + err.Error())
 				}
@@ -516,6 +519,8 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		// decode the original segment data from the piece data
 		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
 		if err != nil {
+			ecTotalSize := int64(uint32(downLoadPieceSize) * dataBlocks)
+			fmt.Println("downtask:", doneTaskNum, " ecTotalSize:", ecTotalSize, "segmentSize:", segmentSize)
 			log.Error().Msg(fmt.Sprintf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error()))
 			return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
 		}
