@@ -181,8 +181,10 @@ type ApproveObjectOptions struct {
 }
 
 type PutObjectOptions struct {
-	ContentType string
-	TxnHash     string
+	ContentType      string
+	TxnHash          string
+	DisableResumable bool
+	PartSize         uint64
 }
 
 // GetObjectOptions contains the options of getObject

@@ -41,6 +41,13 @@ type UploadProgress struct {
 	ProgressDescription string   `xml:"ProgressDescription"`
 }
 
+// UploadOffset indicates the offset of resumable uploading object
+type UploadOffset struct {
+	XMLName xml.Name `xml:"QueryResumeOffset"`
+	Version string   `xml:"version,attr"`
+	Offset  uint64   `xml:"Offset"`
+}
+
 type ListObjectsResult struct {
 	// objects defines the list of object
 	Objects               []*ObjectMeta `json:"objects"`

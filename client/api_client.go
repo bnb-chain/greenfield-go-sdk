@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -230,6 +231,15 @@ type sendOptions struct {
 	isAdminApi       bool        // indicate if it is an admin api request
 }
 
+// downloadSegmentHook is hook for test
+type downloadSegmentHook func(seg int64) error
+
+var DownloadSegmentHooker downloadSegmentHook = DefaultDownloadSegmentHook
+
+func DefaultDownloadSegmentHook(seg int64) error {
+	return nil
+}
+
 // newRequest constructs the http request, set url, body and headers
 func (c *client) newRequest(ctx context.Context, method string, meta requestMeta,
 	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL,
@@ -418,6 +428,17 @@ func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOpt
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (c *client) SplitPartInfo(objectSize int64, configuredPartSize uint64) (totalPartsCount int, partSize int64, lastPartSize int64, err error) {
+	partSizeFlt := float64(configuredPartSize)
+	// Total parts count.
+	totalPartsCount = int(math.Ceil(float64(objectSize) / partSizeFlt))
+	// Part size.
+	partSize = int64(partSizeFlt)
+	// Last part size.
+	lastPartSize = objectSize - int64(totalPartsCount-1)*partSize
+	return totalPartsCount, partSize, lastPartSize, nil
 }
 
 // generateURL constructs the target request url based on the parameters

@@ -21,7 +21,7 @@ format:
 .PHONY: lint lint-fix format examples
 
 e2e_test:
-	go test -p 1 -failfast -v ./e2e/...
+	go test -p 1 -failfast -v ./e2e/... -timeout 99999s
 
 examples:
 	@echo "Building examples"
