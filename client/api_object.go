@@ -549,7 +549,9 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 		if err == nil {
 			break
 		}
-		body.Close()
+		if body != nil {
+			body.Close()
+		}
 
 		connectedFail := strings.Contains(err.Error(), types.GetConnectionFail)
 		if err != nil && !connectedFail {
@@ -663,8 +665,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					}
 					recoveryDataSources[secondaryIndex] = pieceData
 					doneCh <- true
-				} else {
-					log.Error().Msg("get piece from secondary SP error:" + err.Error())
 				}
 
 			}(ecIdx)
@@ -681,11 +681,11 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 				}
 			case <-quitCh: // all the task finish
 				if doneTaskNum < minRecoveryPieces { // finish task num not enough
-					return fmt.Errorf("get piece from secondary not enough %d", doneTaskNum)
+					return fmt.Errorf("get pieces from secondary not enough %d", doneTaskNum)
 				}
 				ecTotalSize := int64(uint32(downLoadPieceSize) * dataBlocks)
 				if ecTotalSize < segmentSize || ecTotalSize > segmentSize+4 {
-					return fmt.Errorf("get secondary piece data length error")
+					return fmt.Errorf("get secondary piece data length error ecChunks total size:%d, segment size:%d", ecTotalSize, segmentSize)
 				}
 			}
 		}
@@ -693,8 +693,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		// decode the original segment data from the piece data
 		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error()))
-			return fmt.Errorf("decode segment err, segment id:%d err: %s", segmentIdx, err.Error())
+			return fmt.Errorf("decode segment err when recovery, segment id:%d err: %s", segmentIdx, err.Error())
 		}
 
 		isFirstSeg := segmentIdx == startSegmentIdx && diffStartOffset > 0
@@ -705,17 +704,14 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 			recoverySegData = recoverySegData[diffStartOffset : segmentSize-diffEndOffset]
 		} else if isFirstSeg {
 			recoverySegData = recoverySegData[diffStartOffset:]
-			log.Printf("first segment diff offset %d \n", diffStartOffset)
 		} else if isLastSeg {
 			recoverySegData = recoverySegData[:segmentSize-diffEndOffset]
-			log.Printf("last segment diff offset %d \n", diffEndOffset)
 		}
 
 		_, err = f.Write(recoverySegData)
 		if err != nil {
 			return err
 		}
-		log.Printf(fmt.Sprintf("finish recovery object:%s segment id:%d ", objectName, segmentIdx))
 	}
 
 	return nil
@@ -894,7 +890,6 @@ func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageT
 		}
 	}
 
-	fmt.Printf("secondEndpont first: %s, len: %d \n", secondaryEndpointList[0], len(secondaryEndpointList))
 	return secondaryEndpointList, nil
 }
 
