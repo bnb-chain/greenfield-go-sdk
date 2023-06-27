@@ -41,7 +41,7 @@ cosmossdk.io/api => github.com/bnb-chain/greenfield-cosmos-sdk/api v0.0.0-202304
 cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230425074444-eb5869b05fe9
 github.com/cometbft/cometbft => github.com/bnb-chain/greenfield-cometbft v0.0.1
 github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.2.1
+github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v0.2.2
 ```
 
 ### Initialize Client
