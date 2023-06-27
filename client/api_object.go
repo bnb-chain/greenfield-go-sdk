@@ -395,7 +395,6 @@ func (c *client) putObjectResumable(ctx context.Context, bucketName, objectName 
 		reqMeta := requestMeta{
 			bucketName:    bucketName,
 			objectName:    objectName,
-			contentSHA256: types.EmptyStringSHA256,
 			contentLength: int64(length),
 			contentType:   contentType,
 			urlValues:     urlValues,
@@ -1308,10 +1307,9 @@ func (c *client) getObjectOffsetFromSP(ctx context.Context, bucketName, objectNa
 	params.Set("upload-context", "")
 
 	reqMeta := requestMeta{
-		urlValues:     params,
-		bucketName:    bucketName,
-		objectName:    objectName,
-		contentSHA256: types.EmptyStringSHA256,
+		urlValues:  params,
+		bucketName: bucketName,
+		objectName: objectName,
 	}
 
 	sendOpt := sendOptions{
