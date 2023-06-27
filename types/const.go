@@ -1,6 +1,7 @@
 package types
 
 import (
+	"os"
 	"runtime"
 	"time"
 )
@@ -22,7 +23,7 @@ const (
 	HTTPHeaderSignedMsg       = "X-Gnfd-Signed-Msg"
 	HTTPHeaderPieceIndex      = "X-Gnfd-Piece-Index"
 	HTTPHeaderRedundancyIndex = "X-Gnfd-Redundancy-Index"
-	HTTPHeaderObjectId        = "X-Gnfd-Object-ID"
+	HTTPHeaderObjectID        = "X-Gnfd-Object-ID"
 	HTTPHeaderIntegrityHash   = "X-Gnfd-Integrity-Hash"
 	HTTPHeaderPieceHash       = "X-Gnfd-Piece-Hash"
 
@@ -54,4 +55,16 @@ const (
 	MaxHeadTryTime   = 4
 	HeadBackOffDelay = time.Millisecond * 500
 	NoSuchObjectErr  = "no such object"
+
+	GetConnectionFail = "connection refused"
+
+	MaxDownloadTryTime   = 3
+	DownloadBackOffDelay = time.Millisecond * 500
+
+	// MinPartSize - minimum part size 16MiB per object after which
+	// putObject behaves internally as multipart.
+	MinPartSize = 1024 * 1024 * 16
+
+	TempFileSuffix = ".temp"           // Temp file suffix
+	FilePermMode   = os.FileMode(0664) // Default file permission
 )

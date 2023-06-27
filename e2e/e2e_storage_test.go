@@ -3,7 +3,9 @@ package e2e
 import (
 	"bytes"
 	"fmt"
+	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"io"
+	"os"
 	"testing"
 	"time"
 
@@ -143,9 +145,9 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 
 	var buffer bytes.Buffer
-	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890`
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
 	// Create 1MiB content where each line contains 1024 characters.
-	for i := 0; i < 1024*100; i++ {
+	for i := 0; i < 1024*300; i++ {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
@@ -166,20 +168,65 @@ func (s *StorageTestSuite) Test_Object() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
 		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 	}
 
-	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOption{})
+	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
 	s.Require().NoError(err)
 	if err == nil {
 		s.Require().Equal(info.ObjectName, objectName)
 		objectBytes, err := io.ReadAll(ior)
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
+	}
+
+	s.T().Log("---> RecoveryObject <---")
+	filePath := "downloadfile"
+	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, types.GetObjectOptions{})
+	s.Require().NoError(err)
+	if err == nil {
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			fmt.Println("can not read download file:", err)
+			return
+		}
+
+		s.Require().NoError(err)
+		s.Require().Equal(content, buffer.Bytes())
+	}
+
+	s.T().Log("---> RecoveryObject Range <---")
+	filePath = "downloadfileRange"
+	opt := types.GetObjectOptions{}
+	rangeStart := 100 * 2024
+	rangeEnd := 10 * 1024 * 1024
+	err = opt.SetRange(int64(rangeStart), int64(rangeEnd))
+	s.Require().NoError(err)
+	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, opt)
+	s.Require().NoError(err)
+	if err == nil {
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			fmt.Println("can not read download file:", err)
+			return
+		}
+
+		fmt.Println("read recovery length:", len(content), "range len:", rangeEnd-rangeStart+1)
+		s.Require().NoError(err)
+		//	originalBytes := buffer.Bytes()[rangeStart:rangeEnd]
+		//	s.Require().Equal(content, originalBytes)
+		ior, _, err = s.Client.GetObject(s.ClientContext, bucketName, objectName, opt)
+		s.Require().NoError(err)
+		if err == nil {
+			objectBytes, err := io.ReadAll(ior)
+			s.Require().NoError(err)
+			s.Require().Equal(objectBytes, content)
+			fmt.Println("read download len length:", len(objectBytes))
+		}
 	}
 
 	s.T().Log("---> PutObjectPolicy <---")
@@ -311,4 +358,123 @@ func (s *StorageTestSuite) Test_Group() {
 	if exist {
 		s.T().Logf("header groupMember: %s , exist", updateMembers[0])
 	}
+}
+
+// UploadErrorHooker is a UploadPart hook---it will fail the 2nd segment's upload.
+func UploadErrorHooker(id int) error {
+	if id == 2 {
+		time.Sleep(time.Second)
+		return fmt.Errorf("UploadErrorHooker")
+	}
+	return nil
+}
+
+// DownloadErrorHooker requests hook by downloadSegment
+func DownloadErrorHooker(segment int64) error {
+	if segment == 1 {
+		time.Sleep(time.Second)
+		return fmt.Errorf("DownloadErrorHooker")
+	}
+	return nil
+}
+
+func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, object string, objectbody bytes.Buffer) {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	var buffer bytes.Buffer
+	// Create 20MiB content.
+	for i := 0; i < 1024*700; i++ {
+		line := types.RandStr(20)
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectInfo.ObjectName, objectName)
+	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
+
+	return bucketName, objectName, buffer
+}
+
+func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
+	// 1) create big object without putobject
+	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
+
+	s.T().Log("---> Resumable PutObject <---")
+	// 2) put an object(20M), the secondary segment will error, then resumable upload
+	client.UploadSegmentHooker = UploadErrorHooker
+	err := s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+	s.Require().ErrorContains(err, "UploadErrorHooker")
+	client.UploadSegmentHooker = client.DefaultUploadSegment
+	offset, err := s.Client.GetObjectResumableUploadOffset(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(offset, uint64(16777216))
+
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+	s.Require().NoError(err)
+
+	time.Sleep(20 * time.Second)
+	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	}
+
+	// 3) FGetObjectResumable compare with FGetObject
+	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOptions{})
+	s.T().Logf("--->  object file :%s <---", fileName)
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOptions{})
+	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.Require().NoError(err)
+
+	isSame, err := types.CompareFiles(fileName, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+
+	// 4) Resumabledownload, download a file with default checkpoint
+	client.DownloadSegmentHooker = DownloadErrorHooker
+	resumableDownloadFile := storageTestUtil.GenRandomObjectName()
+	s.T().Logf("---> Resumable download Create newfile:%s, <---", resumableDownloadFile)
+
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{})
+	s.Require().ErrorContains(err, "DownloadErrorHooker")
+	client.DownloadSegmentHooker = client.DefaultDownloadSegmentHook
+
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{})
+	s.Require().NoError(err)
+	//download success, checkpoint file has been deleted
+
+	isSame, err = types.CompareFiles(resumableDownloadFile, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
 }

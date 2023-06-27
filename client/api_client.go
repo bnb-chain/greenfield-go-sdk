@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -217,7 +218,7 @@ type requestMeta struct {
 	contentLength    int64
 	contentMD5Base64 string // base64 encoded md5sum
 	contentSHA256    string // hex encoded sha256sum
-	challengeInfo    types.ChallengeInfo
+	pieceInfo        types.QueryPieceInfo
 	userAddress      string
 }
 
@@ -228,6 +229,15 @@ type sendOptions struct {
 	disableCloseBody bool        // indicate whether to disable automatic calls to resp.Body.Close()
 	txnHash          string      // the transaction hash info
 	isAdminApi       bool        // indicate if it is an admin api request
+}
+
+// downloadSegmentHook is hook for test
+type downloadSegmentHook func(seg int64) error
+
+var DownloadSegmentHooker downloadSegmentHook = DefaultDownloadSegmentHook
+
+func DefaultDownloadSegmentHook(seg int64) error {
+	return nil
 }
 
 // newRequest constructs the http request, set url, body and headers
@@ -311,20 +321,18 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 		req.Header.Set(types.HTTPHeaderRange, meta.rangeInfo)
 	}
 
-	if isAdminAPi {
-		// set challenge headers
-		// if challengeInfo.ObjectId is not empty, other field should be set as well
-		if meta.challengeInfo.ObjectId != "" {
-			info := meta.challengeInfo
-			req.Header.Set(types.HTTPHeaderObjectId, info.ObjectId)
-			req.Header.Set(types.HTTPHeaderRedundancyIndex, strconv.Itoa(info.RedundancyIndex))
-			req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
-		}
+	// if pieceInfo.ObjectId is not empty, other field should be set as well
+	if meta.pieceInfo.ObjectId != "" {
+		info := meta.pieceInfo
+		req.Header.Set(types.HTTPHeaderObjectID, info.ObjectId)
+		req.Header.Set(types.HTTPHeaderRedundancyIndex, strconv.Itoa(info.RedundancyIndex))
+		req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
+	}
 
+	if isAdminAPi {
 		if meta.txnMsg != "" {
 			req.Header.Set(types.HTTPHeaderUnsignedMsg, meta.txnMsg)
 		}
-
 	} else {
 		// set request host
 		if c.host != "" {
@@ -420,6 +428,17 @@ func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOpt
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (c *client) SplitPartInfo(objectSize int64, configuredPartSize uint64) (totalPartsCount int, partSize int64, lastPartSize int64, err error) {
+	partSizeFlt := float64(configuredPartSize)
+	// Total parts count.
+	totalPartsCount = int(math.Ceil(float64(objectSize) / partSizeFlt))
+	// Part size.
+	partSize = int64(partSizeFlt)
+	// Last part size.
+	lastPartSize = objectSize - int64(totalPartsCount-1)*partSize
+	return totalPartsCount, partSize, lastPartSize, nil
 }
 
 // generateURL constructs the target request url based on the parameters

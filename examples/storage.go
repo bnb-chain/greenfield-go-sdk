@@ -63,7 +63,7 @@ func main() {
 	waitObjectSeal(cli, bucketName, objectName)
 
 	// get object
-	reader, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOption{})
+	reader, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOptions{})
 	handleErr(err, "GetObject")
 	log.Printf("get object %s successfully, size %d \n", info.ObjectName, info.Size)
 	handleErr(err, "GetObject")
@@ -79,7 +79,26 @@ func main() {
 		i := obj.ObjectInfo
 		log.Printf("object: %s, status: %s\n", i.ObjectName, i.ObjectStatus)
 	}
-	
+
+	// list object by object ids
+	ids := []uint64{1, 2, 333}
+	objects2, err := cli.ListObjectsByObjectID(ctx, ids)
+	log.Printf("list objects by ids result: %v\n", objects2)
+	for _, object := range objects2.Objects {
+		if object != nil {
+			log.Printf("object: %s, status: %s\n", object.ObjectInfo.ObjectName, object.ObjectInfo.ObjectStatus)
+		}
+	}
+
+	// list buckets by bucket ids
+	buckets, err := cli.ListBucketsByBucketID(ctx, ids)
+	log.Printf("list buckets by ids result: %v\n", buckets)
+	for _, bucket := range buckets.Buckets {
+		if bucket != nil {
+			log.Printf("bucket: %s, status: %s\n", bucket.BucketInfo.BucketName, bucket.BucketInfo.BucketStatus)
+		}
+	}
+
 }
 
 func waitObjectSeal(cli client.Client, bucketName, objectName string) {

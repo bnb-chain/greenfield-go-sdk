@@ -210,3 +210,112 @@ func IsValidObjectPrefix(prefix string) bool {
 	}
 	return true
 }
+
+func GetSegmentSize(payloadSize uint64, segmentIdx uint32, maxSegmentSize uint64) int64 {
+	segmentCount := GetSegmentCount(payloadSize, maxSegmentSize)
+	if segmentCount == 1 {
+		return int64(payloadSize)
+	} else if segmentIdx == segmentCount-1 {
+		return int64(payloadSize) - (int64(segmentCount)-1)*int64(maxSegmentSize)
+	} else {
+		return int64(maxSegmentSize)
+	}
+}
+
+func GetECPieceSize(payloadSize uint64, segmentIdx uint32, maxSegmentSize uint64, dataChunkNum uint32) int64 {
+	segmentSize := GetSegmentSize(payloadSize, segmentIdx, maxSegmentSize)
+
+	pieceSize := segmentSize / int64(dataChunkNum)
+	// EC padding will cause the EC pieces to have one extra byte if it cannot be evenly divided.
+	// for example, the segment size is 15, the ec piece size should be 15/4 + 1 = 4
+	if segmentSize > 0 && segmentSize%int64(dataChunkNum) != 0 {
+		pieceSize++
+	}
+
+	return pieceSize
+}
+
+func GetSegmentCount(payloadSize uint64, maxSegmentSize uint64) uint32 {
+	count := payloadSize / maxSegmentSize
+	if payloadSize%maxSegmentSize > 0 {
+		count++
+	}
+	return uint32(count)
+}
+
+func ParseRange(rangeStr string) (bool, int64, int64) {
+	if rangeStr == "" {
+		return false, -1, -1
+	}
+	rangeStr = strings.ToLower(rangeStr)
+	rangeStr = strings.ReplaceAll(rangeStr, " ", "")
+	if !strings.HasPrefix(rangeStr, "bytes=") {
+		return false, -1, -1
+	}
+	rangeStr = rangeStr[len("bytes="):]
+	if strings.HasSuffix(rangeStr, "-") {
+		rangeStr = rangeStr[:len(rangeStr)-1]
+		rangeStart, err := stringToUint64(rangeStr)
+		if err != nil {
+			return false, -1, -1
+		}
+		return true, int64(rangeStart), -1
+	}
+	pair := strings.Split(rangeStr, "-")
+	if len(pair) == 2 {
+		rangeStart, err := stringToUint64(pair[0])
+		if err != nil {
+			return false, -1, -1
+		}
+		rangeEnd, err := stringToUint64(pair[1])
+		if err != nil {
+			return false, -1, -1
+		}
+		return true, int64(rangeStart), int64(rangeEnd)
+	}
+	return false, -1, -1
+}
+
+// StringToUint64 converts string to uint64
+func stringToUint64(str string) (uint64, error) {
+	ui64, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return ui64, nil
+}
+
+func ReadFull(r io.Reader, buf []byte) (n int, err error) {
+	// ReadFull reads exactly len(buf) bytes from r into buf.
+	// It returns the number of bytes copied and an error if
+	// fewer bytes were read. The error is EOF only if no bytes
+	// were read. If an EOF happens after reading some but not
+	// all the bytes, ReadFull returns ErrUnexpectedEOF.
+	// On return, n == len(buf) if and only if err == nil.
+	// If r returns an error having read at least len(buf) bytes,
+	// the error is dropped.
+	for n < len(buf) && err == nil {
+		var nn int
+		nn, err = r.Read(buf[n:])
+		// Some spurious io.Reader's return
+		// io.ErrUnexpectedEOF when nn == 0
+		// this behavior is undocumented
+		// so we are on purpose not using io.ReadFull
+		// implementation because this can lead
+		// to custom handling, to avoid that
+		// we simply modify the original io.ReadFull
+		// implementation to avoid this issue.
+		// io.ErrUnexpectedEOF with nn == 0 really
+		// means that io.EOF
+		if err == io.ErrUnexpectedEOF && nn == 0 {
+			err = io.EOF
+		}
+		n += nn
+	}
+	if n >= len(buf) {
+		err = nil
+	} else if n > 0 && err == io.EOF {
+		err = io.ErrUnexpectedEOF
+	}
+	return
+}

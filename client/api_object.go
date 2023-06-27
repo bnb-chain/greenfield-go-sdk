@@ -16,9 +16,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
+	"github.com/bnb-chain/greenfield-common/go/redundancy"
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
@@ -27,20 +31,19 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
-
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 type Object interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
-	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOption) (io.ReadCloser, types.ObjectStat, error)
-	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error
+	GetObject(ctx context.Context, bucketName, objectName string, opts types.GetObjectOptions) (io.ReadCloser, types.ObjectStat, error)
+	FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
+	FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
 
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
@@ -70,9 +73,15 @@ type Object interface {
 	// CreateFolder creates an empty object used as folder.
 	// objectName must ending with a forward slash (/) character
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
-
 	// GetObjectUploadProgress return the status of the uploading object
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
+
+	// RecoverObjectBySecondary get piece data from secondary SPs and recovery the object in client
+	RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
+	// GetObjectResumableUploadOffset return the status of the uploading object
+	GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error)
+	// ListObjectsByObjectID list objects by object ids
+	ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -86,6 +95,18 @@ func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 
 	versionedParams := queryResp.Params.VersionedParams
 	return versionedParams.GetRedundantDataChunkNum(), versionedParams.GetRedundantParityChunkNum(), versionedParams.GetMaxSegmentSize(), nil
+}
+
+// GetParams query and return the data shards, parity shards and segment size of redundancy
+// configuration on chain
+func (c *client) GetParams() (storageTypes.Params, error) {
+	query := storageTypes.QueryParamsRequest{}
+	queryResp, err := c.chainClient.StorageQueryClient.Params(context.Background(), &query)
+	if err != nil {
+		return storageTypes.Params{}, err
+	}
+
+	return queryResp.Params, nil
 }
 
 // ComputeHashRoots return the integrity hash, content size and the redundancy type of the file
@@ -214,6 +235,30 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 		return errors.New("object size should be more than 0")
 	}
 
+	params, err := c.GetParams()
+	if err != nil {
+		return err
+	}
+	// minPartSize: 16MB
+	if opts.PartSize == 0 {
+		opts.PartSize = types.MinPartSize
+	}
+	if opts.PartSize%params.GetMaxSegmentSize() != 0 {
+		return errors.New("part size should be an integer multiple of the segment size")
+	}
+
+	// upload an entire object to the storage provider in a single request
+	if objectSize <= int64(opts.PartSize) || opts.DisableResumable {
+		return c.putObject(ctx, bucketName, objectName, objectSize, reader, opts)
+	}
+
+	// resumableupload
+	return c.putObjectResumable(ctx, bucketName, objectName, objectSize, reader, opts)
+}
+
+func (c *client) putObject(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
+) (err error) {
 	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
 		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
 		return err
@@ -262,6 +307,143 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	return nil
 }
 
+// UploadSegmentHook is for testing usage
+type uploadSegmentHook func(id int) error
+
+var UploadSegmentHooker uploadSegmentHook = DefaultUploadSegment
+
+func DefaultUploadSegment(id int) error {
+	return nil
+}
+
+func (c *client) putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
+) (err error) {
+	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
+		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
+		return err
+	}
+
+	offset, err := c.GetObjectResumableUploadOffset(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	// Total data read and written to server. should be equal to
+	// 'size' at the end of the call.
+	var totalUploadedSize int64
+
+	// Calculate the optimal parts info for a given size.
+	totalPartsCount, partSize, _, err := c.SplitPartInfo(objectSize, opts.PartSize)
+	if err != nil {
+		return err
+	}
+
+	// Part number always starts with '1'.
+	partNumber := 1
+	startPartNumber := int(offset/opts.PartSize + 1)
+
+	// Create a buffer.
+	buf := make([]byte, partSize)
+	complete := false
+
+	//  TODO(chris): Skip successful segments or add a verification file check.
+	for partNumber < startPartNumber {
+		length, rErr := utils.ReadFull(reader, buf)
+		if rErr == io.EOF && partNumber > 1 {
+			break
+		}
+		// Increment part number.
+		log.Debug().Msg(fmt.Sprintf("skip partNumber:%d, length:%d", partNumber, length))
+		// Save successfully uploaded size.
+		totalUploadedSize += int64(length)
+		partNumber++
+	}
+
+	for partNumber <= totalPartsCount {
+		if partNumber == totalPartsCount {
+			complete = true
+		}
+		if err = UploadSegmentHooker(partNumber); err != nil {
+			return err
+		}
+		length, rErr := utils.ReadFull(reader, buf)
+		if rErr == io.EOF && partNumber > 1 {
+			break
+		}
+
+		if rErr != nil && rErr != io.ErrUnexpectedEOF && rErr != io.EOF {
+			return err
+		}
+
+		log.Debug().Msg(fmt.Sprintf("partNumber:%d, length:%d", partNumber, length))
+
+		// Update progress reader appropriately to the latest offset
+		// as we read from the source.
+		rd := bytes.NewReader(buf[:length])
+
+		var contentType string
+		if opts.ContentType != "" {
+			contentType = opts.ContentType
+		} else {
+			contentType = types.ContentDefault
+		}
+
+		// Initialize url queries.
+		urlValues := make(url.Values)
+		urlValues.Set("offset", strconv.FormatInt(totalUploadedSize, 10))
+		urlValues.Set("complete", strconv.FormatBool(complete))
+
+		reqMeta := requestMeta{
+			bucketName:    bucketName,
+			objectName:    objectName,
+			contentLength: int64(length),
+			contentType:   contentType,
+			urlValues:     urlValues,
+		}
+
+		var sendOpt sendOptions
+		if opts.TxnHash != "" {
+			sendOpt = sendOptions{
+				method:  http.MethodPost,
+				body:    rd,
+				txnHash: opts.TxnHash,
+			}
+		} else {
+			sendOpt = sendOptions{
+				method: http.MethodPost,
+				body:   rd,
+			}
+		}
+
+		endpoint, err := c.getSPUrlByBucket(bucketName)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
+			return err
+		}
+
+		// Proceed to upload the part.
+		_, err = c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+		if err != nil {
+			return err
+		}
+
+		// Save successfully uploaded size.
+		totalUploadedSize += int64(length)
+
+		// Increment part number.
+		partNumber++
+
+		// For unknown size, Read EOF we break away.
+		// We do not have to upload till totalPartsCount.
+		if rErr == io.EOF {
+			break
+		}
+	}
+
+	return nil
+}
+
 func (c *client) headSPObjectInfo(ctx context.Context, bucketName, objectName string) error {
 	backoffDelay := types.HeadBackOffDelay
 	for retry := 0; retry < types.MaxHeadTryTime; retry++ {
@@ -305,7 +487,7 @@ func (c *client) FPutObject(ctx context.Context, bucketName, objectName, filePat
 
 // GetObject download s3 object payload and return the related object info
 func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
-	opts types.GetObjectOption,
+	opts types.GetObjectOptions,
 ) (io.ReadCloser, types.ObjectStat, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, types.ObjectStat{}, err
@@ -351,27 +533,52 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOption) error {
+func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {
 		// If the destination exists and is a directory.
 		if st.IsDir() {
-			return errors.New("fileName is a directory.")
+			return errors.New("download file path is a directory")
 		}
+		return errors.New("download file already exist")
 	}
 
-	// If file exist, open it in append mode
+	backoffDelay := types.DownloadBackOffDelay
+	var body io.ReadCloser
+	for retry := 0; retry < types.MaxDownloadTryTime; retry++ {
+		body, _, err = c.GetObject(ctx, bucketName, objectName, opts)
+		if err == nil {
+			break
+		}
+		if body != nil {
+			body.Close()
+		}
+
+		connectedFail := strings.Contains(err.Error(), types.GetConnectionFail)
+		if err != nil && !connectedFail {
+			return err
+		}
+
+		// connect the primary SP failed, try again
+		if opts.SupportRecovery {
+			// connect failed for 3 times, try to download piece from secondary SP
+			if retry == types.MaxDownloadTryTime-1 {
+				return c.RecoverObjectBySecondary(ctx, bucketName, objectName, filePath, opts)
+			}
+			continue
+		}
+
+		time.Sleep(backoffDelay)
+		backoffDelay *= 2
+	}
+
+	defer body.Close()
+
 	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o660)
 	if err != nil {
 		return err
 	}
-
-	body, _, err := c.GetObject(ctx, bucketName, objectName, opts)
-	if err != nil {
-		return err
-	}
-	defer body.Close()
 
 	_, err = io.Copy(fd, body)
 	fd.Close()
@@ -380,6 +587,386 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 	}
 
 	return nil
+}
+
+func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
+	// compute segment count
+	dataBlocks, parityBlocks, maxSegmentSize, err := c.GetRedundancyParams()
+	if err != nil {
+		return err
+	}
+	ecPieceCount := dataBlocks + parityBlocks
+	minRecoveryPieces := dataBlocks
+
+	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+	objectSize := objectInfo.PayloadSize
+	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectSize, maxSegmentSize, opts)
+	if err != nil {
+		return err
+	}
+
+	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(filePath)
+	if err == nil {
+		return errors.New("download file already exist:" + filePath)
+	}
+
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// iterate over segment indices and recover one by one
+	for segmentIdx := startSegmentIdx; segmentIdx <= endSegmentIdx; segmentIdx++ {
+		doneCh := make(chan bool, len(secondaryEndpoints))
+		quitCh := make(chan bool)
+		totalTaskNum := int32(ecPieceCount)
+		doneTaskNum := uint32(0)
+		downLoadPieceSize := int64(0)
+		var recoveryDataSources = make([][]byte, ecPieceCount)
+
+		segmentSize := utils.GetSegmentSize(objectSize, uint32(segmentIdx), maxSegmentSize)
+		ecPieceSize := utils.GetECPieceSize(objectSize, uint32(segmentIdx), maxSegmentSize, dataBlocks)
+		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
+			recoveryDataSources[ecIdx] = nil
+			go func(secondaryIndex int) {
+				var responseBody io.ReadCloser
+				var pieceData []byte
+				defer func() {
+					// fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
+					// finish all the task, send signal to quitCh
+					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
+						quitCh <- true
+					}
+					if responseBody != nil {
+						responseBody.Close()
+					}
+				}()
+				pieceInfo := types.QueryPieceInfo{
+					ObjectId:        strconv.FormatUint(objectInfo.Id.Uint64(), 10),
+					PieceIndex:      segmentIdx,
+					RedundancyIndex: secondaryIndex,
+				}
+				// call getSecondaryPieceData to retrieve recovery data for the segment
+				// TODO check if it is better with downloading data chunks first
+				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
+				if err == nil {
+					// convert recoveryData to byte
+					pieceData, err = io.ReadAll(responseBody)
+					if err != nil {
+						log.Error().Msg("read body err:" + err.Error())
+						return
+					}
+					pieceLen := int64(len(pieceData))
+					if pieceLen == ecPieceSize {
+						recoveryDataSources[secondaryIndex] = pieceData
+						doneCh <- true
+						atomic.StoreInt64(&downLoadPieceSize, pieceLen)
+					}
+				}
+			}(ecIdx)
+		}
+
+	loop:
+		for {
+			select {
+			case <-doneCh:
+				doneTaskNum++
+				// it is enough to recovery data with minRecoveryPieces EC data, no need to wait
+				if doneTaskNum >= minRecoveryPieces {
+					break loop
+				}
+			case <-quitCh: // all the task finish
+				if doneTaskNum < minRecoveryPieces { // finish task num not enough
+					return fmt.Errorf("get pieces from secondary not enough %d", doneTaskNum)
+				}
+				ecTotalSize := int64(uint32(downLoadPieceSize) * dataBlocks)
+				if ecTotalSize < segmentSize || ecTotalSize > segmentSize+4 {
+					return fmt.Errorf("get secondary piece data length error ecChunks total size:%d, segment size:%d", ecTotalSize, segmentSize)
+				}
+			}
+		}
+
+		// decode the original segment data from the piece data
+		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
+		if err != nil {
+			return fmt.Errorf("decode segment err when recovery, segment id:%d err: %s", segmentIdx, err.Error())
+		}
+
+		isFirstSeg := segmentIdx == startSegmentIdx && diffStartOffset > 0
+		isLastSeg := segmentIdx == endSegmentIdx && diffEndOffset > 0
+
+		// deal with range recovery
+		if isFirstSeg && isLastSeg {
+			recoverySegData = recoverySegData[diffStartOffset : segmentSize-diffEndOffset]
+		} else if isFirstSeg {
+			recoverySegData = recoverySegData[diffStartOffset:]
+		} else if isLastSeg {
+			recoverySegData = recoverySegData[:segmentSize-diffEndOffset]
+		}
+
+		_, err = f.Write(recoverySegData)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// GetSegmentEnd calculates the end position
+func GetSegmentEnd(begin int64, total int64, per int64) int64 {
+	if begin+per > total {
+		return total - 1
+	}
+	return begin + per - 1
+}
+
+// FGetObjectResumable download s3 object payload and return the related object info
+func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
+	tempFilePath := filePath + types.TempFileSuffix
+
+	var (
+		startOffset  int64
+		segmentSize  int64
+		objectOption types.GetObjectOptions
+		segNum       int64
+	)
+
+	params, err := c.GetParams()
+	if err != nil {
+		return err
+	}
+	segmentSize = int64(params.GetMaxSegmentSize())
+
+	fileInfo, err := os.Stat(tempFilePath)
+	if err != nil {
+		if strings.Contains(err.Error(), "no such file or directory") {
+			startOffset = 0
+		} else {
+			return err
+		}
+	} else {
+		fileSize := fileInfo.Size()
+		startOffset = (fileSize / segmentSize) * segmentSize
+
+		// truncated file to segment size integer multiples
+		if uint64(fileSize)%params.GetMaxSegmentSize() != 0 {
+			file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0644)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			err = file.Truncate(startOffset)
+			if err != nil {
+				return err
+			}
+			log.Debug().Msgf("The file was truncated to the specified size.%d\n", startOffset)
+			// TODO(chris): verify file's segment
+		}
+	}
+
+	// Get the object detailed meta for object whole size
+	// must delete header:range to get whole object size
+	meta, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	// Create the file if not exists. Otherwise the segments download will overwrite it.
+	fd, err := os.OpenFile(tempFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, types.FilePermMode)
+	if err != nil {
+		return err
+	}
+	_, err = fd.Seek(startOffset, io.SeekStart)
+	if err != nil {
+		fd.Close()
+		return err
+	}
+
+	segNum = startOffset / segmentSize
+	// Wait for the segments download finished
+	for offset := startOffset; offset < int64(meta.PayloadSize); offset += segmentSize {
+		// hook for test
+		if err = DownloadSegmentHooker(segNum); err != nil {
+			return err
+		}
+
+		endOffset := GetSegmentEnd(offset, int64(meta.PayloadSize), segmentSize)
+		err = objectOption.SetRange(offset, endOffset)
+		if err != nil {
+			return err
+		}
+
+		startT := time.Now().UnixNano() / 1000 / 1000 / 1000
+
+		rd, _, err := c.GetObject(ctx, bucketName, objectName, objectOption)
+		if err != nil {
+			return err
+		}
+		defer rd.Close()
+
+		_, err = io.Copy(fd, rd)
+		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, current offset: %d", objectOption.Range, offset))
+		endT := time.Now().UnixNano() / 1000 / 1000 / 1000
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get seg error,cost:%d second,seg number:%d,error:%s.\n", endT-startT, segNum, err.Error()))
+			fd.Close()
+		}
+
+		segNum++
+	}
+
+	fd.Close()
+
+	err = os.Rename(tempFilePath, filePath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.GetObjectOptions) (int, int, int64, int64, error) {
+	var (
+		rangeStart, rangeEnd int64
+		diffStartOffset      int64
+		diffEndOffset        int64
+		startSegmentIdx      int
+		endSegmentIdx        int
+	)
+	segmentCount := utils.GetSegmentCount(payloadSize, maxSegmentSize)
+	if opts.Range == "" {
+		return 0, int(segmentCount - 1), 0, 0, nil
+	}
+
+	isRange, rangeStart, rangeEnd := utils.ParseRange(opts.Range)
+	if isRange && (rangeEnd < 0 || rangeEnd >= int64(payloadSize)) {
+		rangeEnd = int64(payloadSize) - 1
+	}
+
+	if isRange && (rangeStart < 0 || rangeEnd < 0 || rangeStart > rangeEnd) {
+		return 0, 0, 0, 0, errors.New("invalid range: " + opts.Range)
+	}
+
+	if isRange {
+		startSegmentIdx = int(rangeStart / int64(maxSegmentSize))
+		diffStartOffset = rangeStart - int64(startSegmentIdx)*int64(maxSegmentSize)
+
+		endSegmentIdx = int(rangeEnd / int64(maxSegmentSize))
+		endSegSize := utils.GetSegmentSize(payloadSize, uint32(endSegmentIdx), maxSegmentSize)
+		diffEndOffset = int64(endSegmentIdx)*int64(maxSegmentSize) + endSegSize - rangeEnd - 1
+
+		if diffEndOffset > endSegSize {
+			log.Error().Msg("compute end segment diff offset error ")
+			return 0, 0, 0, 0, errors.New("compute end segment diff offset error ")
+		}
+	} else {
+		startSegmentIdx = 0
+		endSegmentIdx = int(segmentCount - 1)
+	}
+
+	log.Printf("startSet %d, diffStartOffset %d,  endSegmentIdx %d, diffEndOffset %d,", startSegmentIdx, diffStartOffset, endSegmentIdx, diffEndOffset)
+	return startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, nil
+}
+
+func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageTypes.ObjectInfo) ([]string, error) {
+	secondarySPAddrs := objectInfo.GetSecondarySpAddresses()
+	spList, err := c.ListStorageProviders(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	secondaryEndpointList := make([]string, len(secondarySPAddrs))
+	for idx, addr := range secondarySPAddrs {
+		for _, info := range spList {
+			if addr == info.GetOperatorAddress() {
+				secondaryEndpointList[idx] = info.Endpoint
+			}
+		}
+	}
+
+	return secondaryEndpointList, nil
+}
+
+func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectName string, pieceInfo types.QueryPieceInfo, opts types.GetSecondaryPieceOptions) (io.ReadCloser, error) {
+	var err error
+	dataBlocks, parityBlocks, _, err := c.GetRedundancyParams()
+	if err != nil {
+		return nil, errors.New("fail to get redundancy params:" + err.Error())
+	}
+	maxRedundancyIndex := int(dataBlocks+parityBlocks) - 1
+	if pieceInfo.RedundancyIndex > maxRedundancyIndex || pieceInfo.RedundancyIndex < 0 {
+		return nil, fmt.Errorf("redundancy index invalid, the index should be %d to %d", 0, maxRedundancyIndex)
+	}
+
+	params := url.Values{}
+	params.Set("get-piece", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		bucketName:    bucketName,
+		objectName:    objectName,
+		contentSHA256: types.EmptyStringSHA256,
+		pieceInfo:     pieceInfo,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	var endpoint *url.URL
+	if opts.Endpoint != "" {
+		var useHttps bool
+		if strings.Contains(opts.Endpoint, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
+
+		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
+			return nil, err
+		}
+	} else if opts.SPAddress != "" {
+		// get endpoint from sp address
+		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by secondary sp address: %s failed, err: %v", opts.SPAddress, err))
+			return nil, err
+		}
+	} else {
+		// get secondary sp address info based on the redundancy index
+		objectInfo, err := c.HeadObjectByID(ctx, pieceInfo.ObjectId)
+		if err != nil {
+			return nil, err
+		}
+
+		secondarySP := objectInfo.SecondarySpAddresses[pieceInfo.RedundancyIndex]
+		endpoint, err = c.getSPUrlByAddr(secondarySP)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
+			return nil, err
+		}
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, nil
 }
 
 // getObjInfo generates objectInfo base on the response http header content
@@ -694,6 +1281,70 @@ func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 	return status.ObjectStatus.String(), nil
 }
 
+// GetObjectResumableUploadOffset return the status of object including the uploading progress
+func (c *client) GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error) {
+	status, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return 0, err
+	}
+
+	// get object status from sp
+	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
+		uploadOffsetInfo, err := c.getObjectOffsetFromSP(ctx, bucketName, objectName)
+		if err != nil {
+			return 0, errors.New("fail to fetch object uploading offset from sp" + err.Error())
+		}
+		log.Debug().Msgf("get object resumable upload offset %d from sp", uploadOffsetInfo.Offset)
+		return uploadOffsetInfo.Offset, nil
+	}
+
+	// TODO(chris): may error
+	return 0, nil
+}
+
+func (c *client) getObjectOffsetFromSP(ctx context.Context, bucketName, objectName string) (types.UploadOffset, error) {
+	params := url.Values{}
+	params.Set("upload-context", "")
+
+	reqMeta := requestMeta{
+		urlValues:  params,
+		bucketName: bucketName,
+		objectName: objectName,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getSPUrlByBucket(bucketName)
+	if err != nil {
+		return types.UploadOffset{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+
+	if err != nil {
+		// not exist
+		if find := strings.Contains(err.Error(), "no uploading record"); find {
+			return types.UploadOffset{Offset: 0}, nil
+		} else {
+			return types.UploadOffset{}, err
+		}
+	}
+
+	defer utils.CloseResponse(resp)
+
+	objectOffset := types.UploadOffset{}
+	// decode the xml content from response body
+	err = xml.NewDecoder(resp.Body).Decode(&objectOffset)
+	if err != nil {
+		return types.UploadOffset{}, err
+	}
+
+	return objectOffset, nil
+}
+
 func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectName string) (types.UploadProgress, error) {
 	params := url.Values{}
 	params.Set("upload-progress", "")
@@ -752,4 +1403,72 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 	}
 
 	return c.sendTxn(ctx, updateObjectMsg, opt.TxOpts)
+}
+
+// ListObjectsByObjectID list objects by object ids
+// By inputting a collection of object IDs, we can retrieve the corresponding object data.
+// If the object is nonexistent or has been deleted, a null value will be returned
+func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error) {
+	const MaximumListObjectsSize = 1000
+	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
+		return types.ListObjectsByObjectIDResponse{}, nil
+	}
+
+	objectIDMap := make(map[uint64]bool)
+	for _, id := range objectIds {
+		if _, ok := objectIDMap[id]; ok {
+			// repeat id keys in request
+			return types.ListObjectsByObjectIDResponse{}, nil
+		}
+		objectIDMap[id] = true
+	}
+
+	params := url.Values{}
+	params.Set("objects-query", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	b, err := json.Marshal(types.ObjectAndBucketIDs{IDs: objectIds})
+	if err != nil {
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodPost,
+		body:             bytes.NewBuffer(b),
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getInServiceSP()
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("the list of objects in object ids:%v failed: %s", objectIds, err.Error())
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+
+	objects := types.ListObjectsByObjectIDResponse{}
+	bufStr := buf.String()
+	err = json.Unmarshal([]byte(bufStr), &objects)
+	if err != nil && objects.Objects == nil {
+		log.Error().Msgf("the list of objects in object ids:%v failed: %s", objectIds, err.Error())
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+
+	return objects, nil
 }

@@ -41,6 +41,13 @@ type UploadProgress struct {
 	ProgressDescription string   `xml:"ProgressDescription"`
 }
 
+// UploadOffset indicates the offset of resumable uploading object
+type UploadOffset struct {
+	XMLName xml.Name `xml:"QueryResumeOffset"`
+	Version string   `xml:"version,attr"`
+	Offset  uint64   `xml:"Offset"`
+}
+
 type ListObjectsResult struct {
 	// objects defines the list of object
 	Objects               []*ObjectMeta `json:"objects"`
@@ -89,6 +96,17 @@ type ObjectMeta struct {
 	UpdateTxHash string `json:"update_tx_hash"`
 	// seal_tx_hash defines the sealed transaction hash of object
 	SealTxHash string `json:"seal_tx_hash"`
+}
+
+// ListObjectsByObjectIDResponse is response type for the ListObjectsByObjectID
+type ListObjectsByObjectIDResponse struct {
+	// objects defines the information of a object map
+	Objects map[uint64]*ObjectMeta `json:"objects"`
+}
+
+// ObjectAndBucketIDs is the structure for ListBucketsByBucketID & ListObjectsByObjectID request body
+type ObjectAndBucketIDs struct {
+	IDs []uint64 `json:"ids"`
 }
 
 // BucketMeta is the structure for metadata service user bucket
@@ -169,6 +187,12 @@ type BucketInfo struct {
 	BillingInfo storageType.BillingInfo `json:"billing_info"`
 	// bucket_status define the status of the bucket.
 	BucketStatus storageType.BucketStatus `json:"bucket_status"`
+}
+
+// ListBucketsByBucketIDResponse is response type for the ListBucketsByBucketID
+type ListBucketsByBucketIDResponse struct {
+	// buckets defines the information of a bucket map
+	Buckets map[uint64]*BucketMeta `json:"buckets"`
 }
 
 // GroupMeta is the structure for group information

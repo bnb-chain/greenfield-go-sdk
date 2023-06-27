@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -59,6 +60,8 @@ type Bucket interface {
 
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error)
 	GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error)
+	// ListBucketsByBucketID list buckets by bucket ids
+	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64) (types.ListBucketsByBucketIDResponse, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
@@ -548,4 +551,72 @@ func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 	}
 
 	return resp.TxResponse.TxHash, err
+}
+
+// ListBucketsByBucketID list buckets by bucket ids
+// By inputting a collection of bucket IDs, we can retrieve the corresponding bucket data.
+// If the bucket is nonexistent or has been deleted, a null value will be returned
+func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64) (types.ListBucketsByBucketIDResponse, error) {
+	const MaximumListBucketsSize = 1000
+	if len(bucketIds) == 0 || len(bucketIds) > MaximumListBucketsSize {
+		return types.ListBucketsByBucketIDResponse{}, nil
+	}
+
+	objectIDMap := make(map[uint64]bool)
+	for _, id := range bucketIds {
+		if _, ok := objectIDMap[id]; ok {
+			// repeat id keys in request
+			return types.ListBucketsByBucketIDResponse{}, nil
+		}
+		objectIDMap[id] = true
+	}
+
+	params := url.Values{}
+	params.Set("buckets-query", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	b, err := json.Marshal(types.ObjectAndBucketIDs{IDs: bucketIds})
+	if err != nil {
+		return types.ListBucketsByBucketIDResponse{}, err
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodPost,
+		body:             bytes.NewBuffer(b),
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getInServiceSP()
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		return types.ListBucketsByBucketIDResponse{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.ListBucketsByBucketIDResponse{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("the list of buckets in bucket ids:%v failed: %s", bucketIds, err.Error())
+		return types.ListBucketsByBucketIDResponse{}, err
+	}
+
+	buckets := types.ListBucketsByBucketIDResponse{}
+	bufStr := buf.String()
+	err = json.Unmarshal([]byte(bufStr), &buckets)
+	if err != nil && buckets.Buckets == nil {
+		log.Error().Msgf("the list of buckets in bucket ids:%v failed: %s", bucketIds, err.Error())
+		return types.ListBucketsByBucketIDResponse{}, err
+	}
+
+	return buckets, nil
 }
