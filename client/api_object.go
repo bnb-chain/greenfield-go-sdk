@@ -372,7 +372,9 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 		if err == nil {
 			break
 		}
-		body.Close()
+		if body != nil {
+			body.Close()
+		}
 
 		connectedFail := strings.Contains(err.Error(), types.GetConnectionFail)
 		if err != nil && !connectedFail {
