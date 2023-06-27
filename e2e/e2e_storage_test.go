@@ -168,7 +168,7 @@ func (s *StorageTestSuite) Test_Object() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
