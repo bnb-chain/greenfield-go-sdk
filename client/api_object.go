@@ -628,10 +628,11 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 		quitCh := make(chan bool)
 		totalTaskNum := int32(ecPieceCount)
 		doneTaskNum := uint32(0)
-		downLoadPieceSize := 0
+		downLoadPieceSize := int64(0)
 		var recoveryDataSources = make([][]byte, ecPieceCount)
 
 		segmentSize := utils.GetSegmentSize(objectSize, uint32(segmentIdx), maxSegmentSize)
+		ecPieceSize := utils.GetECPieceSize(objectSize, uint32(segmentIdx), maxSegmentSize, dataBlocks)
 		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
 			recoveryDataSources[ecIdx] = nil
 			go func(secondaryIndex int) {
@@ -642,7 +643,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					// finish all the task, send signal to quitCh
 					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
 						quitCh <- true
-						downLoadPieceSize = len(pieceData)
 					}
 					if responseBody != nil {
 						responseBody.Close()
@@ -663,10 +663,13 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 						log.Error().Msg("read body err:" + err.Error())
 						return
 					}
-					recoveryDataSources[secondaryIndex] = pieceData
-					doneCh <- true
+					pieceLen := int64(len(pieceData))
+					if pieceLen == ecPieceSize {
+						recoveryDataSources[secondaryIndex] = pieceData
+						doneCh <- true
+						atomic.StoreInt64(&downLoadPieceSize, pieceLen)
+					}
 				}
-
 			}(ecIdx)
 		}
 
