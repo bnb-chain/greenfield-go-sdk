@@ -238,16 +238,15 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 		return err
 	}
 	// minPartSize: 16MB
-	partSize := opts.PartSize
 	if opts.PartSize == 0 {
-		partSize = types.MinPartSize
+		opts.PartSize = types.MinPartSize
 	}
-	if partSize%params.GetMaxSegmentSize() != 0 {
+	if opts.PartSize%params.GetMaxSegmentSize() != 0 {
 		return errors.New("part size should be an integer multiple of the segment size")
 	}
 
 	// upload an entire object to the storage provider in a single request
-	if objectSize < int64(partSize) || opts.DisableResumable {
+	if objectSize <= int64(opts.PartSize) || opts.DisableResumable {
 		return c.putObject(ctx, bucketName, objectName, objectSize, reader, opts)
 	}
 
@@ -258,10 +257,6 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 func (c *client) putObject(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
-	if objectSize <= 0 {
-		return errors.New("object size should be more than 0")
-	}
-
 	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
 		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
 		return err
@@ -807,8 +802,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		}
 
 		endOffset := GetSegmentEnd(offset, int64(meta.PayloadSize), segmentSize)
-		s := fmt.Sprintf("bytes=%d-%d", offset, endOffset)
-		objectOption.Range = s
+		objectOption.SetRange(offset, endOffset)
 
 		startT := time.Now().UnixNano() / 1000 / 1000 / 1000
 
@@ -819,7 +813,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		defer rd.Close()
 
 		_, err = io.Copy(fd, rd)
-		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, current offset: %d", s, offset))
+		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, current offset: %d", objectOption.Range, offset))
 		endT := time.Now().UnixNano() / 1000 / 1000 / 1000
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("get seg error,cost:%d second,seg number:%d,error:%s.\n", endT-startT, segNum, err.Error()))
