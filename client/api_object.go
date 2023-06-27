@@ -802,7 +802,10 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		}
 
 		endOffset := GetSegmentEnd(offset, int64(meta.PayloadSize), segmentSize)
-		objectOption.SetRange(offset, endOffset)
+		err = objectOption.SetRange(offset, endOffset)
+		if err != nil {
+			return err
+		}
 
 		startT := time.Now().UnixNano() / 1000 / 1000 / 1000
 
