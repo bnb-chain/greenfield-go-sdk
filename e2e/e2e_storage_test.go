@@ -483,7 +483,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	s.T().Logf("--->  object file :%s <---", resumableDownloadWithRangeFile)
 	s.Require().NoError(err)
 
-	fGetObjectWithRangeFile := "/Users/lijingjun/greenfield/Env-Dev/greenfield-go-sdk/test-file-" + storageTestUtil.GenRandomObjectName()
+	fGetObjectWithRangeFile := "test-file-" + storageTestUtil.GenRandomObjectName()
 	s.T().Logf("--->  object file :%s <---", fGetObjectWithRangeFile)
 	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectWithRangeFile, types.GetObjectOptions{Range: "bytes=1000-21400000"})
 	s.Require().NoError(err)
