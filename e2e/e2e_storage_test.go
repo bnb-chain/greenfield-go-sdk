@@ -446,7 +446,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 
 	// 3) FGetObjectResumable compare with FGetObject
 	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
-	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOptions{})
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.T().Logf("--->  object file :%s <---", fileName)
 	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
 	s.Require().NoError(err)
@@ -454,7 +454,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
 	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
 	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOptions{})
-	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
+	s.T().Logf("--->  FGetObject error:%s <---", err)
 	s.Require().NoError(err)
 
 	isSame, err := types.CompareFiles(fileName, fGetObjectFileName)
@@ -466,15 +466,30 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	resumableDownloadFile := storageTestUtil.GenRandomObjectName()
 	s.T().Logf("---> Resumable download Create newfile:%s, <---", resumableDownloadFile)
 
-	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{})
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.Require().ErrorContains(err, "DownloadErrorHooker")
 	client.DownloadSegmentHooker = client.DefaultDownloadSegmentHook
 
-	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{})
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.Require().NoError(err)
 	//download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadFile, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+
+	// 5) Resumabledownload, download a file with range
+	resumableDownloadWithRangeFile := "test-file-" + storageTestUtil.GenRandomObjectName()
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadWithRangeFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024, Range: "bytes=1000-21400000"})
+	s.T().Logf("--->  object file :%s <---", resumableDownloadWithRangeFile)
+	s.Require().NoError(err)
+
+	fGetObjectWithRangeFile := "/Users/lijingjun/greenfield/Env-Dev/greenfield-go-sdk/test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectWithRangeFile)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectWithRangeFile, types.GetObjectOptions{Range: "bytes=1000-21400000"})
+	s.Require().NoError(err)
+
+	isSame, err = types.CompareFiles(resumableDownloadWithRangeFile, fGetObjectWithRangeFile)
 	s.Require().True(isSame)
 	s.Require().NoError(err)
 }
