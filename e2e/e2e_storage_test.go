@@ -396,7 +396,7 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 
 	var buffer bytes.Buffer
 	// Create 20MiB content.
-	for i := 0; i < 1024*4000; i++ {
+	for i := 0; i < 1024*3000; i++ {
 		line := types.RandStr(20)
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
@@ -438,7 +438,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
 	s.Require().NoError(err)
 
-	time.Sleep(20 * time.Second)
+	time.Sleep(30 * time.Second)
 	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {

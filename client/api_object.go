@@ -747,6 +747,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		maxSegmentSize int64
 		objectOption   types.GetObjectOptions
 		segNum         int64
+		partSize       int64
 	)
 
 	// 1) check paramter
@@ -760,7 +761,9 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 	if opts.PartSize == 0 {
 		opts.PartSize = types.MinPartSize
 	}
-	if opts.PartSize%params.GetMaxSegmentSize() != 0 {
+
+	partSize = int64(opts.PartSize)
+	if partSize%maxSegmentSize != 0 {
 		return errors.New("part size should be an integer multiple of the segment size")
 	}
 
@@ -790,13 +793,13 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 			            |----------|
 		*/
 		fileSize := fileInfo.Size()
-		firstSeg := rangeStart % maxSegmentSize
+		firstSeg := rangeStart % partSize
 		fileSizeWithoutFirstSeg := fileSize - firstSeg
-		startOffset = (fileSize/maxSegmentSize)*maxSegmentSize + firstSeg
+		startOffset = (fileSize/partSize)*partSize + firstSeg
 		log.Debug().Msgf("The file:%s size:%d, startOffset:%d, range:%s\n", tempFilePath, fileSize, startOffset, opts.Range)
 
-		// truncated file to segment size integer multiples
-		if fileSizeWithoutFirstSeg%maxSegmentSize != 0 {
+		// truncated file to part size integer multiples
+		if fileSizeWithoutFirstSeg%partSize != 0 {
 			file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0644)
 			if err != nil {
 				return err
