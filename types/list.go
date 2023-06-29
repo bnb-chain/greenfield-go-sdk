@@ -184,7 +184,7 @@ type BucketInfo struct {
 	// the ChargeReadQuota specified here.
 	ChargedReadQuota uint64 `json:"charged_read_quota,string"`
 	// billing info of the bucket
-	BillingInfo storageType.BillingInfo `json:"billing_info"`
+	// BillingInfo storageType.BillingInfo `json:"billing_info"`
 	// bucket_status define the status of the bucket.
 	BucketStatus storageType.BucketStatus `json:"bucket_status"`
 }
