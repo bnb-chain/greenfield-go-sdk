@@ -396,7 +396,7 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 
 	var buffer bytes.Buffer
 	// Create 20MiB content.
-	for i := 0; i < 1024*1400; i++ {
+	for i := 0; i < 1024*4000; i++ {
 		line := types.RandStr(20)
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
