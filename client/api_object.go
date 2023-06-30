@@ -16,7 +16,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
@@ -213,12 +212,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	if objectSize <= 0 {
 		return errors.New("object size should be more than 0")
 	}
-
-	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
-		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
-		return err
-	}
-
+	
 	var contentType string
 	if opts.ContentType != "" {
 		contentType = opts.ContentType
@@ -257,29 +251,6 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	_, err = c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (c *client) headSPObjectInfo(ctx context.Context, bucketName, objectName string) error {
-	backoffDelay := types.HeadBackOffDelay
-	for retry := 0; retry < types.MaxHeadTryTime; retry++ {
-		_, err := c.getObjectStatusFromSP(ctx, bucketName, objectName)
-		if err == nil {
-			return nil
-		}
-		// if the error is not "no such object", ignore it
-		if !strings.Contains(strings.ToLower(err.Error()), types.NoSuchObjectErr) {
-			return nil
-		}
-
-		if retry == types.MaxHeadTryTime-1 {
-			return fmt.Errorf(" sp failed to head info of the object: %s, please try putObject later", objectName)
-		}
-
-		time.Sleep(backoffDelay)
-		backoffDelay *= 2
 	}
 
 	return nil
