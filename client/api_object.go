@@ -72,6 +72,9 @@ type Object interface {
 
 	// GetObjectUploadProgress return the status of the uploading object
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
+
+	// ListObjectsByObjectID list objects by object ids
+	ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -212,7 +215,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	if objectSize <= 0 {
 		return errors.New("object size should be more than 0")
 	}
-	
+
 	var contentType string
 	if opts.ContentType != "" {
 		contentType = opts.ContentType
@@ -723,4 +726,70 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 	}
 
 	return c.sendTxn(ctx, updateObjectMsg, opt.TxOpts)
+}
+
+// ListObjectsByObjectID list objects by object ids
+func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error) {
+	const MaximumListObjectsSize = 1000
+	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
+		return types.ListObjectsByObjectIDResponse{}, nil
+	}
+
+	objectIDMap := make(map[uint64]bool)
+	for _, id := range objectIds {
+		if _, ok := objectIDMap[id]; ok {
+			// repeat id keys in request
+			return types.ListObjectsByObjectIDResponse{}, nil
+		}
+		objectIDMap[id] = true
+	}
+
+	params := url.Values{}
+	params.Set("objects-query", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	b, err := json.Marshal(types.ObjectAndBucketIDs{IDs: objectIds})
+	if err != nil {
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodPost,
+		body:             bytes.NewBuffer(b),
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getInServiceSP()
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("the list of objects in object ids:%v failed: %s", objectIds, err.Error())
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+
+	objects := types.ListObjectsByObjectIDResponse{}
+	bufStr := buf.String()
+	err = json.Unmarshal([]byte(bufStr), &objects)
+	if err != nil && objects.Objects == nil {
+		log.Error().Msgf("the list of objects in object ids:%v failed: %s", objectIds, err.Error())
+		return types.ListObjectsByObjectIDResponse{}, err
+	}
+
+	return objects, nil
 }

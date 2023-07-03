@@ -91,6 +91,17 @@ type ObjectMeta struct {
 	SealTxHash string `json:"seal_tx_hash"`
 }
 
+// ListObjectsByObjectIDResponse is response type for the ListObjectsByObjectID
+type ListObjectsByObjectIDResponse struct {
+	// objects defines the information of a object map
+	Objects map[uint64]*ObjectMeta `json:"objects"`
+}
+
+// ObjectAndBucketIDs is the structure for ListBucketsByBucketID & ListObjectsByObjectID request body
+type ObjectAndBucketIDs struct {
+	IDs []uint64 `json:"ids"`
+}
+
 // BucketMeta is the structure for metadata service user bucket
 type BucketMeta struct {
 	// bucket_info defines the information of the bucket.
@@ -111,6 +122,12 @@ type BucketMeta struct {
 	UpdateAt int64 `json:"update_at,string"`
 	// update_time defines the block number when the bucket updated
 	UpdateTime int64 `json:"update_time,string"`
+}
+
+// ListBucketsByBucketIDResponse is response type for the ListBucketsByBucketID
+type ListBucketsByBucketIDResponse struct {
+	// buckets defines the information of a bucket map
+	Buckets map[uint64]*BucketMeta `json:"buckets"`
 }
 
 // ObjectInfo differ from ObjectInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
