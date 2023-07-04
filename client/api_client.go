@@ -160,6 +160,26 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	return nil, fmt.Errorf("the SP endpoint %d not exists on chain", primarySPID)
 }
 
+// getSPUrlByID route url of the sp from sp address
+func (c *client) getSPUrlByID(id uint32) (*url.URL, error) {
+	if _, ok := c.spIDEndpoints[id]; ok {
+		return c.spIDEndpoints[id], nil
+
+	}
+	// query sp info from chain
+	newSpIDInfo, _, err := c.getSPUrlList()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := newSpIDInfo[id]; ok {
+		c.spIDEndpoints = newSpIDInfo
+		return newSpIDInfo[id], nil
+	}
+
+	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", id)
+}
+
 // getSPUrlByAddr route url of the sp from sp address
 func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 	if _, ok := c.spAddressEndpoints[address]; ok {

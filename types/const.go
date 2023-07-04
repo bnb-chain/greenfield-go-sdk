@@ -45,8 +45,9 @@ const (
 	AdminURLPrefix  = "/greenfield/admin"
 	AdminURLVersion = "/v1"
 
-	CreateObjectAction = "CreateObject"
-	CreateBucketAction = "CreateBucket"
+	CreateObjectAction  = "CreateObject"
+	CreateBucketAction  = "CreateBucket"
+	MigrateBucketAction = "MigrateBucket"
 
 	ChallengeUrl           = "challenge"
 	PrimaryRedundancyIndex = -1
