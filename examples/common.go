@@ -17,6 +17,7 @@ const (
 	objectName  = "test-object"
 	groupName   = "test-group"
 	toAddress   = "0x.." // used for cross chain transfer
+	httpsAddr   = ""
 )
 
 func handleErr(err error, funcName string) {

@@ -81,7 +81,7 @@ type Object interface {
 	// GetObjectResumableUploadOffset return the status of the uploading object
 	GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error)
 	// ListObjectsByObjectID list objects by object ids
-	ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error)
+	ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -1153,9 +1153,9 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlByBucket(bucketName)
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListObjectsResult{}, err
 	}
 
@@ -1408,7 +1408,7 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 // ListObjectsByObjectID list objects by object ids
 // By inputting a collection of object IDs, we can retrieve the corresponding object data.
 // If the object is nonexistent or has been deleted, a null value will be returned
-func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error) {
+func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error) {
 	const MaximumListObjectsSize = 1000
 	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
 		return types.ListObjectsByObjectIDResponse{}, nil
@@ -1442,9 +1442,9 @@ func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64) 
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getInServiceSP()
+	endpoint, err := c.getEndpointByOpt(&opts)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListObjectsByObjectIDResponse{}, err
 	}
 

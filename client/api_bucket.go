@@ -55,13 +55,13 @@ type Bucket interface {
 	// userAddr indicates the HEX-encoded string of the user address
 	IsBucketPermissionAllowed(ctx context.Context, userAddr string, bucketName string, action permTypes.ActionType) (permTypes.Effect, error)
 
-	ListBuckets(ctx context.Context) (types.ListBucketsResult, error)
+	ListBuckets(ctx context.Context, opts types.EndPointOptions) (types.ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)
 
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error)
 	GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error)
 	// ListBucketsByBucketID list buckets by bucket ids
-	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64) (types.ListBucketsByBucketIDResponse, error)
+	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
@@ -367,7 +367,7 @@ func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, princip
 }
 
 // ListBuckets list buckets for the owner
-func (c *client) ListBuckets(ctx context.Context) (types.ListBucketsResult, error) {
+func (c *client) ListBuckets(ctx context.Context, opts types.EndPointOptions) (types.ListBucketsResult, error) {
 	reqMeta := requestMeta{
 		contentSHA256: types.EmptyStringSHA256,
 		userAddress:   c.MustGetDefaultAccount().GetAddress().String(),
@@ -378,9 +378,9 @@ func (c *client) ListBuckets(ctx context.Context) (types.ListBucketsResult, erro
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getInServiceSP()
+	endpoint, err := c.getEndpointByOpt(&opts)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListBucketsResult{}, err
 	}
 
@@ -556,7 +556,7 @@ func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 // ListBucketsByBucketID list buckets by bucket ids
 // By inputting a collection of bucket IDs, we can retrieve the corresponding bucket data.
 // If the bucket is nonexistent or has been deleted, a null value will be returned
-func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64) (types.ListBucketsByBucketIDResponse, error) {
+func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error) {
 	const MaximumListBucketsSize = 1000
 	if len(bucketIds) == 0 || len(bucketIds) > MaximumListBucketsSize {
 		return types.ListBucketsByBucketIDResponse{}, nil
@@ -590,9 +590,9 @@ func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64) 
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getInServiceSP()
+	endpoint, err := c.getEndpointByOpt(&opts)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListBucketsByBucketIDResponse{}, err
 	}
 
