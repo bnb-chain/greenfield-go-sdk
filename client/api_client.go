@@ -660,3 +660,40 @@ func (c *client) MustGetDefaultAccount() *types.Account {
 	}
 	return c.defaultAccount
 }
+
+// getEndpointByOpt return the SP endpoint by listOptions
+func (c *client) getEndpointByOpt(opts *types.EndPointOptions) (*url.URL, error) {
+	var (
+		endpoint *url.URL
+		useHttps bool
+		err      error
+	)
+
+	if opts.Endpoint != "" {
+		if strings.Contains(opts.Endpoint, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
+
+		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
+			return nil, err
+		}
+	} else if opts.SPAddress != "" {
+		// get endpoint from sp address
+		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", opts.SPAddress, err))
+			return nil, err
+		}
+	} else {
+		endpoint, err = c.getInServiceSP()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+			return nil, err
+		}
+	}
+	return endpoint, nil
+}

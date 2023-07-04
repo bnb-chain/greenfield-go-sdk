@@ -81,7 +81,7 @@ type Object interface {
 	// GetObjectResumableUploadOffset return the status of the uploading object
 	GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error)
 	// ListObjectsByObjectID list objects by object ids
-	ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.ListObjectsByObjectIDOptions) (types.ListObjectsByObjectIDResponse, error)
+	ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -1153,34 +1153,10 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		disableCloseBody: true,
 	}
 
-	var endpoint *url.URL
-	var useHttps bool
-	var err error
-	if opts.Endpoint != "" {
-		if strings.Contains(opts.Endpoint, "https") {
-			useHttps = true
-		} else {
-			useHttps = c.secure
-		}
-
-		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
-			return types.ListObjectsResult{}, err
-		}
-	} else if opts.SPAddress != "" {
-		// get endpoint from sp address
-		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", opts.SPAddress, err))
-			return types.ListObjectsResult{}, err
-		}
-	} else {
-		endpoint, err = c.getSPUrlByBucket(bucketName)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
-			return types.ListObjectsResult{}, err
-		}
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return types.ListObjectsResult{}, err
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
@@ -1432,7 +1408,7 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 // ListObjectsByObjectID list objects by object ids
 // By inputting a collection of object IDs, we can retrieve the corresponding object data.
 // If the object is nonexistent or has been deleted, a null value will be returned
-func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.ListObjectsByObjectIDOptions) (types.ListObjectsByObjectIDResponse, error) {
+func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error) {
 	const MaximumListObjectsSize = 1000
 	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
 		return types.ListObjectsByObjectIDResponse{}, nil
@@ -1466,33 +1442,10 @@ func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, 
 		disableCloseBody: true,
 	}
 
-	var endpoint *url.URL
-	var useHttps bool
-	if opts.Endpoint != "" {
-		if strings.Contains(opts.Endpoint, "https") {
-			useHttps = true
-		} else {
-			useHttps = c.secure
-		}
-
-		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
-			return types.ListObjectsByObjectIDResponse{}, err
-		}
-	} else if opts.SPAddress != "" {
-		// get endpoint from sp address
-		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", opts.SPAddress, err))
-			return types.ListObjectsByObjectIDResponse{}, err
-		}
-	} else {
-		endpoint, err = c.getInServiceSP()
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
-			return types.ListObjectsByObjectIDResponse{}, err
-		}
+	endpoint, err := c.getEndpointByOpt(&opts)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return types.ListObjectsByObjectIDResponse{}, err
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)

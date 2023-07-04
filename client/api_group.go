@@ -296,34 +296,10 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 		disableCloseBody: true,
 	}
 
-	var endpoint *url.URL
-	var useHttps bool
-	var err error
-	if opts.Endpoint != "" {
-		if strings.Contains(opts.Endpoint, "https") {
-			useHttps = true
-		} else {
-			useHttps = c.secure
-		}
-
-		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
-			return types.ListGroupsResult{}, err
-		}
-	} else if opts.SPAddress != "" {
-		// get endpoint from sp address
-		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", opts.SPAddress, err))
-			return types.ListGroupsResult{}, err
-		}
-	} else {
-		endpoint, err = c.getInServiceSP()
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
-			return types.ListGroupsResult{}, err
-		}
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return types.ListGroupsResult{}, err
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
