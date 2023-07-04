@@ -153,7 +153,9 @@ type ListObjectsOptions struct {
 	// MaxKeys defines the maximum number of keys returned to the response body.
 	// If not specified, the default value is 50.
 	// The maximum limit for returning objects is 1000
-	MaxKeys uint64
+	MaxKeys   uint64
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address
 }
 
 type PutPolicyOption struct {
@@ -207,6 +209,8 @@ type ListGroupsOptions struct {
 	SourceType string
 	Limit      int64
 	Offset     int64
+	Endpoint   string // indicates the endpoint of sp
+	SPAddress  string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
 func (o *GetObjectOptions) SetRange(start, end int64) error {
@@ -224,4 +228,19 @@ func (o *GetObjectOptions) SetRange(start, end int64) error {
 				start, end))
 	}
 	return nil
+}
+
+type ListBucketOptions struct {
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
+}
+
+type ListObjectsByObjectIDOptions struct {
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
+}
+
+type ListBucketsByBucketIDOptions struct {
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }

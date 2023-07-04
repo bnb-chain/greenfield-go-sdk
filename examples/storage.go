@@ -73,7 +73,7 @@ func main() {
 	}
 
 	// list object
-	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{true, "", "", "/", "", 10})
+	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{true, "", "", "/", "", 10, "", ""})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo
@@ -82,7 +82,10 @@ func main() {
 
 	// list object by object ids
 	ids := []uint64{1, 2, 333}
-	objects2, err := cli.ListObjectsByObjectID(ctx, ids)
+	objects2, err := cli.ListObjectsByObjectID(ctx, ids, types.ListObjectsByObjectIDOptions{
+		Endpoint:  "",
+		SPAddress: "",
+	})
 	log.Printf("list objects by ids result: %v\n", objects2)
 	for _, object := range objects2.Objects {
 		if object != nil {
@@ -91,7 +94,10 @@ func main() {
 	}
 
 	// list buckets by bucket ids
-	buckets, err := cli.ListBucketsByBucketID(ctx, ids)
+	buckets, err := cli.ListBucketsByBucketID(ctx, ids, types.ListBucketsByBucketIDOptions{
+		Endpoint:  "",
+		SPAddress: "",
+	})
 	log.Printf("list buckets by ids result: %v\n", buckets)
 	for _, bucket := range buckets.Buckets {
 		if bucket != nil {
