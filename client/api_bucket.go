@@ -62,6 +62,8 @@ type Bucket interface {
 	GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error)
 	// ListBucketsByBucketID list buckets by bucket ids
 	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error)
+	GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error)
+	MigrateBucket(ctx context.Context, bucketName string, opts types.MigrateBucketOptions) (string, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
