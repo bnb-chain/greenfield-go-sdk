@@ -139,7 +139,8 @@ type ObjectInfo struct {
 	// object_name is the name of object
 	ObjectName string `json:"object_name"`
 	// id is the unique identifier of object
-	Id storageType.Uint `json:"id"`
+	Id                  storageType.Uint `json:"id"`
+	LocalVirtualGroupId uint32           `json:"local_virtual_group_id"`
 	// payloadSize is the total size of the object payload
 	PayloadSize uint64 `json:"payload_size,string"`
 	// visibility defines the highest permissions for object. When an object is public, everyone can access it.
@@ -156,8 +157,6 @@ type ObjectInfo struct {
 	SourceType storageType.SourceType `json:"source_type"`
 	// checksums define the root hash of the pieces which stored in a SP.
 	Checksums [][]byte `json:"checksums" traits:"omit"`
-	// secondary_sp_addresses define the addresses of secondary_sps
-	SecondarySpAddresses []string `json:"secondary_sp_addresses"`
 }
 
 // BucketInfo differ from BucketInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
@@ -176,15 +175,15 @@ type BucketInfo struct {
 	CreateAt int64 `json:"create_at,string"`
 	// payment_address is the address of the payment account
 	PaymentAddress string `json:"payment_address"`
-	// primary_sp_address is the address of the primary sp. Objects belongs to this bucket will never
+	// primary_sp_id is the unique id of the primary sp. Objects belongs to this bucket will never
 	// leave this SP, unless you explicitly shift them to another SP.
-	PrimarySpAddress string `json:"primary_sp_address"`
+	PrimarySpId uint32 `json:"primary_sp_id"`
+	// global_virtual_group_family_id defines the unique id of gvg family
+	GlobalVirtualGroupFamilyId uint32 `json:"global_virtual_group_family_id"`
 	// charged_read_quota defines the traffic quota for read in bytes per month.
 	// The available read data for each user is the sum of the free read data provided by SP and
 	// the ChargeReadQuota specified here.
 	ChargedReadQuota uint64 `json:"charged_read_quota,string"`
-	// billing info of the bucket
-	BillingInfo storageType.BillingInfo `json:"billing_info"`
 	// bucket_status define the status of the bucket.
 	BucketStatus storageType.BucketStatus `json:"bucket_status"`
 }
