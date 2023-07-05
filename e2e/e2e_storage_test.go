@@ -132,7 +132,6 @@ func (s *StorageTestSuite) Test_Object() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
 
-	s.T().Logf("bucketName: %s, operatorAddress: %s", bucketName, s.PrimarySP.String())
 	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
 	s.Require().NoError(err)
 
@@ -153,7 +152,6 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 
 	s.T().Log("---> CreateObject and HeadObject <---")
-	s.T().Logf("BucketName: %s, ObjectName: %s", bucketName, objectName)
 	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
