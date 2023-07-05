@@ -70,14 +70,15 @@ func (s *BasicTestSuite) Test_Account() {
 	s.Require().Equal(acc.GetAddress(), account1.GetAddress())
 	s.Require().Equal(acc.GetSequence(), uint64(0))
 
-	txHash, err := s.Client.CreatePaymentAccount(s.ClientContext, s.DefaultAccount.GetAddress().String(), types2.TxOption{})
+	s.Client.SetDefaultAccount(account1)
+	txHash, err := s.Client.CreatePaymentAccount(s.ClientContext, account1.GetAddress().String(), types2.TxOption{})
 	s.Require().NoError(err)
 	s.T().Logf("Acc: %s", txHash)
 	waitForTx, err = s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
 	s.T().Logf("Wair for tx: %s", waitForTx.String())
 
-	paymentAccountsByOwner, err := s.Client.GetPaymentAccountsByOwner(s.ClientContext, s.DefaultAccount.GetAddress().String())
+	paymentAccountsByOwner, err := s.Client.GetPaymentAccountsByOwner(s.ClientContext, account1.GetAddress().String())
 	s.Require().NoError(err)
 	s.Require().Equal(len(paymentAccountsByOwner), 1)
 }
