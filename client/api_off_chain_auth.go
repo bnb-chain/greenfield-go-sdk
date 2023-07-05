@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"golang.org/x/crypto/blake2b"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -58,6 +57,9 @@ func (c *client) GetNextNonce(spEndpoint string) (string, error) {
 	}
 	authNonce := AuthNonce{}
 	err = json.Unmarshal([]byte(response), &authNonce)
+	if err != nil {
+		return "0", err
+	}
 	return strconv.Itoa(authNonce.NextNonce), nil
 }
 
@@ -85,7 +87,7 @@ func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 	}
 	// get the EDDSA private and public key
 	userEddsaPublicKeyStr := GetEddsaCompressedPublicKey(eddsaSeed)
-	log.Println("userEddsaPublicKeyStr is %s", userEddsaPublicKeyStr)
+	log.Println("userEddsaPublicKeyStr is ", userEddsaPublicKeyStr)
 
 	IssueDate := time.Now().Format(time.RFC3339)
 	// ExpiryDate := "2023-06-27T06:35:24Z"
@@ -128,9 +130,9 @@ func HttpGetWithHeader(url string, header map[string]string) (string, error) {
 	if (nil != resp) && (nil != resp.Body) {
 		defer resp.Body.Close()
 	}
-	body, err2 := ioutil.ReadAll(resp.Body)
+	body, err2 := io.ReadAll(resp.Body)
 	if err2 != nil {
-		log.Println("ioutil read error")
+		log.Println("io read error")
 	}
 	return string(body), err
 }
@@ -138,6 +140,9 @@ func HttpGetWithHeader(url string, header map[string]string) (string, error) {
 func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (string, error) {
 	var json = []byte(jsonStr)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
+	if err != nil {
+		log.Println("post error")
+	}
 	req.Header.Set("Content-Type", "application/json")
 	for key, value := range header {
 		req.Header.Set(key, value)
@@ -151,9 +156,9 @@ func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (s
 	if (nil != resp) && (nil != resp.Body) {
 		defer resp.Body.Close()
 	}
-	body, err2 := ioutil.ReadAll(resp.Body)
+	body, err2 := io.ReadAll(resp.Body)
 	if err2 != nil {
-		log.Println("ioutil read error")
+		log.Println("io read error")
 	}
 	return string(body), err
 }
