@@ -9,7 +9,7 @@ import (
 const (
 	rpcAddr     = "https://gnfd-testnet-fullnode-tendermint-us.bnbchain.org:443"
 	chainId     = "greenfield_5600-1"
-	privateKey  = "xx"
+	privateKey  = "4490e6024ace246eafa46b3b6d6bda1df443475f77c17b197c230cf7f244941b"
 	objectSize  = 1000
 	groupMember = "0x.." // used for group examples
 	principal   = "0x.." // used for permission examples
