@@ -1384,7 +1384,8 @@ func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectNa
 }
 
 func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectName string,
-	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error) {
+	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption,
+) (string, error) {
 	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
 		return "", fmt.Errorf("object:%s not exists: %s\n", objectName, err.Error())

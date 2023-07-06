@@ -87,7 +87,8 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 
 // EditValidator edits a existing validator info.
 func (c *client) EditValidator(ctx context.Context, description stakingtypes.Description,
-	newRate *sdktypes.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption) (string, error) {
+	newRate *sdktypes.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption,
+) (string, error) {
 	relayer, err := sdktypes.AccAddressFromHexUnsafe(newRelayerAddr)
 	if err != nil {
 		return "", err

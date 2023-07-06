@@ -108,7 +108,7 @@ func main() {
 			log.Printf("bucket: %s, status: %s\n", bucket.BucketInfo.BucketName, bucket.BucketInfo.BucketStatus)
 		}
 	}
-
+	log.Printf("object: %s has been deleted\n", objectName)
 }
 
 func waitObjectSeal(cli client.Client, bucketName, objectName string) {

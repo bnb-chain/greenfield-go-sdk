@@ -3,6 +3,8 @@ package types
 import (
 	"encoding/hex"
 
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+
 	"cosmossdk.io/math"
 
 	"github.com/bnb-chain/greenfield/sdk/keys"
@@ -56,6 +58,18 @@ func NewAccount(name string) (*Account, string, error) {
 		name: name,
 		km:   km,
 	}, hex.EncodeToString(privKey.Bytes()), nil
+}
+
+func NewBlsAccount(name string) (*Account, string, error) {
+	blsPrivKey, _ := bls.RandKey()
+	km, err := keys.NewBlsPrivateKeyManager(hex.EncodeToString(blsPrivKey.Marshal()))
+	if err != nil {
+		return nil, "", err
+	}
+	return &Account{
+		name: name,
+		km:   km,
+	}, hex.EncodeToString(blsPrivKey.Marshal()), nil
 }
 
 func (a *Account) GetKeyManager() keys.KeyManager {

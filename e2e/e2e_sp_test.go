@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"encoding/hex"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ type SPTestSuite struct {
 	SealAcc     *types.Account
 	ApprovalAcc *types.Account
 	GcAcc       *types.Account
+	BlsAcc      *types.Account
 }
 
 func (s *SPTestSuite) SetupSuite() {
@@ -35,12 +37,15 @@ func (s *SPTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.GcAcc, _, err = types.NewAccount("gc")
 	s.Require().NoError(err)
-	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s",
+	s.BlsAcc, _, err = types.NewBlsAccount("bls")
+	s.Require().NoError(err)
+	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s, blsPubKey: %s",
 		s.FundingAcc.GetAddress().String(),
 		s.SealAcc.GetAddress().String(),
 		s.ApprovalAcc.GetAddress().String(),
 		s.OperatorAcc.GetAddress().String(),
 		s.GcAcc.GetAddress().String(),
+		s.BlsAcc.GetKeyManager().PubKey().String(),
 	)
 }
 
@@ -77,6 +82,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	s.Client.SetDefaultAccount(s.OperatorAcc)
 	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(),
+		hex.EncodeToString(s.BlsAcc.GetKeyManager().PubKey().Bytes()),
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
 		types3.Description{Moniker: "test"},
