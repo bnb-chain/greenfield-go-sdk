@@ -70,6 +70,9 @@ func (s *BasicTestSuite) Test_Account() {
 	s.Require().Equal(acc.GetAddress(), account1.GetAddress())
 	s.Require().Equal(acc.GetSequence(), uint64(0))
 
+	paymentAccountsByOwnerBefore, err := s.Client.GetPaymentAccountsByOwner(s.ClientContext, s.DefaultAccount.GetAddress().String())
+	s.Require().NoError(err)
+
 	txHash, err := s.Client.CreatePaymentAccount(s.ClientContext, s.DefaultAccount.GetAddress().String(), types2.TxOption{})
 	s.Require().NoError(err)
 	s.T().Logf("Acc: %s", txHash)
@@ -79,7 +82,7 @@ func (s *BasicTestSuite) Test_Account() {
 
 	paymentAccountsByOwner, err := s.Client.GetPaymentAccountsByOwner(s.ClientContext, s.DefaultAccount.GetAddress().String())
 	s.Require().NoError(err)
-	s.Require().Equal(len(paymentAccountsByOwner), 1)
+	s.Require().Equal(len(paymentAccountsByOwner), len(paymentAccountsByOwnerBefore)+1)
 }
 
 func (s *BasicTestSuite) Test_MultiTransfer() {
