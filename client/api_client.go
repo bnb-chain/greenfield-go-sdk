@@ -177,7 +177,7 @@ func (c *client) getSPUrlByID(id uint32) (*url.URL, error) {
 		return newSpIDInfo[id], nil
 	}
 
-	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", id)
+	return nil, fmt.Errorf("the SP endpoint %d not exists on chain", id)
 }
 
 // getSPUrlByAddr route url of the sp from sp address

@@ -957,7 +957,7 @@ func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectNa
 		secondarySPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[pieceInfo.RedundancyIndex]
 		endpoint, err = c.getSPUrlByID(secondarySPID)
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySPID, err))
+			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %d failed, err: %v", secondarySPID, err))
 			return nil, err
 		}
 	}

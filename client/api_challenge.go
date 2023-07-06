@@ -103,12 +103,12 @@ func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 			}
 		} else {
 			// get endpoint of the secondary sp
-			// secondarySP := objectDetail.SecondarySpAddresses[redundancyIndex]
-			//endpoint, err = c.getSPUrlByAddr(secondarySP)
-			//if err != nil {
-			//	log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
-			//	return types.ChallengeResult{}, err
-			//}
+			secondarySPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[redundancyIndex]
+			endpoint, err = c.getSPUrlByID(secondarySPID)
+			if err != nil {
+				log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %d failed, err: %v", secondarySPID, err))
+				return types.ChallengeResult{}, err
+			}
 		}
 	}
 
