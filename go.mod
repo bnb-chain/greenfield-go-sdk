@@ -5,14 +5,14 @@ go 1.19
 require (
 	cosmossdk.io/errors v1.0.0-beta.7
 	cosmossdk.io/math v1.0.1
-	github.com/bnb-chain/greenfield v0.2.3-0.20230706065530-2c74aef28add // virtual_group_dev branch
+	github.com/bnb-chain/greenfield v0.2.3-0.20230707033622-28ad8fe4c8ec // virtual_group_dev branch
 	github.com/bnb-chain/greenfield-common/go v0.0.0-20230512062756-5d7790d0ccbf
 	github.com/cometbft/cometbft v0.37.1
 	github.com/cosmos/cosmos-sdk v0.47.2
 	github.com/prysmaticlabs/prysm v0.0.0-20220124113610-e26cde5e091b
 	github.com/rs/zerolog v1.29.1
-	github.com/stretchr/testify v1.8.2
-	google.golang.org/grpc v1.55.0
+	github.com/stretchr/testify v1.8.4
+	google.golang.org/grpc v1.56.1
 )
 
 require (
@@ -102,7 +102,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
-	github.com/sirupsen/logrus v1.9.0 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/afero v1.9.3 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
@@ -124,13 +124,13 @@ require (
 	github.com/zondax/hid v0.9.1 // indirect
 	github.com/zondax/ledger-go v0.14.1 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
-	golang.org/x/crypto v0.8.0 // indirect
+	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
-	golang.org/x/net v0.9.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
-	golang.org/x/term v0.7.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
-	google.golang.org/genproto v0.0.0-20230320184635-7606e756e683 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
