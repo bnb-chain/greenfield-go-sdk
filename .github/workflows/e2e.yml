@@ -5,11 +5,13 @@ on:
     branches:
       - master
       - develop
+      - feat-sp-exit-develop
 
   pull_request:
     branches:
       - master
       - develop
+      - feat-sp-exit-develop
 
 env:
   GreenfieldTag: 28ad8fe4c8ec975aaa7d6635500cecca26959b9b
