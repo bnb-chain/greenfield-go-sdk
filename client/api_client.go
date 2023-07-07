@@ -138,6 +138,9 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 
 	// register off-chain-auth pubkey to all sps
 	if option.OffChainAuthOption != nil {
+		if option.OffChainAuthOption.Seed == "" || option.OffChainAuthOption.Domain == "" {
+			return nil, errors.New("seed and domain can't be empty in OffChainAuthOption")
+		}
 		c.offChainAuthOption = option.OffChainAuthOption
 		if option.OffChainAuthOption.ShouldRegisterPubKey {
 			for spAddress, spEndpoint := range c.spEndpoints {

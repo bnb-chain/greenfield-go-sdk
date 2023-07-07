@@ -13,9 +13,9 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/twistededwards/eddsa"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/blake2b"
 	"io"
-	"log"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -87,12 +87,12 @@ func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 	}
 	// get the EDDSA private and public key
 	userEddsaPublicKeyStr := GetEddsaCompressedPublicKey(eddsaSeed)
-	log.Println("userEddsaPublicKeyStr is ", userEddsaPublicKeyStr)
+	log.Info().Msg("userEddsaPublicKeyStr is " + userEddsaPublicKeyStr)
 
 	IssueDate := time.Now().Format(time.RFC3339)
-	// ExpiryDate := "2023-06-27T06:35:24Z"
+	// ExpiryDate formate := "2023-06-27T06:35:24Z"
 	ExpiryDate := time.Now().Add(time.Hour * 24).Format(time.RFC3339)
-	log.Println("ExpiryDate:", ExpiryDate)
+
 	unSignedContent := fmt.Sprintf(UnsignedContentTemplate, appDomain, c.defaultAccount.GetAddress().String(), userEddsaPublicKeyStr, appDomain, IssueDate, ExpiryDate, spAddress, nextNonce)
 
 	unSignedContentHash := accounts.TextHash([]byte(unSignedContent))
@@ -108,15 +108,14 @@ func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 	headers["origin"] = appDomain
 	headers["x-gnfd-user-address"] = c.defaultAccount.GetAddress().String()
 	jsonResult, error1 := HttpPostWithHeader(spEndpoint+"/auth/update_key", "{}", headers)
-	log.Println("error1:", error1)
-	log.Println("jsonResult:", jsonResult)
+
 	return jsonResult, error1
 }
 
 func HttpGetWithHeader(url string, header map[string]string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		log.Println("get error")
+		return "", err
 	}
 	for key, value := range header {
 		req.Header.Set(key, value)
@@ -124,15 +123,14 @@ func HttpGetWithHeader(url string, header map[string]string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("get error")
 		return "", err
 	}
 	if (nil != resp) && (nil != resp.Body) {
 		defer resp.Body.Close()
 	}
-	body, err2 := io.ReadAll(resp.Body)
-	if err2 != nil {
-		log.Println("io read error")
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return "", err
 	}
 	return string(body), err
 }
@@ -141,7 +139,7 @@ func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (s
 	var json = []byte(jsonStr)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
 	if err != nil {
-		log.Println("post error")
+		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	for key, value := range header {
@@ -150,7 +148,6 @@ func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (s
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("post error")
 		return "", err
 	}
 	if (nil != resp) && (nil != resp.Body) {
@@ -158,7 +155,7 @@ func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (s
 	}
 	body, err2 := io.ReadAll(resp.Body)
 	if err2 != nil {
-		log.Println("io read error")
+		return "", err
 	}
 	return string(body), err
 }
