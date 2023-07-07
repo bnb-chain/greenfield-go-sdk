@@ -153,9 +153,9 @@ func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (s
 	if (nil != resp) && (nil != resp.Body) {
 		defer resp.Body.Close()
 	}
-	body, err2 := io.ReadAll(resp.Body)
-	if err2 != nil {
-		return "", err
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return "", readErr
 	}
 	return string(body), err
 }
