@@ -28,6 +28,13 @@ type MigrateBucketOptions struct {
 	IsAsyncMode          bool // indicate whether to create the bucket in asynchronous mode
 }
 
+type ListGlobalVirtualGroupsOptions struct {
+	DstPrimarySPID       uint32
+	DstPrimarySPApproval common.Approval
+	TxOpts               *gnfdsdktypes.TxOption
+	IsAsyncMode          bool // indicate whether to create the bucket in asynchronous mode
+}
+
 type VoteProposalOptions struct {
 	Metadata string
 	TxOption gnfdsdktypes.TxOption

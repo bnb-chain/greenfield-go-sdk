@@ -24,6 +24,9 @@ type BucketMigrateTestSuite struct {
 	basesuite.BaseSuite
 	PrimarySP spTypes.StorageProvider
 
+	SPList []spTypes.StorageProvider
+
+	// destSP config
 	OperatorAcc *types.Account
 	FundingAcc  *types.Account
 	SealAcc     *types.Account
@@ -42,6 +45,7 @@ func (s *BucketMigrateTestSuite) SetupSuite() {
 			s.PrimarySP = sp
 		}
 	}
+	s.SPList = spList
 }
 
 func TestBucketMigrateTestSuiteTestSuite(t *testing.T) {
@@ -49,6 +53,29 @@ func TestBucketMigrateTestSuiteTestSuite(t *testing.T) {
 }
 
 func (s *BucketMigrateTestSuite) CreateStorageProvider() {
+	var err error
+
+	s.OperatorAcc, _, err = types.NewAccount("operator")
+	s.Require().NoError(err)
+	s.FundingAcc, _, err = types.NewAccount("funding")
+	s.Require().NoError(err)
+	s.SealAcc, _, err = types.NewAccount("seal")
+	s.Require().NoError(err)
+	s.ApprovalAcc, _, err = types.NewAccount("approval")
+	s.Require().NoError(err)
+	s.GcAcc, _, err = types.NewAccount("gc")
+	s.Require().NoError(err)
+	s.BlsAcc, _, err = types.NewBlsAccount("bls")
+	s.Require().NoError(err)
+	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s, blsPubKey: %s",
+		s.FundingAcc.GetAddress().String(),
+		s.SealAcc.GetAddress().String(),
+		s.ApprovalAcc.GetAddress().String(),
+		s.OperatorAcc.GetAddress().String(),
+		s.GcAcc.GetAddress().String(),
+		s.BlsAcc.GetKeyManager().PubKey().String(),
+	)
+
 	txHash, err := s.Client.Transfer(s.ClientContext, s.FundingAcc.GetAddress().String(), math.NewIntWithDecimal(10001, types2.DecimalBNB), types2.TxOption{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, txHash)
@@ -180,13 +207,37 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Object() {
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
 
-	// 2) create destSP
+	//2) create destSP
 	//s.CreateStorageProvider()
 	//var destSP *spTypes.StorageProvider
 	//destSP, err = s.Client.GetStorageProviderInfo(s.ClientContext, s.OperatorAcc.GetAddress())
 	//s.Require().NoError(err)
-	//
-	//// 3) migrate bucket
-	//s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
 
+	//3) migrate bucket
+	// TODO : determine destSP bucketInfo.GetGlobalVirtualGroupFamilyId()
+
+	//sp, err := s.Client.GetStorageProviderInfo(s.ClientContext, sdk.AccAddress(s.PrimarySP.OperatorAddress))
+	//s.Require().NoError(err)
+	////sp.
+
+	destSP := s.SPList[7]
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+	s.Require().NoError(err)
+
+	tx, err := s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Logf("VoteTx: %s", tx.TxHash)
+
+	// TODO check migration whether success
+	//for {
+	//	p, err := s.Client.GetProposal(s.ClientContext, proposalID)
+	//	s.T().Logf("Proposal: %d, %s, %s, %s", p.Id, p.Status, p.VotingEndTime.String(), p.FinalTallyResult.String())
+	//	s.Require().NoError(err)
+	//	if p.Status == govTypesV1.ProposalStatus_PROPOSAL_STATUS_PASSED {
+	//		break
+	//	} else if p.Status == govTypesV1.ProposalStatus_PROPOSAL_STATUS_FAILED {
+	//		s.Require().True(false)
+	//	}
+	//	time.Sleep(1 * time.Second)
+	//}
 }

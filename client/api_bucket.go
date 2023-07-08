@@ -64,6 +64,7 @@ type Bucket interface {
 	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error)
 	GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error)
 	MigrateBucket(ctx context.Context, bucketName string, opts types.MigrateBucketOptions) (string, error)
+	//ListGlobalVirtualGroupsByBucket(ctx context.Context, bucketName string, opts types.ListGlobalVirtualGroupsOptions) (string, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
@@ -712,3 +713,51 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 
 	return txnHash, nil
 }
+
+//func (c *client) ListGlobalVirtualGroupsByBucket(ctx context.Context, bucketName string, opts types.ListGlobalVirtualGroupsOptions) (types, error) {
+//
+//	params := url.Values{}
+//	c.headb
+//	params.Set("bucket-id", strconv.FormatUint(opts.MaxKeys, 10))
+//	reqMeta := requestMeta{
+//		urlValues:     params,
+//		bucketName:    bucketName,
+//		contentSHA256: types.EmptyStringSHA256,
+//	}
+//
+//	sendOpt := sendOptions{
+//		method:           http.MethodGet,
+//		disableCloseBody: true,
+//	}
+//
+//	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+//	if err != nil {
+//		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+//		return types.ListObjectsResult{}, err
+//	}
+//
+//	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+//	if err != nil {
+//		return types.ListObjectsResult{}, err
+//	}
+//	defer utils.CloseResponse(resp)
+//
+//	// unmarshal the json content from response body
+//	buf := new(strings.Builder)
+//	_, err = io.Copy(buf, resp.Body)
+//	if err != nil {
+//		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
+//		return types.ListObjectsResult{}, err
+//	}
+//
+//	listObjectsResult := types.ListObjectsResult{}
+//	bufStr := buf.String()
+//	err = json.Unmarshal([]byte(bufStr), &listObjectsResult)
+//	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
+//	if err != nil && listObjectsResult.Objects == nil {
+//		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
+//		return types.ListObjectsResult{}, err
+//	}
+//
+//	return "", nil
+//}
