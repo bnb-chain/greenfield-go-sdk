@@ -2,9 +2,13 @@ package e2e
 
 import (
 	"bytes"
-	"cosmossdk.io/math"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"testing"
+	"time"
+
+	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
@@ -13,9 +17,6 @@ import (
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/stretchr/testify/suite"
-	"io"
-	"testing"
-	"time"
 
 	types3 "github.com/bnb-chain/greenfield/x/sp/types"
 )
@@ -194,9 +195,7 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Object() {
 	time.Sleep(20 * time.Second)
 	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
-	}
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 
 	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
 	s.Require().NoError(err)
@@ -207,20 +206,28 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Object() {
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
 
-	//2) create destSP
-	//s.CreateStorageProvider()
-	//var destSP *spTypes.StorageProvider
-	//destSP, err = s.Client.GetStorageProviderInfo(s.ClientContext, s.OperatorAcc.GetAddress())
-	//s.Require().NoError(err)
+	// selete a storage provider to miragte
+	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
+	s.Require().NoError(err)
 
-	//3) migrate bucket
-	// TODO : determine destSP bucketInfo.GetGlobalVirtualGroupFamilyId()
+	spIDs := make(map[uint32]bool)
+	spIDs[objectDetail.GlobalVirtualGroup.PrimarySpId] = true
+	for _, id := range objectDetail.GlobalVirtualGroup.SecondarySpIds {
+		spIDs[id] = true
+	}
+	s.Require().Equal(len(spIDs), 7)
 
-	//sp, err := s.Client.GetStorageProviderInfo(s.ClientContext, sdk.AccAddress(s.PrimarySP.OperatorAddress))
-	//s.Require().NoError(err)
-	////sp.
+	var destSP *types3.StorageProvider
+	for _, sp := range sps {
+		_, exist := spIDs[sp.Id]
+		if !exist {
+			destSP = &sp
+			break
+		}
+	}
+	s.Require().NotNil(destSP)
 
-	destSP := s.SPList[7]
+	// send migrate bucket transaction
 	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
 	s.Require().NoError(err)
 
