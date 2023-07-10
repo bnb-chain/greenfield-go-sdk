@@ -70,9 +70,10 @@ type client struct {
 	// The user agent info
 	userAgent string
 	// define if trace the error request to SP
-	isTraceEnabled bool
-	traceOutput    io.Writer
-	onlyTraceError bool
+	isTraceEnabled     bool
+	traceOutput        io.Writer
+	onlyTraceError     bool
+	offChainAuthOption *OffChainAuthOption
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -87,6 +88,22 @@ type Option struct {
 	Transport http.RoundTripper
 	// Host is the target sp server hostname
 	Host string
+	// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+	// This property should not be set in most cases unless you want to use go-sdk to test if the SP support off-chain-auth feature.
+	// Once this property is set, the request will be signed in "off-chain-auth" way rather than v1
+	OffChainAuthOption *OffChainAuthOption
+}
+
+// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+// This auth mechanism is usually used in browser-based application.
+// That we support OffChainAuth configuration in go-sdk is to make the tests on off-chain-auth be convenient.
+type OffChainAuthOption struct {
+	// Seed is a EdDSA private key used for off-chain-auth.
+	Seed string
+	// Domain is the domain where the EdDSA keys will be registered for.
+	Domain string
+	// ShouldRegisterPubKey This should be set as true for the first time and could be set as false if the pubkey have been already been registered already.
+	ShouldRegisterPubKey bool
 }
 
 // New - instantiate greenfield chain with chain info, account info and options.
@@ -113,12 +130,31 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	}
 
 	// fetch sp endpoints info from chain
-	spIDInfo, _, err := c.getSPUrlList()
+	spIDInfo, spAddressInfo, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
 
 	c.spIDEndpoints = spIDInfo
+	c.spAddressEndpoints = spAddressInfo
+
+	// register off-chain-auth pubkey to all sps
+	if option.OffChainAuthOption != nil {
+		if option.OffChainAuthOption.Seed == "" || option.OffChainAuthOption.Domain == "" {
+			return nil, errors.New("seed and domain can't be empty in OffChainAuthOption")
+		}
+		c.offChainAuthOption = option.OffChainAuthOption
+		if option.OffChainAuthOption.ShouldRegisterPubKey {
+			for spAddress, spEndpoint := range c.spAddressEndpoints {
+				registerResult, err := c.RegisterEDDSAPublicKey(spAddress, spEndpoint.Scheme+"://"+spEndpoint.Host)
+				if err != nil {
+					log.Error().Msg(fmt.Sprintf("Fail to RegisterEDDSAPublicKey for sp : %s", spEndpoint))
+				}
+				log.Info().Msg(fmt.Sprintf("registerResult: %s", registerResult))
+			}
+		}
+
+	}
 	return &c, nil
 }
 
@@ -517,6 +553,16 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 
 // signRequest signs the request and set authorization before send to server
 func (c *client) signRequest(req *http.Request) error {
+	// use offChainAuth if OffChainAuthOption is set
+	if c.offChainAuthOption != nil {
+		authStr := c.OffChainAuthSign()
+		// set auth header
+		req.Header.Set(types.HTTPHeaderAuthorization, authStr)
+		req.Header.Set("X-Gnfd-User-Address", c.defaultAccount.GetAddress().String())
+		req.Header.Set("X-Gnfd-App-Domain", c.offChainAuthOption.Domain)
+		return nil
+	}
+
 	unsignedMsg := httplib.GetMsgToSign(req)
 
 	// sign the request header info, generate the signature
