@@ -123,9 +123,9 @@ func waitObjectSeal(cli client.Client, bucketName, objectName string) {
 			err := errors.New("object not sealed after 15 seconds")
 			handleErr(err, "HeadObject")
 		case <-ticker.C:
-			objectInfo, err := cli.HeadObject(ctx, bucketName, objectName)
+			objectDetail, err := cli.HeadObject(ctx, bucketName, objectName)
 			handleErr(err, "HeadObject")
-			if objectInfo.GetObjectStatus().String() == "OBJECT_STATUS_SEALED" {
+			if objectDetail.ObjectInfo.GetObjectStatus().String() == "OBJECT_STATUS_SEALED" {
 				ticker.Stop()
 				fmt.Printf("put object %s successfully \n", objectName)
 				return
