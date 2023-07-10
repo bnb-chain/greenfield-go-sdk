@@ -190,8 +190,10 @@ type PutObjectOptions struct {
 
 // GetObjectOptions contains the options of getObject
 type GetObjectOptions struct {
-	Range           string `url:"-" header:"Range,omitempty"` // support for downloading partial data
-	SupportRecovery bool   // support recover data from secondary SPs if primary SP not in service
+	Range            string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+	SupportRecovery  bool   // support recover data from secondary SPs if primary SP not in service
+	SupportResumable bool   // support resumable download. Resumable downloads refer to the capability of resuming interrupted or incomplete downloads from the point where they were paused or disrupted.
+	PartSize         uint64 // indicate the resumable download's part size, download a large file in multiple parts. The part size is an integer multiple of the segment size.
 }
 
 type GetChallengeInfoOptions struct {

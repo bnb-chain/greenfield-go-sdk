@@ -730,36 +730,76 @@ func GetSegmentEnd(begin int64, total int64, per int64) int64 {
 	return begin + per - 1
 }
 
-// FGetObjectResumable download s3 object payload and return the related object info
+// FGetObjectResumable download s3 object payload with resumable download
 func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
-	tempFilePath := filePath + types.TempFileSuffix
+	// Get the object detailed meta for object whole size
+	meta, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	tempFilePath := filePath + "_" + c.defaultAccount.GetAddress().String() + opts.Range + types.TempFileSuffix
 
 	var (
-		startOffset  int64
-		segmentSize  int64
-		objectOption types.GetObjectOptions
-		segNum       int64
+		startOffset    int64
+		endOffset      int64
+		partEndOffset  int64
+		maxSegmentSize int64
+		objectOption   types.GetObjectOptions
+		segNum         int64
+		partSize       int64
 	)
 
+	// 1) check paramter
 	params, err := c.GetParams()
 	if err != nil {
 		return err
 	}
-	segmentSize = int64(params.GetMaxSegmentSize())
+	maxSegmentSize = int64(params.GetMaxSegmentSize())
 
+	// minPartSize: 16MB
+	if opts.PartSize == 0 {
+		opts.PartSize = types.MinPartSize
+	}
+
+	partSize = int64(opts.PartSize)
+	if partSize%maxSegmentSize != 0 {
+		return errors.New("part size should be an integer multiple of the segment size")
+	}
+
+	isRange, rangeStart, rangeEnd := utils.ParseRange(opts.Range)
+	if isRange && (rangeEnd < 0 || rangeEnd >= int64(meta.GetPayloadSize())) {
+		rangeEnd = int64(meta.GetPayloadSize()) - 1
+	}
+
+	// 2)prepare and check temp file
 	fileInfo, err := os.Stat(tempFilePath)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file or directory") {
-			startOffset = 0
+			if isRange {
+				startOffset = rangeStart
+			} else {
+				startOffset = 0
+			}
 		} else {
 			return err
 		}
 	} else {
+		/*
+				| -----seg1 ------ | -----seg2 ------ | -----seg3 ------ | -----seg4 ------ |
+				        ^                                                         ^
+				        |													      |
+				 startOffset													  endOffset
+			            |----------|
+		*/
 		fileSize := fileInfo.Size()
-		startOffset = (fileSize / segmentSize) * segmentSize
+		firstSeg := rangeStart % partSize
+		fileSizeWithoutFirstSeg := fileSize - firstSeg
+		startOffset = (fileSize/partSize)*partSize + firstSeg
+		log.Debug().Msgf("The file:%s size:%d, startOffset:%d, range:%s\n", tempFilePath, fileSize, startOffset, opts.Range)
 
-		// truncated file to segment size integer multiples
-		if uint64(fileSize)%params.GetMaxSegmentSize() != 0 {
+		// truncated file to part size integer multiples
+		if fileSizeWithoutFirstSeg%partSize != 0 {
 			file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0644)
 			if err != nil {
 				return err
@@ -775,13 +815,6 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		}
 	}
 
-	// Get the object detailed meta for object whole size
-	// must delete header:range to get whole object size
-	meta, err := c.HeadObject(ctx, bucketName, objectName)
-	if err != nil {
-		return err
-	}
-
 	// Create the file if not exists. Otherwise the segments download will overwrite it.
 	fd, err := os.OpenFile(tempFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, types.FilePermMode)
 	if err != nil {
@@ -793,16 +826,23 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		return err
 	}
 
-	segNum = startOffset / segmentSize
-	// Wait for the segments download finished
-	for offset := startOffset; offset < int64(meta.PayloadSize); offset += segmentSize {
+	segNum = startOffset / int64(opts.PartSize)
+	if isRange {
+		endOffset = rangeEnd
+	} else {
+		endOffset = int64(meta.GetPayloadSize()) - 1
+	}
+	log.Debug().Msg(fmt.Sprintf("get object resumeable begin segment Range: %s, startOffset: %d, endOffset:%d", opts.Range, startOffset, endOffset))
+
+	// 3) Downloading Parts Sequentially based on opts.PartSize
+	for partStartOffset := startOffset; partStartOffset < endOffset; partStartOffset += int64(opts.PartSize) {
 		// hook for test
 		if err = DownloadSegmentHooker(segNum); err != nil {
 			return err
 		}
 
-		endOffset := GetSegmentEnd(offset, int64(meta.PayloadSize), segmentSize)
-		err = objectOption.SetRange(offset, endOffset)
+		partEndOffset = GetSegmentEnd(partStartOffset, endOffset+1, int64(opts.PartSize))
+		err = objectOption.SetRange(partStartOffset, partEndOffset)
 		if err != nil {
 			return err
 		}
@@ -816,7 +856,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		defer rd.Close()
 
 		_, err = io.Copy(fd, rd)
-		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, current offset: %d", objectOption.Range, offset))
+		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, current partStartOffset: %d, segNum: %d", objectOption.Range, partStartOffset, segNum))
 		endT := time.Now().UnixNano() / 1000 / 1000 / 1000
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("get seg error,cost:%d second,seg number:%d,error:%s.\n", endT-startT, segNum, err.Error()))
@@ -828,6 +868,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 
 	fd.Close()
 
+	// 4) rename temp file
 	err = os.Rename(tempFilePath, filePath)
 	if err != nil {
 		return err
