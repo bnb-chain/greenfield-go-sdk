@@ -26,10 +26,10 @@ type Validator interface {
 	ListValidators(ctx context.Context, status string) (*stakingtypes.QueryValidatorsResponse, error)
 
 	CreateValidator(ctx context.Context, description stakingtypes.Description, commission stakingtypes.CommissionRates,
-		selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
+		selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey, blsProof string,
 		proposalDepositAmount math.Int, proposalTitle, proposalSummary, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error)
 	EditValidator(ctx context.Context, description stakingtypes.Description, newRate *sdktypes.Dec,
-		newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption) (string, error)
+		newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey, blsProof string, txOption gnfdsdktypes.TxOption) (string, error)
 	DelegateValidator(ctx context.Context, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
 	BeginRedelegate(ctx context.Context, validatorSrcAddr, validatorDestAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
 	Undelegate(ctx context.Context, validatorAddr string, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
@@ -46,7 +46,7 @@ func (c *client) ListValidators(ctx context.Context, status string) (*stakingtyp
 
 // CreateValidator submits a proposal to the Greenfield for creating a validator, and it returns a proposal ID and tx hash.
 func (c *client) CreateValidator(ctx context.Context, description stakingtypes.Description, commission stakingtypes.CommissionRates,
-	selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey string,
+	selfDelegation math.Int, validatorAddress string, ed25519PubKey string, selfDelAddr string, relayerAddr string, challengerAddr string, blsKey, blsProof string,
 	proposalDepositAmount math.Int, proposalTitle, proposalSummary, proposalMetadata string, txOption gnfdsdktypes.TxOption,
 ) (uint64, string, error) {
 	govModule, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
@@ -75,7 +75,7 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 	if err != nil {
 		return 0, "", err
 	}
-	msg, err := stakingtypes.NewMsgCreateValidator(validator, pk, delegationCoin, description, commission, selfDelegation, govAccountAddr, selfDel, relayer, challenger, blsKey)
+	msg, err := stakingtypes.NewMsgCreateValidator(validator, pk, delegationCoin, description, commission, selfDelegation, govAccountAddr, selfDel, relayer, challenger, blsKey, blsProof)
 	if err != nil {
 		return 0, "", err
 	}
@@ -87,7 +87,7 @@ func (c *client) CreateValidator(ctx context.Context, description stakingtypes.D
 
 // EditValidator edits a existing validator info.
 func (c *client) EditValidator(ctx context.Context, description stakingtypes.Description,
-	newRate *sdktypes.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey string, txOption gnfdsdktypes.TxOption,
+	newRate *sdktypes.Dec, newMinSelfDelegation *math.Int, newRelayerAddr, newChallengerAddr, newBlsKey, blsProof string, txOption gnfdsdktypes.TxOption,
 ) (string, error) {
 	relayer, err := sdktypes.AccAddressFromHexUnsafe(newRelayerAddr)
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *client) EditValidator(ctx context.Context, description stakingtypes.Des
 	if err != nil {
 		return "", err
 	}
-	msg := stakingtypes.NewMsgEditValidator(c.MustGetDefaultAccount().GetAddress(), description, newRate, newMinSelfDelegation, relayer, challenger, newBlsKey)
+	msg := stakingtypes.NewMsgEditValidator(c.MustGetDefaultAccount().GetAddress(), description, newRate, newMinSelfDelegation, relayer, challenger, newBlsKey, blsProof)
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err

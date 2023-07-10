@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"encoding/hex"
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	"testing"
 	"time"
 
@@ -58,6 +59,11 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 		MaxChangeRate: sdk.OneDec(),
 	}
 
+	blsAcc, _, err := types.NewBlsAccount("bls")
+	s.Require().NoError(err)
+	blsPubKey := blsAcc.GetKeyManager().PubKey().Bytes()
+	blsProofBz, err := blsAcc.GetKeyManager().Sign(tmhash.Sum(blsPubKey))
+
 	proposalID, txHash, err := s.Client.CreateValidator(s.ClientContext,
 		description,
 		rates,
@@ -67,7 +73,8 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 		newValAccount.GetAddress().String(),
 		"0xA4A2957E858529FFABBBb483D1D704378a9fca6b",
 		"0x4038993E087832D84e2Ac855d27f6b0b2EEc1907",
-		"a5e140ee80a0ff1552a954701f599622adf029916f55b3157a649e16086a0669900f784d03bff79e69eb8eb7ccfd77d8",
+		hex.EncodeToString(blsPubKey),
+		hex.EncodeToString(blsProofBz),
 		math.NewIntWithDecimal(1, 18),
 		"create new validator",
 		"create new validator",

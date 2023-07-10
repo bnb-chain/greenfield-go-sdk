@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"encoding/hex"
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	"testing"
 	"time"
 
@@ -81,8 +82,10 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 	s.Require().NoError(err)
 
 	s.Client.SetDefaultAccount(s.OperatorAcc)
+
+	blsProofBz, err := s.BlsAcc.GetKeyManager().Sign(tmhash.Sum(s.BlsAcc.GetKeyManager().PubKey().Bytes()))
 	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(),
-		hex.EncodeToString(s.BlsAcc.GetKeyManager().PubKey().Bytes()),
+		hex.EncodeToString(s.BlsAcc.GetKeyManager().PubKey().Bytes()), hex.EncodeToString(blsProofBz),
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
 		types3.Description{Moniker: "test"},
