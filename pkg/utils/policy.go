@@ -38,7 +38,7 @@ func NewPrincipalWithAccount(principalAddr sdk.AccAddress) (types.Principal, err
 
 // NewPrincipalWithGroupId return the marshaled Principal string which indicates the group
 func NewPrincipalWithGroupId(groupId uint64) (types.Principal, error) {
-	p := permTypes.NewPrincipalWithGroup(sdkmath.NewUint(groupId))
+	p := permTypes.NewPrincipalWithGroupId(sdkmath.NewUint(groupId))
 	principalBytes, err := p.Marshal()
 	if err != nil {
 		return "", err

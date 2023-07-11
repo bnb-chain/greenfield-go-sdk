@@ -2,15 +2,16 @@ package client
 
 import (
 	"context"
+	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"strings"
 	"time"
 
 	"cosmossdk.io/errors"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	"github.com/cometbft/cometbft/proto/tendermint/p2p"
-	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
+	bfttypes "github.com/cometbft/cometbft/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"google.golang.org/grpc"
 )
@@ -20,14 +21,14 @@ type Basic interface {
 	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error)
 
 	GetLatestBlockHeight(ctx context.Context) (int64, error)
-	GetLatestBlock(ctx context.Context) (*tmservice.Block, error)
+	GetLatestBlock(ctx context.Context) (*bfttypes.Block, error)
 	GetSyncing(ctx context.Context) (bool, error)
-	GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error)
+	GetBlockByHeight(ctx context.Context, height int64) (*bfttypes.Block, error)
 
-	GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error)
+	GetValidatorSet(ctx context.Context) (int64, []*bfttypes.Validator, error)
 
 	WaitForBlockHeight(ctx context.Context, height int64) error
-	WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, error)
+	WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error)
 	WaitForNBlocks(ctx context.Context, n int64) error
 	WaitForNextBlock(ctx context.Context) error
 
@@ -84,12 +85,12 @@ func (c *client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc
 
 // GetLatestBlock retrieves the latest block from the chain.
 // The function returns a pointer to a Block object and any error that occurred during the operation.
-func (c *client) GetLatestBlock(ctx context.Context) (*tmservice.Block, error) {
-	resp, err := c.chainClient.TmClient.GetLatestBlock(ctx, &tmservice.GetLatestBlockRequest{})
+func (c *client) GetLatestBlock(ctx context.Context) (*bfttypes.Block, error) {
+	res, err := c.chainClient.GetBlock(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return resp.SdkBlock, nil
+	return res.Block, nil
 }
 
 // GetLatestBlockHeight retrieves the height of the latest block from the chain.
@@ -143,9 +144,9 @@ func (c *client) WaitForNBlocks(ctx context.Context, n int64) error {
 
 // WaitForTx requests the tx from hash, if not found, waits for next block and
 // tries again. Returns an error if ctx is canceled.
-func (c *client) WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, error) {
+func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error) {
 	for {
-		txResponse, err := c.chainClient.TxClient.GetTx(ctx, &tx.GetTxRequest{Hash: hash})
+		txResponse, err := c.chainClient.GetTx(ctx, hash)
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Tx not found, wait for next block and try again
@@ -157,8 +158,16 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*sdk.TxResponse, e
 			}
 			return nil, errors.Wrapf(err, "fetching tx '%s'", hash)
 		}
+		// `nil` could mean the transaction is in the mempool, invalidated, or was not sent in the first place.
+		if txResponse == nil {
+			err := c.WaitForNextBlock(ctx)
+			if err != nil {
+				return nil, errors.Wrap(err, "waiting for next block")
+			}
+			continue
+		}
 		// Tx found
-		return txResponse.TxResponse, nil
+		return txResponse, nil
 	}
 }
 
@@ -186,20 +195,19 @@ func (c *client) GetSyncing(ctx context.Context) (bool, error) {
 
 // GetBlockByHeight retrieves the block at the given height from the chain.
 // The function returns a pointer to a Block object and any error that occurred during the operation.
-func (c *client) GetBlockByHeight(ctx context.Context, height int64) (*tmservice.Block, error) {
-	blockByHeight, err := c.chainClient.GetBlockByHeight(ctx, &tmservice.GetBlockByHeightRequest{Height: height})
+func (c *client) GetBlockByHeight(ctx context.Context, height int64) (*bfttypes.Block, error) {
+	blockByHeight, err := c.chainClient.GetBlock(ctx, &height)
 	if err != nil {
 		return nil, err
 	}
-	return blockByHeight.SdkBlock, nil
+	return blockByHeight.Block, nil
 }
 
 // GetValidatorSet retrieves the latest validator set from the chain.
-// The function returns the block height of the validator set, a slice of Validator objects, a pointer to a PageResponse object, and any error that occurred during the operation.
-func (c *client) GetValidatorSet(ctx context.Context, request *query.PageRequest) (int64, []*tmservice.Validator, *query.PageResponse, error) {
-	validatorSetResponse, err := c.chainClient.TmClient.GetLatestValidatorSet(ctx, &tmservice.GetLatestValidatorSetRequest{Pagination: request})
+func (c *client) GetValidatorSet(ctx context.Context) (int64, []*bfttypes.Validator, error) {
+	validatorSetResponse, err := c.chainClient.GetValidators(ctx, nil)
 	if err != nil {
-		return 0, nil, nil, err
+		return 0, nil, err
 	}
-	return validatorSetResponse.BlockHeight, validatorSetResponse.Validators, validatorSetResponse.Pagination, nil
+	return validatorSetResponse.BlockHeight, validatorSetResponse.Validators, nil
 }
