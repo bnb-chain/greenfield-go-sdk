@@ -193,7 +193,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
 		if txnResponse.TxResult.Code != 0 {
-			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.TxResult.Code != 0)
+			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.TxResult.Code)
 		}
 	}
 	return txnHash, nil

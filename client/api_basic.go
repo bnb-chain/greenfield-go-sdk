@@ -146,7 +146,7 @@ func (c *client) WaitForNBlocks(ctx context.Context, n int64) error {
 // tries again. Returns an error if ctx is canceled.
 func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error) {
 	for {
-		txResponse, err := c.chainClient.GetTx(ctx, hash)
+		txResponse, err := c.chainClient.Tx(ctx, hash)
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Tx not found, wait for next block and try again
