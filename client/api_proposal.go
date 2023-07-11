@@ -34,22 +34,19 @@ func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmou
 	}
 	waitCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	waitForTx, err := c.WaitForTx(waitCtx, txResp.TxResponse.TxHash)
+	txResult, err := c.WaitForTx(waitCtx, txResp.TxResponse.TxHash)
 	if err != nil {
 		return 0, "", err
 	}
-
 	key := govTypes.AttributeKeyProposalID
-	for _, logs := range waitForTx.Logs {
-		for _, event := range logs.Events {
-			for _, attr := range event.Attributes {
-				if attr.Key == key {
-					proposalID, err := strconv.ParseUint(attr.Value, 10, 64)
-					if err != nil {
-						return 0, txResp.TxResponse.TxHash, err
-					}
-					return proposalID, txResp.TxResponse.TxHash, nil
+	for _, event := range txResult.TxResult.Events {
+		for _, attr := range event.Attributes {
+			if attr.Key == key {
+				proposalID, err := strconv.ParseUint(attr.Value, 10, 64)
+				if err != nil {
+					return 0, txResp.TxResponse.TxHash, err
 				}
+				return proposalID, txResp.TxResponse.TxHash, nil
 			}
 		}
 	}

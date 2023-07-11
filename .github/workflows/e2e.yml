@@ -12,7 +12,7 @@ on:
       - develop
 
 env:
-  GreenfieldTag: v0.2.3-alpha.1
+  GreenfieldTag: 9ac03468d48bec5b43134bbc657541fd837f70ee
   GreenfieldStorageProviderTag: v0.2.3-alpha.1
   GOPRIVATE: github.com/bnb-chain
   GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
