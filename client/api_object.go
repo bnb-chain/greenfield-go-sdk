@@ -119,7 +119,7 @@ func (c *client) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTyp
 		return nil, 0, storageTypes.REDUNDANCY_EC_TYPE, err
 	}
 
-	return hashlib.ComputeIntegrityHash(reader, int64(segSize), int(dataBlocks), int(parityBlocks))
+	return hashlib.ComputeIntegrityHashParallel(reader, int64(segSize), int(dataBlocks), int(parityBlocks))
 }
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain,
@@ -641,7 +641,6 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 				var responseBody io.ReadCloser
 				var pieceData []byte
 				defer func() {
-					// fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
 					// finish all the task, send signal to quitCh
 					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
 						quitCh <- true
