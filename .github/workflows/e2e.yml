@@ -14,8 +14,8 @@ on:
       - feat-sp-exit-develop
 
 env:
-  GreenfieldTag: 90d1f2faac37594eff3865efc8a3030932dc058f
-  GreenfieldStorageProviderTag: db468e39c3e39b183a34b6a1e0971ea4a293302d
+  GreenfieldTag: f847ad5053fdd6c5d5471bbac307d81d1e262d7a
+  GreenfieldStorageProviderTag: f3d0c483326d0521f6f5057764558a43c8259b63
   GOPRIVATE: github.com/bnb-chain
   GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
   MYSQL_USER: root
