@@ -9,7 +9,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	"io"
 	"math"
 	"net/http"
@@ -17,11 +16,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
+
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
-	"github.com/bnb-chain/greenfield-common/go/redundancy"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
@@ -77,8 +76,6 @@ type Object interface {
 	// GetObjectUploadProgress return the status of the uploading object
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
 
-	// RecoverObjectBySecondary get piece data from secondary SPs and recovery the object in client
-	RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
 	// GetObjectResumableUploadOffset return the status of the uploading object
 	GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error)
 	// ListObjectsByObjectID list objects by object ids
@@ -545,179 +542,21 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 		return errors.New("download file already exist")
 	}
 
-	backoffDelay := types.DownloadBackOffDelay
-	var body io.ReadCloser
-	for retry := 0; retry < types.MaxDownloadTryTime; retry++ {
-		body, _, err = c.GetObject(ctx, bucketName, objectName, opts)
-		if err == nil {
-			break
-		}
-		if body != nil {
-			body.Close()
-		}
-
-		connectedFail := strings.Contains(err.Error(), types.GetConnectionFail)
-		if err != nil && !connectedFail {
-			return err
-		}
-
-		// connect the primary SP failed, try again
-		if opts.SupportRecovery {
-			// connect failed for 3 times, try to download piece from secondary SP
-			if retry == types.MaxDownloadTryTime-1 {
-				return c.RecoverObjectBySecondary(ctx, bucketName, objectName, filePath, opts)
-			}
-			continue
-		}
-
-		time.Sleep(backoffDelay)
-		backoffDelay *= 2
-	}
-
-	defer body.Close()
-
 	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o660)
 	if err != nil {
 		return err
 	}
 
+	body, _, err := c.GetObject(ctx, bucketName, objectName, opts)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
 	_, err = io.Copy(fd, body)
 	fd.Close()
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
-	// compute segment count
-	dataBlocks, parityBlocks, maxSegmentSize, err := c.GetRedundancyParams()
-	if err != nil {
-		return err
-	}
-	ecPieceCount := dataBlocks + parityBlocks
-	minRecoveryPieces := dataBlocks
-
-	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
-	if err != nil {
-		return err
-	}
-	objectSize := objectInfo.PayloadSize
-	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectSize, maxSegmentSize, opts)
-	if err != nil {
-		return err
-	}
-
-	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(filePath)
-	if err == nil {
-		return errors.New("download file already exist:" + filePath)
-	}
-
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	// iterate over segment indices and recover one by one
-	for segmentIdx := startSegmentIdx; segmentIdx <= endSegmentIdx; segmentIdx++ {
-		doneCh := make(chan bool, len(secondaryEndpoints))
-		quitCh := make(chan bool)
-		totalTaskNum := int32(ecPieceCount)
-		doneTaskNum := uint32(0)
-		downLoadPieceSize := int64(0)
-		var recoveryDataSources = make([][]byte, ecPieceCount)
-
-		segmentSize := utils.GetSegmentSize(objectSize, uint32(segmentIdx), maxSegmentSize)
-		ecPieceSize := utils.GetECPieceSize(objectSize, uint32(segmentIdx), maxSegmentSize, dataBlocks)
-		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
-			recoveryDataSources[ecIdx] = nil
-			go func(secondaryIndex int) {
-				var responseBody io.ReadCloser
-				var pieceData []byte
-				defer func() {
-					// fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
-					// finish all the task, send signal to quitCh
-					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
-						quitCh <- true
-					}
-					if responseBody != nil {
-						responseBody.Close()
-					}
-				}()
-				pieceInfo := types.QueryPieceInfo{
-					ObjectId:        strconv.FormatUint(objectInfo.Id.Uint64(), 10),
-					PieceIndex:      segmentIdx,
-					RedundancyIndex: secondaryIndex,
-				}
-				// call getSecondaryPieceData to retrieve recovery data for the segment
-				// TODO check if it is better with downloading data chunks first
-				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
-				if err == nil {
-					// convert recoveryData to byte
-					pieceData, err = io.ReadAll(responseBody)
-					if err != nil {
-						log.Error().Msg("read body err:" + err.Error())
-						return
-					}
-					pieceLen := int64(len(pieceData))
-					if pieceLen == ecPieceSize {
-						recoveryDataSources[secondaryIndex] = pieceData
-						doneCh <- true
-						atomic.StoreInt64(&downLoadPieceSize, pieceLen)
-					}
-				}
-			}(ecIdx)
-		}
-
-	loop:
-		for {
-			select {
-			case <-doneCh:
-				doneTaskNum++
-				// it is enough to recovery data with minRecoveryPieces EC data, no need to wait
-				if doneTaskNum >= minRecoveryPieces {
-					break loop
-				}
-			case <-quitCh: // all the task finish
-				if doneTaskNum < minRecoveryPieces { // finish task num not enough
-					return fmt.Errorf("get pieces from secondary not enough %d", doneTaskNum)
-				}
-				ecTotalSize := int64(uint32(downLoadPieceSize) * dataBlocks)
-				if ecTotalSize < segmentSize || ecTotalSize > segmentSize+4 {
-					return fmt.Errorf("get secondary piece data length error ecChunks total size:%d, segment size:%d", ecTotalSize, segmentSize)
-				}
-			}
-		}
-
-		// decode the original segment data from the piece data
-		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
-		if err != nil {
-			return fmt.Errorf("decode segment err when recovery, segment id:%d err: %s", segmentIdx, err.Error())
-		}
-
-		isFirstSeg := segmentIdx == startSegmentIdx && diffStartOffset > 0
-		isLastSeg := segmentIdx == endSegmentIdx && diffEndOffset > 0
-
-		// deal with range recovery
-		if isFirstSeg && isLastSeg {
-			recoverySegData = recoverySegData[diffStartOffset : segmentSize-diffEndOffset]
-		} else if isFirstSeg {
-			recoverySegData = recoverySegData[diffStartOffset:]
-		} else if isLastSeg {
-			recoverySegData = recoverySegData[:segmentSize-diffEndOffset]
-		}
-
-		_, err = f.Write(recoverySegData)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
