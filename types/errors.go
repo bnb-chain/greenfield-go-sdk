@@ -21,14 +21,13 @@ type ErrResponse struct {
 	XMLName    xml.Name `xml:"Error"`
 	Code       string   `xml:"Code"`
 	Message    string   `xml:"Message"`
-	RequestId  string   `xml:"RequestId"`
 	StatusCode int
 }
 
 // Error returns the error msg
 func (r ErrResponse) Error() string {
-	return fmt.Sprintf("statusCode %v : code : %s  request-id %s (Message: %s)",
-		r.StatusCode, r.Code, r.RequestId, r.Message)
+	return fmt.Sprintf("statusCode %v : code : %s  (Message: %s)",
+		r.StatusCode, r.Code, r.Message)
 }
 
 // ConstructErrResponse  checks the response is an error response
@@ -42,7 +41,6 @@ func ConstructErrResponse(r *http.Response, bucketName, objectName string) error
 			StatusCode: r.StatusCode,
 			Code:       unknownErr,
 			Message:    "Response is empty ",
-			RequestId:  "greenfield",
 		}
 	}
 
@@ -109,6 +107,5 @@ func ToInvalidArgumentResp(message string) error {
 		StatusCode: http.StatusBadRequest,
 		Code:       "InvalidArgument",
 		Message:    message,
-		RequestId:  "greenfield",
 	}
 }
