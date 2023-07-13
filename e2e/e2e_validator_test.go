@@ -3,24 +3,21 @@ package e2e
 import (
 	"context"
 	"encoding/hex"
-	"github.com/cometbft/cometbft/crypto/tmhash"
-	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
 	"testing"
 	"time"
 
+	"github.com/cometbft/cometbft/crypto/tmhash"
+	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
+
 	"cosmossdk.io/math"
-	"encoding/hex"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
-	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/suite"
-	"testing"
-	"time"
 )
 
 type ValidatorTestSuite struct {

@@ -3,9 +3,8 @@ package client
 import (
 	"context"
 
-	"github.com/bnb-chain/greenfield-go-sdk/types"
-
 	"cosmossdk.io/math"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	paymentTypes "github.com/bnb-chain/greenfield/x/payment/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"

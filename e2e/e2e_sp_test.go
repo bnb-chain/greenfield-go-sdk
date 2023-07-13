@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	"encoding/hex"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
@@ -14,8 +13,6 @@ import (
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/stretchr/testify/suite"
-	"testing"
-	"time"
 )
 
 type SPTestSuite struct {

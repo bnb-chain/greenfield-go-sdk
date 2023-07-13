@@ -8,7 +8,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	"io"
 	"math"
 	"net/http"
@@ -16,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
@@ -696,7 +697,7 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 		return "", err
 	}
 
-	var txnResponse *sdk.TxResponse
+	var txnResponse *ctypes.ResultTx
 	txnHash := resp.TxResponse.TxHash
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
@@ -706,8 +707,8 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
-		if txnResponse.Code != 0 {
-			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.Code)
+		if txnResponse.TxResult.Code != 0 {
+			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
 		}
 	}
 

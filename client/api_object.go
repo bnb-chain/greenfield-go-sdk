@@ -9,7 +9,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	"io"
 	"math"
 	"net/http"
@@ -19,6 +18,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield-common/go/redundancy"
@@ -770,8 +771,8 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 	}
 
 	isRange, rangeStart, rangeEnd := utils.ParseRange(opts.Range)
-	if isRange && (rangeEnd < 0 || rangeEnd >= int64(meta.GetPayloadSize())) {
-		rangeEnd = int64(meta.GetPayloadSize()) - 1
+	if isRange && (rangeEnd < 0 || rangeEnd >= int64(meta.ObjectInfo.GetPayloadSize())) {
+		rangeEnd = int64(meta.ObjectInfo.GetPayloadSize()) - 1
 	}
 
 	// 2)prepare and check temp file
@@ -828,12 +829,11 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		return err
 	}
 
-
 	segNum = startOffset / int64(opts.PartSize)
 	if isRange {
 		endOffset = rangeEnd
 	} else {
-		endOffset = int64(meta.GetPayloadSize()) - 1
+		endOffset = int64(meta.ObjectInfo.GetPayloadSize()) - 1
 	}
 	log.Debug().Msg(fmt.Sprintf("get object resumeable begin segment Range: %s, startOffset: %d, endOffset:%d", opts.Range, startOffset, endOffset))
 
@@ -844,8 +844,8 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 			return err
 		}
 
-		endOffset := GetSegmentEnd(offset, int64(meta.ObjectInfo.PayloadSize), segmentSize)
-		err = objectOption.SetRange(offset, endOffset)
+		partEndOffset = GetSegmentEnd(partStartOffset, endOffset+1, int64(opts.PartSize))
+		err = objectOption.SetRange(partStartOffset, partEndOffset)
 		if err != nil {
 			return err
 		}
