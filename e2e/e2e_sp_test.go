@@ -1,6 +1,10 @@
 package e2e
 
 import (
+	"encoding/hex"
+	"testing"
+	"time"
+
 	"cosmossdk.io/math"
 	"encoding/hex"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
@@ -93,7 +97,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	createTx, err := s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
-	s.T().Log(createTx.Logs.String())
+	s.T().Log(createTx.TxResult.String())
 
 	for {
 		p, err := s.Client.GetProposal(s.ClientContext, proposalID)
@@ -111,7 +115,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	tx, err := s.Client.WaitForTx(s.ClientContext, voteTxHash)
 	s.Require().NoError(err)
-	s.T().Logf("VoteTx: %s", tx.TxHash)
+	s.T().Logf("VoteTx: %s", hex.EncodeToString(tx.Hash))
 
 	for {
 		p, err := s.Client.GetProposal(s.ClientContext, proposalID)

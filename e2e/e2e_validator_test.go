@@ -2,6 +2,12 @@ package e2e
 
 import (
 	"context"
+	"encoding/hex"
+	"github.com/cometbft/cometbft/crypto/tmhash"
+	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
+	"testing"
+	"time"
+
 	"cosmossdk.io/math"
 	"encoding/hex"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
@@ -58,10 +64,9 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 		MaxChangeRate: sdk.OneDec(),
 	}
 
-	blsAcc, _, err := types.NewBlsAccount("bls")
-	s.Require().NoError(err)
-	blsPubKey := blsAcc.GetKeyManager().PubKey().Bytes()
-	blsProofBz, err := blsAcc.GetKeyManager().Sign(tmhash.Sum(blsPubKey))
+	blsSecretKey, _ := blst.RandKey()
+	blsPubKey := blsSecretKey.PublicKey().Marshal()
+	blsProofBz := blsSecretKey.Sign(tmhash.Sum(blsPubKey)).Marshal()
 
 	proposalID, txHash, err := s.Client.CreateValidator(s.ClientContext,
 		description,

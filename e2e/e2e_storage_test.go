@@ -397,7 +397,7 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 
 	var buffer bytes.Buffer
 	// Create 20MiB content.
-	for i := 0; i < 1024*700; i++ {
+	for i := 0; i < 1024*3000; i++ {
 		line := types.RandStr(20)
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
@@ -424,18 +424,19 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
 
 	s.T().Log("---> Resumable PutObject <---")
+	partSize := uint64(1024 * 1024 * 32)
 	// 2) put an object(20M), the secondary segment will error, then resumable upload
 	client.UploadSegmentHooker = UploadErrorHooker
 	err := s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
 	s.Require().ErrorContains(err, "UploadErrorHooker")
 	client.UploadSegmentHooker = client.DefaultUploadSegment
 	offset, err := s.Client.GetObjectResumableUploadOffset(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
-	s.Require().Equal(offset, uint64(16777216))
+	s.Require().Equal(offset, partSize)
 
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
 	s.Require().NoError(err)
 
 	time.Sleep(20 * time.Second)
@@ -447,15 +448,13 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 
 	// 3) FGetObjectResumable compare with FGetObject
 	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
-	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOptions{})
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOptions{PartSize: 32 * 1024 * 1024})
 	s.T().Logf("--->  object file :%s <---", fileName)
-	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
 	s.Require().NoError(err)
 
 	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
 	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
 	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOptions{})
-	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
 	s.Require().NoError(err)
 
 	isSame, err := types.CompareFiles(fileName, fGetObjectFileName)
@@ -476,6 +475,21 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	//download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadFile, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+
+	// 5) Resumabledownload, download a file with range
+	resumableDownloadWithRangeFile := "test-file-" + storageTestUtil.GenRandomObjectName()
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadWithRangeFile, types.GetObjectOptions{Range: "bytes=1000-21400000"})
+	s.T().Logf("--->  object file :%s <---", resumableDownloadWithRangeFile)
+	s.Require().NoError(err)
+
+	fGetObjectWithRangeFile := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectWithRangeFile)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectWithRangeFile, types.GetObjectOptions{Range: "bytes=1000-21400000"})
+	s.Require().NoError(err)
+
+	isSame, err = types.CompareFiles(resumableDownloadWithRangeFile, fGetObjectWithRangeFile)
 	s.Require().True(isSame)
 	s.Require().NoError(err)
 }

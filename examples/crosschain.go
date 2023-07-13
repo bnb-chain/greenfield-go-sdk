@@ -35,7 +35,7 @@ func transferOut(cli client.Client, ctx context.Context) {
 	txResp, err := cli.TransferOut(ctx, toAddress, math.NewInt(123456), gnfdSdkTypes.TxOption{})
 	handleErr(err, "crossChainTransfer")
 	waitForTx, _ := cli.WaitForTx(ctx, txResp.TxHash)
-	log.Printf("Wait for tx: %s", waitForTx.String())
+	log.Printf("Wait for tx: %s", waitForTx.TxResult.String())
 	log.Printf("the tx log is %s", txResp.String())
 }
 
@@ -55,7 +55,7 @@ func mirrorBucket(cli client.Client, ctx context.Context) {
 	log.Printf("create bucket %s on SP: %s successfully \n", bucketName, spLists[0].Endpoint)
 
 	waitForTx, _ := cli.WaitForTx(ctx, txHash)
-	log.Printf("Wait for tx: %s", waitForTx.String())
+	log.Printf("Wait for tx: %s", waitForTx.TxResult.String())
 
 	// head bucket
 	bucketInfo, err := cli.HeadBucket(ctx, bucketName)
@@ -66,6 +66,6 @@ func mirrorBucket(cli client.Client, ctx context.Context) {
 	txResp, err := cli.MirrorBucket(ctx, bucketInfo.Id, bucketName, gnfdSdkTypes.TxOption{})
 	handleErr(err, "MirrorBucket")
 	waitForTx, _ = cli.WaitForTx(ctx, txResp.TxHash)
-	log.Printf("Wait for tx: %s", waitForTx.String())
+	log.Printf("Wait for tx: %s", waitForTx.TxResult.String())
 	log.Printf("successfully mirrored bucket wiht bucket id %s to BSC", bucketInfo.Id)
 }
