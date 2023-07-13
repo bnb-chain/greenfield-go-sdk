@@ -6,6 +6,7 @@ import (
 
 	"cosmossdk.io/math"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
+	"github.com/bnb-chain/greenfield/types/common"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -18,6 +19,13 @@ type CreateBucketOptions struct {
 	PaymentAddress string
 	ChargedQuota   uint64
 	IsAsyncMode    bool // indicate whether to create the bucket in asynchronous mode
+}
+
+type MigrateBucketOptions struct {
+	DstPrimarySPID       uint32
+	DstPrimarySPApproval common.Approval
+	TxOpts               *gnfdsdktypes.TxOption
+	IsAsyncMode          bool // indicate whether to create the bucket in asynchronous mode
 }
 
 type VoteProposalOptions struct {
@@ -153,7 +161,8 @@ type ListObjectsOptions struct {
 	// MaxKeys defines the maximum number of keys returned to the response body.
 	// If not specified, the default value is 50.
 	// The maximum limit for returning objects is 1000
-	MaxKeys uint64
+	MaxKeys         uint64
+	EndPointOptions *EndPointOptions
 }
 
 type PutPolicyOption struct {
@@ -189,8 +198,10 @@ type PutObjectOptions struct {
 
 // GetObjectOptions contains the options of getObject
 type GetObjectOptions struct {
-	Range           string `url:"-" header:"Range,omitempty"` // support for downloading partial data
-	SupportRecovery bool   // support recover data from secondary SPs if primary SP not in service
+	Range            string `url:"-" header:"Range,omitempty"` // support for downloading partial data
+	SupportRecovery  bool   // support recover data from secondary SPs if primary SP not in service
+	SupportResumable bool   // support resumable download. Resumable downloads refer to the capability of resuming interrupted or incomplete downloads from the point where they were paused or disrupted.
+	PartSize         uint64 // indicate the resumable download's part size, download a large file in multiple parts. The part size is an integer multiple of the segment size.
 }
 
 type GetChallengeInfoOptions struct {
@@ -204,9 +215,10 @@ type GetSecondaryPieceOptions struct {
 }
 
 type ListGroupsOptions struct {
-	SourceType string
-	Limit      int64
-	Offset     int64
+	SourceType      string
+	Limit           int64
+	Offset          int64
+	EndPointOptions *EndPointOptions
 }
 
 func (o *GetObjectOptions) SetRange(start, end int64) error {
@@ -224,4 +236,9 @@ func (o *GetObjectOptions) SetRange(start, end int64) error {
 				start, end))
 	}
 	return nil
+}
+
+type EndPointOptions struct {
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }

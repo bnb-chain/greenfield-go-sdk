@@ -3,11 +3,11 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"io"
-	"os"
 	"testing"
 	"time"
+
+	"github.com/bnb-chain/greenfield-go-sdk/client"
 
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
@@ -158,21 +158,21 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().NoError(err)
 
 	time.Sleep(5 * time.Second)
-	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
-	s.Require().Equal(objectInfo.ObjectName, objectName)
-	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
 	s.T().Log("---> PutObject and GetObject <---")
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
-	time.Sleep(20 * time.Second)
-	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	time.Sleep(40 * time.Second)
+	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
-		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+		s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 	}
 
 	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
@@ -182,51 +182,6 @@ func (s *StorageTestSuite) Test_Object() {
 		objectBytes, err := io.ReadAll(ior)
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
-	}
-
-	s.T().Log("---> RecoveryObject <---")
-	filePath := "downloadfile"
-	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, types.GetObjectOptions{})
-	s.Require().NoError(err)
-	if err == nil {
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			fmt.Println("can not read download file:", err)
-			return
-		}
-
-		s.Require().NoError(err)
-		s.Require().Equal(content, buffer.Bytes())
-	}
-
-	s.T().Log("---> RecoveryObject Range <---")
-	filePath = "downloadfileRange"
-	opt := types.GetObjectOptions{}
-	rangeStart := 100 * 2024
-	rangeEnd := 10 * 1024 * 1024
-	err = opt.SetRange(int64(rangeStart), int64(rangeEnd))
-	s.Require().NoError(err)
-	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, opt)
-	s.Require().NoError(err)
-	if err == nil {
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			fmt.Println("can not read download file:", err)
-			return
-		}
-
-		fmt.Println("read recovery length:", len(content), "range len:", rangeEnd-rangeStart+1)
-		s.Require().NoError(err)
-		//	originalBytes := buffer.Bytes()[rangeStart:rangeEnd]
-		//	s.Require().Equal(content, originalBytes)
-		ior, _, err = s.Client.GetObject(s.ClientContext, bucketName, objectName, opt)
-		s.Require().NoError(err)
-		if err == nil {
-			objectBytes, err := io.ReadAll(ior)
-			s.Require().NoError(err)
-			s.Require().Equal(objectBytes, content)
-			fmt.Println("read download len length:", len(objectBytes))
-		}
 	}
 
 	s.T().Log("---> PutObjectPolicy <---")
@@ -396,7 +351,7 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 
 	var buffer bytes.Buffer
 	// Create 20MiB content.
-	for i := 0; i < 1024*700; i++ {
+	for i := 0; i < 1024*3000; i++ {
 		line := types.RandStr(20)
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
@@ -408,10 +363,10 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 	s.Require().NoError(err)
 
 	time.Sleep(5 * time.Second)
-	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
-	s.Require().Equal(objectInfo.ObjectName, objectName)
-	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
 	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
 
@@ -423,38 +378,37 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
 
 	s.T().Log("---> Resumable PutObject <---")
+	partSize := uint64(1024 * 1024 * 32)
 	// 2) put an object(20M), the secondary segment will error, then resumable upload
 	client.UploadSegmentHooker = UploadErrorHooker
 	err := s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
 	s.Require().ErrorContains(err, "UploadErrorHooker")
 	client.UploadSegmentHooker = client.DefaultUploadSegment
 	offset, err := s.Client.GetObjectResumableUploadOffset(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
-	s.Require().Equal(offset, uint64(16777216))
+	s.Require().Equal(offset, partSize)
 
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: 1024 * 1024 * 16})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
 	s.Require().NoError(err)
 
-	time.Sleep(20 * time.Second)
-	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	time.Sleep(30 * time.Second)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
-		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+		s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 	}
 
 	// 3) FGetObjectResumable compare with FGetObject
 	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
-	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOptions{})
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOptions{PartSize: 32 * 1024 * 1024})
 	s.T().Logf("--->  object file :%s <---", fileName)
-	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
 	s.Require().NoError(err)
 
 	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
 	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
 	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOptions{})
-	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
 	s.Require().NoError(err)
 
 	isSame, err := types.CompareFiles(fileName, fGetObjectFileName)
@@ -475,6 +429,21 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	//download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadFile, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+
+	// 5) Resumabledownload, download a file with range
+	resumableDownloadWithRangeFile := "test-file-" + storageTestUtil.GenRandomObjectName()
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadWithRangeFile, types.GetObjectOptions{Range: "bytes=1000-21400000"})
+	s.T().Logf("--->  object file :%s <---", resumableDownloadWithRangeFile)
+	s.Require().NoError(err)
+
+	fGetObjectWithRangeFile := "test-file-" + storageTestUtil.GenRandomObjectName()
+	s.T().Logf("--->  object file :%s <---", fGetObjectWithRangeFile)
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectWithRangeFile, types.GetObjectOptions{Range: "bytes=1000-21400000"})
+	s.Require().NoError(err)
+
+	isSame, err = types.CompareFiles(resumableDownloadWithRangeFile, fGetObjectWithRangeFile)
 	s.Require().True(isSame)
 	s.Require().NoError(err)
 }

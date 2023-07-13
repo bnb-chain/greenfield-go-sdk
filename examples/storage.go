@@ -73,7 +73,11 @@ func main() {
 	}
 
 	// list object
-	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{true, "", "", "/", "", 10})
+	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{
+		true, "", "", "/", "", 10, &types.EndPointOptions{
+			Endpoint:  httpsAddr,
+			SPAddress: "",
+		}})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo
@@ -82,7 +86,10 @@ func main() {
 
 	// list object by object ids
 	ids := []uint64{1, 2, 333}
-	objects2, err := cli.ListObjectsByObjectID(ctx, ids)
+	objects2, err := cli.ListObjectsByObjectID(ctx, ids, types.EndPointOptions{
+		Endpoint:  httpsAddr,
+		SPAddress: "",
+	})
 	log.Printf("list objects by ids result: %v\n", objects2)
 	for _, object := range objects2.Objects {
 		if object != nil {
@@ -91,14 +98,17 @@ func main() {
 	}
 
 	// list buckets by bucket ids
-	buckets, err := cli.ListBucketsByBucketID(ctx, ids)
+	buckets, err := cli.ListBucketsByBucketID(ctx, ids, types.EndPointOptions{
+		Endpoint:  httpsAddr,
+		SPAddress: "",
+	})
 	log.Printf("list buckets by ids result: %v\n", buckets)
 	for _, bucket := range buckets.Buckets {
 		if bucket != nil {
 			log.Printf("bucket: %s, status: %s\n", bucket.BucketInfo.BucketName, bucket.BucketInfo.BucketStatus)
 		}
 	}
-
+	log.Printf("object: %s has been deleted\n", objectName)
 }
 
 func waitObjectSeal(cli client.Client, bucketName, objectName string) {
@@ -113,9 +123,9 @@ func waitObjectSeal(cli client.Client, bucketName, objectName string) {
 			err := errors.New("object not sealed after 15 seconds")
 			handleErr(err, "HeadObject")
 		case <-ticker.C:
-			objectInfo, err := cli.HeadObject(ctx, bucketName, objectName)
+			objectDetail, err := cli.HeadObject(ctx, bucketName, objectName)
 			handleErr(err, "HeadObject")
-			if objectInfo.GetObjectStatus().String() == "OBJECT_STATUS_SEALED" {
+			if objectDetail.ObjectInfo.GetObjectStatus().String() == "OBJECT_STATUS_SEALED" {
 				ticker.Stop()
 				fmt.Printf("put object %s successfully \n", objectName)
 				return

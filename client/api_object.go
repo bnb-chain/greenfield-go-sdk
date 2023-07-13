@@ -16,11 +16,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
+
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
-	"github.com/bnb-chain/greenfield-common/go/redundancy"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
@@ -47,10 +47,10 @@ type Object interface {
 
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
-	HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error)
+	HeadObject(ctx context.Context, bucketName, objectName string) (*types.ObjectDetail, error)
 	// HeadObjectByID query the objectInfo on chain by object id, return the object info if exists
 	// return err info if object not exist
-	HeadObjectByID(ctx context.Context, objID string) (*storageTypes.ObjectInfo, error)
+	HeadObjectByID(ctx context.Context, objID string) (*types.ObjectDetail, error)
 	// UpdateObjectVisibility update the visibility of the object
 	UpdateObjectVisibility(ctx context.Context, bucketName, objectName string, visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error)
 	// PutObjectPolicy apply object policy to the principal, return the txn hash
@@ -76,12 +76,10 @@ type Object interface {
 	// GetObjectUploadProgress return the status of the uploading object
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
 
-	// RecoverObjectBySecondary get piece data from secondary SPs and recovery the object in client
-	RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error
 	// GetObjectResumableUploadOffset return the status of the uploading object
 	GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error)
 	// ListObjectsByObjectID list objects by object ids
-	ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error)
+	ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -160,7 +158,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	}
 
 	createObjectMsg := storageTypes.NewMsgCreateObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName,
-		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
+		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil)
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
 		return "", err
@@ -183,7 +181,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	}
 
 	txnHash := resp.TxResponse.TxHash
-	var txnResponse *sdk.TxResponse
+	var txnResponse *ctypes.ResultTx
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
@@ -191,8 +189,8 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
-		if txnResponse.Code != 0 {
-			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.Code)
+		if txnResponse.TxResult.Code != 0 {
+			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.TxResult.Code)
 		}
 	}
 	return txnHash, nil
@@ -320,7 +318,6 @@ func (c *client) putObjectResumable(ctx context.Context, bucketName, objectName 
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
 	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
-		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
 		return err
 	}
 
@@ -544,179 +541,21 @@ func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePat
 		return errors.New("download file already exist")
 	}
 
-	backoffDelay := types.DownloadBackOffDelay
-	var body io.ReadCloser
-	for retry := 0; retry < types.MaxDownloadTryTime; retry++ {
-		body, _, err = c.GetObject(ctx, bucketName, objectName, opts)
-		if err == nil {
-			break
-		}
-		if body != nil {
-			body.Close()
-		}
-
-		connectedFail := strings.Contains(err.Error(), types.GetConnectionFail)
-		if err != nil && !connectedFail {
-			return err
-		}
-
-		// connect the primary SP failed, try again
-		if opts.SupportRecovery {
-			// connect failed for 3 times, try to download piece from secondary SP
-			if retry == types.MaxDownloadTryTime-1 {
-				return c.RecoverObjectBySecondary(ctx, bucketName, objectName, filePath, opts)
-			}
-			continue
-		}
-
-		time.Sleep(backoffDelay)
-		backoffDelay *= 2
-	}
-
-	defer body.Close()
-
 	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o660)
 	if err != nil {
 		return err
 	}
 
+	body, _, err := c.GetObject(ctx, bucketName, objectName, opts)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
 	_, err = io.Copy(fd, body)
 	fd.Close()
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
-	// compute segment count
-	dataBlocks, parityBlocks, maxSegmentSize, err := c.GetRedundancyParams()
-	if err != nil {
-		return err
-	}
-	ecPieceCount := dataBlocks + parityBlocks
-	minRecoveryPieces := dataBlocks
-
-	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
-	if err != nil {
-		return err
-	}
-	objectSize := objectInfo.PayloadSize
-	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectSize, maxSegmentSize, opts)
-	if err != nil {
-		return err
-	}
-
-	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(filePath)
-	if err == nil {
-		return errors.New("download file already exist:" + filePath)
-	}
-
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	// iterate over segment indices and recover one by one
-	for segmentIdx := startSegmentIdx; segmentIdx <= endSegmentIdx; segmentIdx++ {
-		doneCh := make(chan bool, len(secondaryEndpoints))
-		quitCh := make(chan bool)
-		totalTaskNum := int32(ecPieceCount)
-		doneTaskNum := uint32(0)
-		downLoadPieceSize := int64(0)
-		var recoveryDataSources = make([][]byte, ecPieceCount)
-
-		segmentSize := utils.GetSegmentSize(objectSize, uint32(segmentIdx), maxSegmentSize)
-		ecPieceSize := utils.GetECPieceSize(objectSize, uint32(segmentIdx), maxSegmentSize, dataBlocks)
-		for ecIdx := 0; ecIdx < int(ecPieceCount); ecIdx++ {
-			recoveryDataSources[ecIdx] = nil
-			go func(secondaryIndex int) {
-				var responseBody io.ReadCloser
-				var pieceData []byte
-				defer func() {
-					// fmt.Printf("get done routine: %d \n", atomic.LoadUint32(&ecPieceCount))
-					// finish all the task, send signal to quitCh
-					if atomic.AddInt32(&totalTaskNum, -1) == 0 {
-						quitCh <- true
-					}
-					if responseBody != nil {
-						responseBody.Close()
-					}
-				}()
-				pieceInfo := types.QueryPieceInfo{
-					ObjectId:        strconv.FormatUint(objectInfo.Id.Uint64(), 10),
-					PieceIndex:      segmentIdx,
-					RedundancyIndex: secondaryIndex,
-				}
-				// call getSecondaryPieceData to retrieve recovery data for the segment
-				// TODO check if it is better with downloading data chunks first
-				responseBody, err = c.getSecondaryPieceData(ctx, bucketName, objectName, pieceInfo, types.GetSecondaryPieceOptions{Endpoint: secondaryEndpoints[secondaryIndex]})
-				if err == nil {
-					// convert recoveryData to byte
-					pieceData, err = io.ReadAll(responseBody)
-					if err != nil {
-						log.Error().Msg("read body err:" + err.Error())
-						return
-					}
-					pieceLen := int64(len(pieceData))
-					if pieceLen == ecPieceSize {
-						recoveryDataSources[secondaryIndex] = pieceData
-						doneCh <- true
-						atomic.StoreInt64(&downLoadPieceSize, pieceLen)
-					}
-				}
-			}(ecIdx)
-		}
-
-	loop:
-		for {
-			select {
-			case <-doneCh:
-				doneTaskNum++
-				// it is enough to recovery data with minRecoveryPieces EC data, no need to wait
-				if doneTaskNum >= minRecoveryPieces {
-					break loop
-				}
-			case <-quitCh: // all the task finish
-				if doneTaskNum < minRecoveryPieces { // finish task num not enough
-					return fmt.Errorf("get pieces from secondary not enough %d", doneTaskNum)
-				}
-				ecTotalSize := int64(uint32(downLoadPieceSize) * dataBlocks)
-				if ecTotalSize < segmentSize || ecTotalSize > segmentSize+4 {
-					return fmt.Errorf("get secondary piece data length error ecChunks total size:%d, segment size:%d", ecTotalSize, segmentSize)
-				}
-			}
-		}
-
-		// decode the original segment data from the piece data
-		recoverySegData, err := redundancy.DecodeRawSegment(recoveryDataSources, segmentSize, int(dataBlocks), int(parityBlocks))
-		if err != nil {
-			return fmt.Errorf("decode segment err when recovery, segment id:%d err: %s", segmentIdx, err.Error())
-		}
-
-		isFirstSeg := segmentIdx == startSegmentIdx && diffStartOffset > 0
-		isLastSeg := segmentIdx == endSegmentIdx && diffEndOffset > 0
-
-		// deal with range recovery
-		if isFirstSeg && isLastSeg {
-			recoverySegData = recoverySegData[diffStartOffset : segmentSize-diffEndOffset]
-		} else if isFirstSeg {
-			recoverySegData = recoverySegData[diffStartOffset:]
-		} else if isLastSeg {
-			recoverySegData = recoverySegData[:segmentSize-diffEndOffset]
-		}
-
-		_, err = f.Write(recoverySegData)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -730,36 +569,76 @@ func GetSegmentEnd(begin int64, total int64, per int64) int64 {
 	return begin + per - 1
 }
 
-// FGetObjectResumable download s3 object payload and return the related object info
+// FGetObjectResumable download s3 object payload with resumable download
 func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
-	tempFilePath := filePath + types.TempFileSuffix
+	// Get the object detailed meta for object whole size
+	meta, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return err
+	}
+
+	tempFilePath := filePath + "_" + c.defaultAccount.GetAddress().String() + opts.Range + types.TempFileSuffix
 
 	var (
-		startOffset  int64
-		segmentSize  int64
-		objectOption types.GetObjectOptions
-		segNum       int64
+		startOffset    int64
+		endOffset      int64
+		partEndOffset  int64
+		maxSegmentSize int64
+		objectOption   types.GetObjectOptions
+		segNum         int64
+		partSize       int64
 	)
 
+	// 1) check paramter
 	params, err := c.GetParams()
 	if err != nil {
 		return err
 	}
-	segmentSize = int64(params.GetMaxSegmentSize())
+	maxSegmentSize = int64(params.GetMaxSegmentSize())
 
+	// minPartSize: 16MB
+	if opts.PartSize == 0 {
+		opts.PartSize = types.MinPartSize
+	}
+
+	partSize = int64(opts.PartSize)
+	if partSize%maxSegmentSize != 0 {
+		return errors.New("part size should be an integer multiple of the segment size")
+	}
+
+	isRange, rangeStart, rangeEnd := utils.ParseRange(opts.Range)
+	if isRange && (rangeEnd < 0 || rangeEnd >= int64(meta.ObjectInfo.GetPayloadSize())) {
+		rangeEnd = int64(meta.ObjectInfo.GetPayloadSize()) - 1
+	}
+
+	// 2)prepare and check temp file
 	fileInfo, err := os.Stat(tempFilePath)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file or directory") {
-			startOffset = 0
+			if isRange {
+				startOffset = rangeStart
+			} else {
+				startOffset = 0
+			}
 		} else {
 			return err
 		}
 	} else {
+		/*
+				| -----seg1 ------ | -----seg2 ------ | -----seg3 ------ | -----seg4 ------ |
+				        ^                                                         ^
+				        |													      |
+				 startOffset													  endOffset
+			            |----------|
+		*/
 		fileSize := fileInfo.Size()
-		startOffset = (fileSize / segmentSize) * segmentSize
+		firstSeg := rangeStart % partSize
+		fileSizeWithoutFirstSeg := fileSize - firstSeg
+		startOffset = (fileSize/partSize)*partSize + firstSeg
+		log.Debug().Msgf("The file:%s size:%d, startOffset:%d, range:%s\n", tempFilePath, fileSize, startOffset, opts.Range)
 
-		// truncated file to segment size integer multiples
-		if uint64(fileSize)%params.GetMaxSegmentSize() != 0 {
+		// truncated file to part size integer multiples
+		if fileSizeWithoutFirstSeg%partSize != 0 {
 			file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0644)
 			if err != nil {
 				return err
@@ -775,13 +654,6 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		}
 	}
 
-	// Get the object detailed meta for object whole size
-	// must delete header:range to get whole object size
-	meta, err := c.HeadObject(ctx, bucketName, objectName)
-	if err != nil {
-		return err
-	}
-
 	// Create the file if not exists. Otherwise the segments download will overwrite it.
 	fd, err := os.OpenFile(tempFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, types.FilePermMode)
 	if err != nil {
@@ -793,16 +665,23 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		return err
 	}
 
-	segNum = startOffset / segmentSize
-	// Wait for the segments download finished
-	for offset := startOffset; offset < int64(meta.PayloadSize); offset += segmentSize {
+	segNum = startOffset / int64(opts.PartSize)
+	if isRange {
+		endOffset = rangeEnd
+	} else {
+		endOffset = int64(meta.ObjectInfo.GetPayloadSize()) - 1
+	}
+	log.Debug().Msg(fmt.Sprintf("get object resumeable begin segment Range: %s, startOffset: %d, endOffset:%d", opts.Range, startOffset, endOffset))
+
+	// 3) Downloading Parts Sequentially based on opts.PartSize
+	for partStartOffset := startOffset; partStartOffset < endOffset; partStartOffset += int64(opts.PartSize) {
 		// hook for test
 		if err = DownloadSegmentHooker(segNum); err != nil {
 			return err
 		}
 
-		endOffset := GetSegmentEnd(offset, int64(meta.PayloadSize), segmentSize)
-		err = objectOption.SetRange(offset, endOffset)
+		partEndOffset = GetSegmentEnd(partStartOffset, endOffset+1, int64(opts.PartSize))
+		err = objectOption.SetRange(partStartOffset, partEndOffset)
 		if err != nil {
 			return err
 		}
@@ -816,7 +695,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		defer rd.Close()
 
 		_, err = io.Copy(fd, rd)
-		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, current offset: %d", objectOption.Range, offset))
+		log.Debug().Msg(fmt.Sprintf("get object for segment Range: %s, current partStartOffset: %d, segNum: %d", objectOption.Range, partStartOffset, segNum))
 		endT := time.Now().UnixNano() / 1000 / 1000 / 1000
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("get seg error,cost:%d second,seg number:%d,error:%s.\n", endT-startT, segNum, err.Error()))
@@ -828,145 +707,13 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 
 	fd.Close()
 
+	// 4) rename temp file
 	err = os.Rename(tempFilePath, filePath)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.GetObjectOptions) (int, int, int64, int64, error) {
-	var (
-		rangeStart, rangeEnd int64
-		diffStartOffset      int64
-		diffEndOffset        int64
-		startSegmentIdx      int
-		endSegmentIdx        int
-	)
-	segmentCount := utils.GetSegmentCount(payloadSize, maxSegmentSize)
-	if opts.Range == "" {
-		return 0, int(segmentCount - 1), 0, 0, nil
-	}
-
-	isRange, rangeStart, rangeEnd := utils.ParseRange(opts.Range)
-	if isRange && (rangeEnd < 0 || rangeEnd >= int64(payloadSize)) {
-		rangeEnd = int64(payloadSize) - 1
-	}
-
-	if isRange && (rangeStart < 0 || rangeEnd < 0 || rangeStart > rangeEnd) {
-		return 0, 0, 0, 0, errors.New("invalid range: " + opts.Range)
-	}
-
-	if isRange {
-		startSegmentIdx = int(rangeStart / int64(maxSegmentSize))
-		diffStartOffset = rangeStart - int64(startSegmentIdx)*int64(maxSegmentSize)
-
-		endSegmentIdx = int(rangeEnd / int64(maxSegmentSize))
-		endSegSize := utils.GetSegmentSize(payloadSize, uint32(endSegmentIdx), maxSegmentSize)
-		diffEndOffset = int64(endSegmentIdx)*int64(maxSegmentSize) + endSegSize - rangeEnd - 1
-
-		if diffEndOffset > endSegSize {
-			log.Error().Msg("compute end segment diff offset error ")
-			return 0, 0, 0, 0, errors.New("compute end segment diff offset error ")
-		}
-	} else {
-		startSegmentIdx = 0
-		endSegmentIdx = int(segmentCount - 1)
-	}
-
-	log.Printf("startSet %d, diffStartOffset %d,  endSegmentIdx %d, diffEndOffset %d,", startSegmentIdx, diffStartOffset, endSegmentIdx, diffEndOffset)
-	return startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, nil
-}
-
-func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageTypes.ObjectInfo) ([]string, error) {
-	secondarySPAddrs := objectInfo.GetSecondarySpAddresses()
-	spList, err := c.ListStorageProviders(ctx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	secondaryEndpointList := make([]string, len(secondarySPAddrs))
-	for idx, addr := range secondarySPAddrs {
-		for _, info := range spList {
-			if addr == info.GetOperatorAddress() {
-				secondaryEndpointList[idx] = info.Endpoint
-			}
-		}
-	}
-
-	return secondaryEndpointList, nil
-}
-
-func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectName string, pieceInfo types.QueryPieceInfo, opts types.GetSecondaryPieceOptions) (io.ReadCloser, error) {
-	var err error
-	dataBlocks, parityBlocks, _, err := c.GetRedundancyParams()
-	if err != nil {
-		return nil, errors.New("fail to get redundancy params:" + err.Error())
-	}
-	maxRedundancyIndex := int(dataBlocks+parityBlocks) - 1
-	if pieceInfo.RedundancyIndex > maxRedundancyIndex || pieceInfo.RedundancyIndex < 0 {
-		return nil, fmt.Errorf("redundancy index invalid, the index should be %d to %d", 0, maxRedundancyIndex)
-	}
-
-	params := url.Values{}
-	params.Set("get-piece", "")
-
-	reqMeta := requestMeta{
-		urlValues:     params,
-		bucketName:    bucketName,
-		objectName:    objectName,
-		contentSHA256: types.EmptyStringSHA256,
-		pieceInfo:     pieceInfo,
-	}
-
-	sendOpt := sendOptions{
-		method:           http.MethodGet,
-		disableCloseBody: true,
-	}
-
-	var endpoint *url.URL
-	if opts.Endpoint != "" {
-		var useHttps bool
-		if strings.Contains(opts.Endpoint, "https") {
-			useHttps = true
-		} else {
-			useHttps = c.secure
-		}
-
-		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
-			return nil, err
-		}
-	} else if opts.SPAddress != "" {
-		// get endpoint from sp address
-		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("route endpoint by secondary sp address: %s failed, err: %v", opts.SPAddress, err))
-			return nil, err
-		}
-	} else {
-		// get secondary sp address info based on the redundancy index
-		objectInfo, err := c.HeadObjectByID(ctx, pieceInfo.ObjectId)
-		if err != nil {
-			return nil, err
-		}
-
-		secondarySP := objectInfo.SecondarySpAddresses[pieceInfo.RedundancyIndex]
-		endpoint, err = c.getSPUrlByAddr(secondarySP)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
-			return nil, err
-		}
-	}
-
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp.Body, nil
 }
 
 // getObjInfo generates objectInfo base on the response http header content
@@ -1000,7 +747,7 @@ func getObjInfo(objectName string, h http.Header) (types.ObjectStat, error) {
 
 // HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 // return err info if object not exist
-func (c *client) HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error) {
+func (c *client) HeadObject(ctx context.Context, bucketName, objectName string) (*types.ObjectDetail, error) {
 	queryHeadObjectRequest := storageTypes.QueryHeadObjectRequest{
 		BucketName: bucketName,
 		ObjectName: objectName,
@@ -1010,12 +757,15 @@ func (c *client) HeadObject(ctx context.Context, bucketName, objectName string) 
 		return nil, err
 	}
 
-	return queryHeadObjectResponse.ObjectInfo, nil
+	return &types.ObjectDetail{
+		ObjectInfo:         queryHeadObjectResponse.ObjectInfo,
+		GlobalVirtualGroup: queryHeadObjectResponse.GlobalVirtualGroup,
+	}, nil
 }
 
 // HeadObjectByID query the objectInfo on chain by object id, return the object info if exists
 // return err info if object not exist
-func (c *client) HeadObjectByID(ctx context.Context, objID string) (*storageTypes.ObjectInfo, error) {
+func (c *client) HeadObjectByID(ctx context.Context, objID string) (*types.ObjectDetail, error) {
 	headObjectRequest := storageTypes.QueryHeadObjectByIdRequest{
 		ObjectId: objID,
 	}
@@ -1024,7 +774,10 @@ func (c *client) HeadObjectByID(ctx context.Context, objID string) (*storageType
 		return nil, err
 	}
 
-	return queryHeadObjectResponse.ObjectInfo, nil
+	return &types.ObjectDetail{
+		ObjectInfo:         queryHeadObjectResponse.ObjectInfo,
+		GlobalVirtualGroup: queryHeadObjectResponse.GlobalVirtualGroup,
+	}, nil
 }
 
 // PutObjectPolicy apply object policy to the principal, return the txn hash
@@ -1153,9 +906,9 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlByBucket(bucketName)
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListObjectsResult{}, err
 	}
 
@@ -1270,7 +1023,7 @@ func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 	}
 
 	// get object status from sp
-	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
+	if status.ObjectInfo.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
 		uploadProgressInfo, err := c.getObjectStatusFromSP(ctx, bucketName, objectName)
 		if err != nil {
 			return "", errors.New("fail to fetch object uploading progress from sp" + err.Error())
@@ -1278,7 +1031,7 @@ func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 		return uploadProgressInfo.ProgressDescription, nil
 	}
 
-	return status.ObjectStatus.String(), nil
+	return status.ObjectInfo.ObjectStatus.String(), nil
 }
 
 // GetObjectResumableUploadOffset return the status of object including the uploading progress
@@ -1289,7 +1042,7 @@ func (c *client) GetObjectResumableUploadOffset(ctx context.Context, bucketName,
 	}
 
 	// get object status from sp
-	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
+	if status.ObjectInfo.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
 		uploadOffsetInfo, err := c.getObjectOffsetFromSP(ctx, bucketName, objectName)
 		if err != nil {
 			return 0, errors.New("fail to fetch object uploading offset from sp" + err.Error())
@@ -1384,13 +1137,14 @@ func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectNa
 }
 
 func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectName string,
-	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error) {
-	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption,
+) (string, error) {
+	object, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
 		return "", fmt.Errorf("object:%s not exists: %s\n", objectName, err.Error())
 	}
 
-	if objectInfo.GetVisibility() == visibility {
+	if object.ObjectInfo.GetVisibility() == visibility {
 		return "", fmt.Errorf("the visibility of object:%s is already %s \n", objectName, visibility.String())
 	}
 
@@ -1408,7 +1162,7 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 // ListObjectsByObjectID list objects by object ids
 // By inputting a collection of object IDs, we can retrieve the corresponding object data.
 // If the object is nonexistent or has been deleted, a null value will be returned
-func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64) (types.ListObjectsByObjectIDResponse, error) {
+func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error) {
 	const MaximumListObjectsSize = 1000
 	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
 		return types.ListObjectsByObjectIDResponse{}, nil
@@ -1442,9 +1196,9 @@ func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64) 
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getInServiceSP()
+	endpoint, err := c.getEndpointByOpt(&opts)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListObjectsByObjectIDResponse{}, err
 	}
 

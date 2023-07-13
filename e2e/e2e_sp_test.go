@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"encoding/hex"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	types3 "github.com/bnb-chain/greenfield/x/sp/types"
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/stretchr/testify/suite"
 )
@@ -20,6 +22,7 @@ type SPTestSuite struct {
 	SealAcc     *types.Account
 	ApprovalAcc *types.Account
 	GcAcc       *types.Account
+	BlsAcc      *types.Account
 }
 
 func (s *SPTestSuite) SetupSuite() {
@@ -35,12 +38,15 @@ func (s *SPTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.GcAcc, _, err = types.NewAccount("gc")
 	s.Require().NoError(err)
-	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s",
+	s.BlsAcc, _, err = types.NewBlsAccount("bls")
+	s.Require().NoError(err)
+	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s, blsPubKey: %s",
 		s.FundingAcc.GetAddress().String(),
 		s.SealAcc.GetAddress().String(),
 		s.ApprovalAcc.GetAddress().String(),
 		s.OperatorAcc.GetAddress().String(),
 		s.GcAcc.GetAddress().String(),
+		s.BlsAcc.GetKeyManager().PubKey().String(),
 	)
 }
 
@@ -76,7 +82,11 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 	s.Require().NoError(err)
 
 	s.Client.SetDefaultAccount(s.OperatorAcc)
+
+	blsProofBz, err := s.BlsAcc.GetKeyManager().Sign(tmhash.Sum(s.BlsAcc.GetKeyManager().PubKey().Bytes()))
+	s.Require().NoError(err)
 	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(),
+		hex.EncodeToString(s.BlsAcc.GetKeyManager().PubKey().Bytes()), hex.EncodeToString(blsProofBz),
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
 		types3.Description{Moniker: "test"},
@@ -85,7 +95,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	createTx, err := s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
-	s.T().Log(createTx.Logs.String())
+	s.T().Log(createTx.TxResult.String())
 
 	for {
 		p, err := s.Client.GetProposal(s.ClientContext, proposalID)
@@ -103,7 +113,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	tx, err := s.Client.WaitForTx(s.ClientContext, voteTxHash)
 	s.Require().NoError(err)
-	s.T().Logf("VoteTx: %s", tx.TxHash)
+	s.T().Logf("VoteTx: %s", hex.EncodeToString(tx.Hash))
 
 	for {
 		p, err := s.Client.GetProposal(s.ClientContext, proposalID)

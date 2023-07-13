@@ -45,8 +45,9 @@ const (
 	AdminURLPrefix  = "/greenfield/admin"
 	AdminURLVersion = "/v1"
 
-	CreateObjectAction = "CreateObject"
-	CreateBucketAction = "CreateBucket"
+	CreateObjectAction  = "CreateObject"
+	CreateBucketAction  = "CreateBucket"
+	MigrateBucketAction = "MigrateBucket"
 
 	ChallengeUrl           = "challenge"
 	PrimaryRedundancyIndex = -1
@@ -63,7 +64,7 @@ const (
 
 	// MinPartSize - minimum part size 16MiB per object after which
 	// putObject behaves internally as multipart.
-	MinPartSize = 1024 * 1024 * 16
+	MinPartSize = 1024 * 1024 * 32
 
 	TempFileSuffix = ".temp"           // Temp file suffix
 	FilePermMode   = os.FileMode(0664) // Default file permission

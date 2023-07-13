@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -41,7 +42,7 @@ func (s *BasicTestSuite) Test_Basic() {
 
 	blockByHeight, err := s.Client.GetBlockByHeight(s.ClientContext, heightBefore)
 	s.Require().NoError(err)
-	s.Require().Equal(blockByHeight.GetHeader(), latestBlock.GetHeader())
+	s.Require().Equal(blockByHeight.Header.Hash(), latestBlock.Header.Hash())
 }
 
 func (s *BasicTestSuite) Test_Account() {
@@ -57,7 +58,7 @@ func (s *BasicTestSuite) Test_Account() {
 
 	waitForTx, err := s.Client.WaitForTx(s.ClientContext, transferTxHash)
 	s.Require().NoError(err)
-	s.T().Logf("Wair for tx: %s", waitForTx.String())
+	s.T().Logf("Wair for tx: %s", hex.EncodeToString(waitForTx.Hash))
 
 	balance, err = s.Client.GetAccountBalance(s.ClientContext, account1.GetAddress().String())
 	s.Require().NoError(err)
@@ -70,16 +71,22 @@ func (s *BasicTestSuite) Test_Account() {
 	s.Require().Equal(acc.GetAddress(), account1.GetAddress())
 	s.Require().Equal(acc.GetSequence(), uint64(0))
 
+	paymentAccountsByOwnerBefore, err := s.Client.GetPaymentAccountsByOwner(s.ClientContext, s.DefaultAccount.GetAddress().String())
+	numPaymentAccounts := 0
+	if err == nil {
+		numPaymentAccounts = len(paymentAccountsByOwnerBefore)
+	}
+
 	txHash, err := s.Client.CreatePaymentAccount(s.ClientContext, s.DefaultAccount.GetAddress().String(), types2.TxOption{})
 	s.Require().NoError(err)
 	s.T().Logf("Acc: %s", txHash)
 	waitForTx, err = s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
-	s.T().Logf("Wair for tx: %s", waitForTx.String())
+	s.T().Logf("Wair for tx: %s", hex.EncodeToString(waitForTx.Hash))
 
 	paymentAccountsByOwner, err := s.Client.GetPaymentAccountsByOwner(s.ClientContext, s.DefaultAccount.GetAddress().String())
 	s.Require().NoError(err)
-	s.Require().Equal(len(paymentAccountsByOwner), 1)
+	s.Require().Equal(len(paymentAccountsByOwner), numPaymentAccounts+1)
 }
 
 func (s *BasicTestSuite) Test_MultiTransfer() {
@@ -148,7 +155,7 @@ func (s *BasicTestSuite) Test_Payment() {
 	t.Logf("Acc: %s", txHash)
 	waitForTx, err := cli.WaitForTx(ctx, txHash)
 	s.Require().NoError(err)
-	t.Logf("Wair for tx: %s", waitForTx.String())
+	t.Logf("Wair for tx: %s", hex.EncodeToString(waitForTx.Hash))
 
 	paymentAccountsByOwnerAfterCreate, err := cli.GetPaymentAccountsByOwner(ctx, account.GetAddress().String())
 	s.Require().NoError(err)
@@ -162,7 +169,7 @@ func (s *BasicTestSuite) Test_Payment() {
 	t.Logf("deposit tx: %s", depositTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, depositTxHash)
 	s.Require().NoError(err)
-	t.Logf("Wair for tx: %s", waitForTx.String())
+	t.Logf("Wair for tx: %s", hex.EncodeToString(waitForTx.Hash))
 
 	// get stream record
 	streamRecord, err := cli.GetStreamRecord(ctx, paymentAddr)
@@ -176,7 +183,7 @@ func (s *BasicTestSuite) Test_Payment() {
 	t.Logf("withdraw tx: %s", withdrawTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, withdrawTxHash)
 	s.Require().NoError(err)
-	t.Logf("Wair for tx: %s", waitForTx.String())
+	t.Logf("Wair for tx: %s", hex.EncodeToString(waitForTx.Hash))
 	streamRecordAfterWithdraw, err := cli.GetStreamRecord(ctx, paymentAddr)
 	s.Require().NoError(err)
 	s.Require().Equal(streamRecordAfterWithdraw.StaticBalance.String(), depositAmount.Sub(withdrawAmount).String())
@@ -190,7 +197,7 @@ func (s *BasicTestSuite) Test_Payment() {
 	t.Logf("disable refund tx: %s", disableRefundTxHash)
 	waitForTx, err = cli.WaitForTx(ctx, disableRefundTxHash)
 	s.Require().NoError(err)
-	t.Logf("Wair for tx: %s", waitForTx.String())
+	t.Logf("Wair for tx: %s", hex.EncodeToString(waitForTx.Hash))
 	paymentAccountAfterDisableRefund, err := cli.GetPaymentAccount(ctx, paymentAddr)
 	s.Require().NoError(err)
 	s.Require().False(paymentAccountAfterDisableRefund.Refundable)

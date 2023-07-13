@@ -62,7 +62,10 @@ func main() {
 	log.Printf(" head member %s exist \n", groupMember)
 
 	// list groups
-	groups, err := cli.ListGroup(ctx, "e", "t", types.ListGroupsOptions{SourceType: "SOURCE_TYPE_ORIGIN", Limit: 10})
+	groups, err := cli.ListGroup(ctx, "a", "a", types.ListGroupsOptions{SourceType: "SOURCE_TYPE_ORIGIN", Limit: 10, Offset: 0, EndPointOptions: &types.EndPointOptions{
+		Endpoint:  httpsAddr,
+		SPAddress: "",
+	}})
 	log.Println("list groups result:")
 	for _, group := range groups.Groups {
 		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)

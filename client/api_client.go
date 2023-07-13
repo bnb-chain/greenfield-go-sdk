@@ -59,7 +59,8 @@ type client struct {
 	// The HTTP client is used to send HTTP requests to the greenfield blockchain and sp
 	httpClient *http.Client
 	// Service provider endpoints
-	spEndpoints map[string]*url.URL
+	spIDEndpoints      map[uint32]*url.URL
+	spAddressEndpoints map[string]*url.URL
 	// The default account to use when sending transactions.
 	defaultAccount *types.Account
 	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
@@ -69,9 +70,10 @@ type client struct {
 	// The user agent info
 	userAgent string
 	// define if trace the error request to SP
-	isTraceEnabled bool
-	traceOutput    io.Writer
-	onlyTraceError bool
+	isTraceEnabled     bool
+	traceOutput        io.Writer
+	onlyTraceError     bool
+	offChainAuthOption *OffChainAuthOption
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -86,6 +88,22 @@ type Option struct {
 	Transport http.RoundTripper
 	// Host is the target sp server hostname
 	Host string
+	// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+	// This property should not be set in most cases unless you want to use go-sdk to test if the SP support off-chain-auth feature.
+	// Once this property is set, the request will be signed in "off-chain-auth" way rather than v1
+	OffChainAuthOption *OffChainAuthOption
+}
+
+// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+// This auth mechanism is usually used in browser-based application.
+// That we support OffChainAuth configuration in go-sdk is to make the tests on off-chain-auth be convenient.
+type OffChainAuthOption struct {
+	// Seed is a EdDSA private key used for off-chain-auth.
+	Seed string
+	// Domain is the domain where the EdDSA keys will be registered for.
+	Domain string
+	// ShouldRegisterPubKey This should be set as true for the first time and could be set as false if the pubkey have been already been registered already.
+	ShouldRegisterPubKey bool
 }
 
 // New - instantiate greenfield chain with chain info, account info and options.
@@ -112,12 +130,31 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	}
 
 	// fetch sp endpoints info from chain
-	spInfo, err := c.getSPUrlList()
+	spIDInfo, spAddressInfo, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
 
-	c.spEndpoints = spInfo
+	c.spIDEndpoints = spIDInfo
+	c.spAddressEndpoints = spAddressInfo
+
+	// register off-chain-auth pubkey to all sps
+	if option.OffChainAuthOption != nil {
+		if option.OffChainAuthOption.Seed == "" || option.OffChainAuthOption.Domain == "" {
+			return nil, errors.New("seed and domain can't be empty in OffChainAuthOption")
+		}
+		c.offChainAuthOption = option.OffChainAuthOption
+		if option.OffChainAuthOption.ShouldRegisterPubKey {
+			for spAddress, spEndpoint := range c.spAddressEndpoints {
+				registerResult, err := c.RegisterEDDSAPublicKey(spAddress, spEndpoint.Scheme+"://"+spEndpoint.Host)
+				if err != nil {
+					log.Error().Msg(fmt.Sprintf("Fail to RegisterEDDSAPublicKey for sp : %s", spEndpoint))
+				}
+				log.Info().Msg(fmt.Sprintf("registerResult: %s", registerResult))
+			}
+		}
+
+	}
 	return &c, nil
 }
 
@@ -141,38 +178,58 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 		return nil, err
 	}
 
-	primarySP := bucketInfo.GetPrimarySpAddress()
-	if _, ok := c.spEndpoints[primarySP]; ok {
-		return c.spEndpoints[primarySP], nil
+	primarySPID := bucketInfo.GetPrimarySpId()
+	if _, ok := c.spIDEndpoints[primarySPID]; ok {
+		return c.spIDEndpoints[primarySPID], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.getSPUrlList()
+	newSpInfo, _, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := newSpInfo[primarySP]; ok {
-		c.spEndpoints = newSpInfo
-		return newSpInfo[primarySP], nil
+	if _, ok := newSpInfo[primarySPID]; ok {
+		c.spIDEndpoints = newSpInfo
+		return newSpInfo[primarySPID], nil
 	}
 
-	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", primarySP)
+	return nil, fmt.Errorf("the SP endpoint %d not exists on chain", primarySPID)
+}
+
+// getSPUrlByID route url of the sp from sp id
+func (c *client) getSPUrlByID(id uint32) (*url.URL, error) {
+	if _, ok := c.spIDEndpoints[id]; ok {
+		return c.spIDEndpoints[id], nil
+
+	}
+	// query sp info from chain
+	newSpIDInfo, _, err := c.getSPUrlList()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := newSpIDInfo[id]; ok {
+		c.spIDEndpoints = newSpIDInfo
+		return newSpIDInfo[id], nil
+	}
+
+	return nil, fmt.Errorf("the SP endpoint %d not exists on chain", id)
 }
 
 // getSPUrlByAddr route url of the sp from sp address
 func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
-	if _, ok := c.spEndpoints[address]; ok {
-		return c.spEndpoints[address], nil
+	if _, ok := c.spAddressEndpoints[address]; ok {
+		return c.spAddressEndpoints[address], nil
 	}
 	// query sp info from chain
-	newSpInfo, err := c.getSPUrlList()
+	_, newSpAddressInfo, err := c.getSPUrlList()
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := newSpInfo[address]; ok {
-		c.spEndpoints = newSpInfo
-		return newSpInfo[address], nil
+	if _, ok := newSpAddressInfo[address]; ok {
+		c.spAddressEndpoints = newSpAddressInfo
+		return newSpAddressInfo[address], nil
 	}
 
 	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", address)
@@ -496,6 +553,16 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 
 // signRequest signs the request and set authorization before send to server
 func (c *client) signRequest(req *http.Request) error {
+	// use offChainAuth if OffChainAuthOption is set
+	if c.offChainAuthOption != nil {
+		authStr := c.OffChainAuthSign()
+		// set auth header
+		req.Header.Set(types.HTTPHeaderAuthorization, authStr)
+		req.Header.Set("X-Gnfd-User-Address", c.defaultAccount.GetAddress().String())
+		req.Header.Set("X-Gnfd-App-Domain", c.offChainAuthOption.Domain)
+		return nil
+	}
+
 	unsignedMsg := httplib.GetMsgToSign(req)
 
 	// sign the request header info, generate the signature
@@ -659,4 +726,41 @@ func (c *client) MustGetDefaultAccount() *types.Account {
 		panic("Default account not exist, Use SetDefaultAccount to set ")
 	}
 	return c.defaultAccount
+}
+
+// getEndpointByOpt return the SP endpoint by listOptions
+func (c *client) getEndpointByOpt(opts *types.EndPointOptions) (*url.URL, error) {
+	var (
+		endpoint *url.URL
+		useHttps bool
+		err      error
+	)
+
+	if opts.Endpoint != "" {
+		if strings.Contains(opts.Endpoint, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
+
+		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
+			return nil, err
+		}
+	} else if opts.SPAddress != "" {
+		// get endpoint from sp address
+		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", opts.SPAddress, err))
+			return nil, err
+		}
+	} else {
+		endpoint, err = c.getInServiceSP()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+			return nil, err
+		}
+	}
+	return endpoint, nil
 }

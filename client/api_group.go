@@ -296,9 +296,9 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getInServiceSP()
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListGroupsResult{}, err
 	}
 
