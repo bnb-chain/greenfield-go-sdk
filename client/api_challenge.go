@@ -89,24 +89,24 @@ func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 		}
 	} else {
 		// get sp address info based on the redundancy index
-		objectInfo, err := c.HeadObjectByID(ctx, objectID)
+		objectDetail, err := c.HeadObjectByID(ctx, objectID)
 		if err != nil {
 			return types.ChallengeResult{}, err
 		}
 
 		if redundancyIndex == types.PrimaryRedundancyIndex {
 			// get endpoint of primary sp
-			endpoint, err = c.getSPUrlByBucket(objectInfo.BucketName)
+			endpoint, err = c.getSPUrlByBucket(objectDetail.ObjectInfo.BucketName)
 			if err != nil {
-				log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %v", objectInfo.BucketName, err))
+				log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %v", objectDetail.ObjectInfo.BucketName, err))
 				return types.ChallengeResult{}, err
 			}
 		} else {
 			// get endpoint of the secondary sp
-			secondarySP := objectInfo.SecondarySpAddresses[redundancyIndex]
-			endpoint, err = c.getSPUrlByAddr(secondarySP)
+			secondarySPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[redundancyIndex]
+			endpoint, err = c.getSPUrlByID(secondarySPID)
 			if err != nil {
-				log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
+				log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %d failed, err: %v", secondarySPID, err))
 				return types.ChallengeResult{}, err
 			}
 		}

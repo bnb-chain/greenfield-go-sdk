@@ -28,6 +28,7 @@ import (
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
+	vgtypes "github.com/bnb-chain/greenfield/x/virtualgroup/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
@@ -47,10 +48,10 @@ type Object interface {
 
 	// HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 	// return err info if object not exist
-	HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error)
+	HeadObject(ctx context.Context, bucketName, objectName string) (*types.ObjectDetail, error)
 	// HeadObjectByID query the objectInfo on chain by object id, return the object info if exists
 	// return err info if object not exist
-	HeadObjectByID(ctx context.Context, objID string) (*storageTypes.ObjectInfo, error)
+	HeadObjectByID(ctx context.Context, objID string) (*types.ObjectDetail, error)
 	// UpdateObjectVisibility update the visibility of the object
 	UpdateObjectVisibility(ctx context.Context, bucketName, objectName string, visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error)
 	// PutObjectPolicy apply object policy to the principal, return the txn hash
@@ -160,7 +161,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	}
 
 	createObjectMsg := storageTypes.NewMsgCreateObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName,
-		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil, opts.SecondarySPAccs)
+		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil)
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
 		return "", err
@@ -598,17 +599,17 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 	ecPieceCount := dataBlocks + parityBlocks
 	minRecoveryPieces := dataBlocks
 
-	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	objectDetail, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
 		return err
 	}
-	objectSize := objectInfo.PayloadSize
+	objectSize := objectDetail.ObjectInfo.PayloadSize
 	startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, err := checkGetObjectRange(objectSize, maxSegmentSize, opts)
 	if err != nil {
 		return err
 	}
 
-	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectInfo)
+	secondaryEndpoints, err := c.getSecondaryEndpoints(ctx, objectDetail.GlobalVirtualGroup)
 	if err != nil {
 		return err
 	}
@@ -651,7 +652,7 @@ func (c *client) RecoverObjectBySecondary(ctx context.Context, bucketName, objec
 					}
 				}()
 				pieceInfo := types.QueryPieceInfo{
-					ObjectId:        strconv.FormatUint(objectInfo.Id.Uint64(), 10),
+					ObjectId:        strconv.FormatUint(objectDetail.ObjectInfo.Id.Uint64(), 10),
 					PieceIndex:      segmentIdx,
 					RedundancyIndex: secondaryIndex,
 				}
@@ -795,13 +796,13 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 
 	segNum = startOffset / segmentSize
 	// Wait for the segments download finished
-	for offset := startOffset; offset < int64(meta.PayloadSize); offset += segmentSize {
+	for offset := startOffset; offset < int64(meta.ObjectInfo.PayloadSize); offset += segmentSize {
 		// hook for test
 		if err = DownloadSegmentHooker(segNum); err != nil {
 			return err
 		}
 
-		endOffset := GetSegmentEnd(offset, int64(meta.PayloadSize), segmentSize)
+		endOffset := GetSegmentEnd(offset, int64(meta.ObjectInfo.PayloadSize), segmentSize)
 		err = objectOption.SetRange(offset, endOffset)
 		if err != nil {
 			return err
@@ -879,17 +880,17 @@ func checkGetObjectRange(payloadSize uint64, maxSegmentSize uint64, opts types.G
 	return startSegmentIdx, endSegmentIdx, diffStartOffset, diffEndOffset, nil
 }
 
-func (c *client) getSecondaryEndpoints(ctx context.Context, objectInfo *storageTypes.ObjectInfo) ([]string, error) {
-	secondarySPAddrs := objectInfo.GetSecondarySpAddresses()
+func (c *client) getSecondaryEndpoints(ctx context.Context, gvg *vgtypes.GlobalVirtualGroup) ([]string, error) {
+	secondarySPIDs := gvg.SecondarySpIds
 	spList, err := c.ListStorageProviders(ctx, false)
 	if err != nil {
 		return nil, err
 	}
 
-	secondaryEndpointList := make([]string, len(secondarySPAddrs))
-	for idx, addr := range secondarySPAddrs {
+	secondaryEndpointList := make([]string, len(secondarySPIDs))
+	for idx, id := range secondarySPIDs {
 		for _, info := range spList {
-			if addr == info.GetOperatorAddress() {
+			if id == info.GetId() {
 				secondaryEndpointList[idx] = info.Endpoint
 			}
 		}
@@ -948,15 +949,15 @@ func (c *client) getSecondaryPieceData(ctx context.Context, bucketName, objectNa
 		}
 	} else {
 		// get secondary sp address info based on the redundancy index
-		objectInfo, err := c.HeadObjectByID(ctx, pieceInfo.ObjectId)
+		objectDetail, err := c.HeadObjectByID(ctx, pieceInfo.ObjectId)
 		if err != nil {
 			return nil, err
 		}
 
-		secondarySP := objectInfo.SecondarySpAddresses[pieceInfo.RedundancyIndex]
-		endpoint, err = c.getSPUrlByAddr(secondarySP)
+		secondarySPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[pieceInfo.RedundancyIndex]
+		endpoint, err = c.getSPUrlByID(secondarySPID)
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", secondarySP, err))
+			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %d failed, err: %v", secondarySPID, err))
 			return nil, err
 		}
 	}
@@ -1000,7 +1001,7 @@ func getObjInfo(objectName string, h http.Header) (types.ObjectStat, error) {
 
 // HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 // return err info if object not exist
-func (c *client) HeadObject(ctx context.Context, bucketName, objectName string) (*storageTypes.ObjectInfo, error) {
+func (c *client) HeadObject(ctx context.Context, bucketName, objectName string) (*types.ObjectDetail, error) {
 	queryHeadObjectRequest := storageTypes.QueryHeadObjectRequest{
 		BucketName: bucketName,
 		ObjectName: objectName,
@@ -1010,12 +1011,15 @@ func (c *client) HeadObject(ctx context.Context, bucketName, objectName string) 
 		return nil, err
 	}
 
-	return queryHeadObjectResponse.ObjectInfo, nil
+	return &types.ObjectDetail{
+		ObjectInfo:         queryHeadObjectResponse.ObjectInfo,
+		GlobalVirtualGroup: queryHeadObjectResponse.GlobalVirtualGroup,
+	}, nil
 }
 
 // HeadObjectByID query the objectInfo on chain by object id, return the object info if exists
 // return err info if object not exist
-func (c *client) HeadObjectByID(ctx context.Context, objID string) (*storageTypes.ObjectInfo, error) {
+func (c *client) HeadObjectByID(ctx context.Context, objID string) (*types.ObjectDetail, error) {
 	headObjectRequest := storageTypes.QueryHeadObjectByIdRequest{
 		ObjectId: objID,
 	}
@@ -1024,7 +1028,10 @@ func (c *client) HeadObjectByID(ctx context.Context, objID string) (*storageType
 		return nil, err
 	}
 
-	return queryHeadObjectResponse.ObjectInfo, nil
+	return &types.ObjectDetail{
+		ObjectInfo:         queryHeadObjectResponse.ObjectInfo,
+		GlobalVirtualGroup: queryHeadObjectResponse.GlobalVirtualGroup,
+	}, nil
 }
 
 // PutObjectPolicy apply object policy to the principal, return the txn hash
@@ -1270,7 +1277,7 @@ func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 	}
 
 	// get object status from sp
-	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
+	if status.ObjectInfo.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
 		uploadProgressInfo, err := c.getObjectStatusFromSP(ctx, bucketName, objectName)
 		if err != nil {
 			return "", errors.New("fail to fetch object uploading progress from sp" + err.Error())
@@ -1278,7 +1285,7 @@ func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 		return uploadProgressInfo.ProgressDescription, nil
 	}
 
-	return status.ObjectStatus.String(), nil
+	return status.ObjectInfo.ObjectStatus.String(), nil
 }
 
 // GetObjectResumableUploadOffset return the status of object including the uploading progress
@@ -1289,7 +1296,7 @@ func (c *client) GetObjectResumableUploadOffset(ctx context.Context, bucketName,
 	}
 
 	// get object status from sp
-	if status.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
+	if status.ObjectInfo.ObjectStatus == storageTypes.OBJECT_STATUS_CREATED {
 		uploadOffsetInfo, err := c.getObjectOffsetFromSP(ctx, bucketName, objectName)
 		if err != nil {
 			return 0, errors.New("fail to fetch object uploading offset from sp" + err.Error())
@@ -1384,13 +1391,14 @@ func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectNa
 }
 
 func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectName string,
-	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption) (string, error) {
-	objectInfo, err := c.HeadObject(ctx, bucketName, objectName)
+	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption,
+) (string, error) {
+	object, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
 		return "", fmt.Errorf("object:%s not exists: %s\n", objectName, err.Error())
 	}
 
-	if objectInfo.GetVisibility() == visibility {
+	if object.ObjectInfo.GetVisibility() == visibility {
 		return "", fmt.Errorf("the visibility of object:%s is already %s \n", objectName, visibility.String())
 	}
 

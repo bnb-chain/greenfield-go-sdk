@@ -3,11 +3,12 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"io"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/bnb-chain/greenfield-go-sdk/client"
 
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
@@ -158,21 +159,21 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().NoError(err)
 
 	time.Sleep(5 * time.Second)
-	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
-	s.Require().Equal(objectInfo.ObjectName, objectName)
-	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
 	s.T().Log("---> PutObject and GetObject <---")
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
-	time.Sleep(20 * time.Second)
-	objectInfo, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	time.Sleep(40 * time.Second)
+	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
-		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+		s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 	}
 
 	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
@@ -408,10 +409,10 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 	s.Require().NoError(err)
 
 	time.Sleep(5 * time.Second)
-	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
-	s.Require().Equal(objectInfo.ObjectName, objectName)
-	s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
 	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
 
@@ -438,10 +439,10 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	s.Require().NoError(err)
 
 	time.Sleep(20 * time.Second)
-	objectInfo, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
-		s.Require().Equal(objectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+		s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
 	}
 
 	// 3) FGetObjectResumable compare with FGetObject
