@@ -84,6 +84,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 	s.Client.SetDefaultAccount(s.OperatorAcc)
 
 	blsProofBz, err := s.BlsAcc.GetKeyManager().Sign(tmhash.Sum(s.BlsAcc.GetKeyManager().PubKey().Bytes()))
+	s.Require().NoError(err)
 	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(),
 		hex.EncodeToString(s.BlsAcc.GetKeyManager().PubKey().Bytes()), hex.EncodeToString(blsProofBz),
 		"https://sp0.greenfield.io",
