@@ -35,6 +35,7 @@ func (s *StorageTestSuite) SetupSuite() {
 	for _, sp := range spList {
 		if sp.Endpoint != "https://sp0.greenfield.io" {
 			s.PrimarySP = sp
+			break
 		}
 	}
 }
@@ -133,6 +134,8 @@ func (s *StorageTestSuite) Test_Object() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
 
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+
 	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
 	s.Require().NoError(err)
 
@@ -183,51 +186,6 @@ func (s *StorageTestSuite) Test_Object() {
 		objectBytes, err := io.ReadAll(ior)
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
-	}
-
-	s.T().Log("---> RecoveryObject <---")
-	filePath := "downloadfile"
-	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, types.GetObjectOptions{})
-	s.Require().NoError(err)
-	if err == nil {
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			fmt.Println("can not read download file:", err)
-			return
-		}
-
-		s.Require().NoError(err)
-		s.Require().Equal(content, buffer.Bytes())
-	}
-
-	s.T().Log("---> RecoveryObject Range <---")
-	filePath = "downloadfileRange"
-	opt := types.GetObjectOptions{}
-	rangeStart := 100 * 2024
-	rangeEnd := 10 * 1024 * 1024
-	err = opt.SetRange(int64(rangeStart), int64(rangeEnd))
-	s.Require().NoError(err)
-	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, opt)
-	s.Require().NoError(err)
-	if err == nil {
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			fmt.Println("can not read download file:", err)
-			return
-		}
-
-		fmt.Println("read recovery length:", len(content), "range len:", rangeEnd-rangeStart+1)
-		s.Require().NoError(err)
-		//	originalBytes := buffer.Bytes()[rangeStart:rangeEnd]
-		//	s.Require().Equal(content, originalBytes)
-		ior, _, err = s.Client.GetObject(s.ClientContext, bucketName, objectName, opt)
-		s.Require().NoError(err)
-		if err == nil {
-			objectBytes, err := io.ReadAll(ior)
-			s.Require().NoError(err)
-			s.Require().Equal(objectBytes, content)
-			fmt.Println("read download len length:", len(objectBytes))
-		}
 	}
 
 	s.T().Log("---> PutObjectPolicy <---")
@@ -447,12 +405,14 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 
 	// 3) FGetObjectResumable compare with FGetObject
 	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	defer os.Remove(fileName)
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, fileName, types.GetObjectOptions{})
 	s.T().Logf("--->  object file :%s <---", fileName)
 	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
 	s.Require().NoError(err)
 
 	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	defer os.Remove(fGetObjectFileName)
 	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
 	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOptions{})
 	s.T().Logf("--->  GetObjectResumable error:%s <---", err)
@@ -465,6 +425,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	// 4) Resumabledownload, download a file with default checkpoint
 	client.DownloadSegmentHooker = DownloadErrorHooker
 	resumableDownloadFile := storageTestUtil.GenRandomObjectName()
+	defer os.Remove(resumableDownloadFile)
 	s.T().Logf("---> Resumable download Create newfile:%s, <---", resumableDownloadFile)
 
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{})

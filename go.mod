@@ -5,7 +5,7 @@ go 1.19
 require (
 	cosmossdk.io/errors v1.0.0-beta.7
 	cosmossdk.io/math v1.0.1
-	github.com/bnb-chain/greenfield v0.2.3-0.20230711112213-f847ad5053fd
+	github.com/bnb-chain/greenfield v0.2.3-0.20230713011058-a3c346526aeb
 	github.com/bnb-chain/greenfield-common/go v0.0.0-20230512062756-5d7790d0ccbf
 	github.com/cometbft/cometbft v0.37.1
 	github.com/consensys/gnark-crypto v0.7.0
