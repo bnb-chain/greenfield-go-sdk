@@ -3,10 +3,11 @@ package e2e
 import (
 	"context"
 	"encoding/hex"
-	"github.com/cometbft/cometbft/crypto/tmhash"
-	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
 	"testing"
 	"time"
+
+	"github.com/cometbft/cometbft/crypto/tmhash"
+	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
 
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"

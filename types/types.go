@@ -4,6 +4,9 @@ import (
 	"io"
 	"math/rand"
 	"time"
+
+	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
+	"github.com/bnb-chain/greenfield/x/virtualgroup/types"
 )
 
 var (
@@ -19,6 +22,13 @@ type ObjectStat struct {
 	ObjectName  string
 	ContentType string
 	Size        int64 // Object size
+}
+
+// ObjectInfo
+
+type ObjectDetail struct {
+	ObjectInfo         *storagetypes.ObjectInfo
+	GlobalVirtualGroup *types.GlobalVirtualGroup
 }
 
 // QueryPieceInfo indicates the challenge or recovery object piece info
