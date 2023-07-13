@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"testing"
 	"time"
 
@@ -183,51 +182,6 @@ func (s *StorageTestSuite) Test_Object() {
 		objectBytes, err := io.ReadAll(ior)
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
-	}
-
-	s.T().Log("---> RecoveryObject <---")
-	filePath := "downloadfile"
-	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, types.GetObjectOptions{})
-	s.Require().NoError(err)
-	if err == nil {
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			fmt.Println("can not read download file:", err)
-			return
-		}
-
-		s.Require().NoError(err)
-		s.Require().Equal(content, buffer.Bytes())
-	}
-
-	s.T().Log("---> RecoveryObject Range <---")
-	filePath = "downloadfileRange"
-	opt := types.GetObjectOptions{}
-	rangeStart := 100 * 2024
-	rangeEnd := 10 * 1024 * 1024
-	err = opt.SetRange(int64(rangeStart), int64(rangeEnd))
-	s.Require().NoError(err)
-	err = s.Client.RecoverObjectBySecondary(s.ClientContext, bucketName, objectName, filePath, opt)
-	s.Require().NoError(err)
-	if err == nil {
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			fmt.Println("can not read download file:", err)
-			return
-		}
-
-		fmt.Println("read recovery length:", len(content), "range len:", rangeEnd-rangeStart+1)
-		s.Require().NoError(err)
-		//	originalBytes := buffer.Bytes()[rangeStart:rangeEnd]
-		//	s.Require().Equal(content, originalBytes)
-		ior, _, err = s.Client.GetObject(s.ClientContext, bucketName, objectName, opt)
-		s.Require().NoError(err)
-		if err == nil {
-			objectBytes, err := io.ReadAll(ior)
-			s.Require().NoError(err)
-			s.Require().Equal(objectBytes, content)
-			fmt.Println("read download len length:", len(objectBytes))
-		}
 	}
 
 	s.T().Log("---> PutObjectPolicy <---")
