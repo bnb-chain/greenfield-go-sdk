@@ -26,6 +26,7 @@ import (
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
+	types2 "github.com/bnb-chain/greenfield/x/virtualgroup/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -59,8 +60,7 @@ type client struct {
 	// The HTTP client is used to send HTTP requests to the greenfield blockchain and sp
 	httpClient *http.Client
 	// Service provider endpoints
-	spIDEndpoints      map[uint32]*url.URL
-	spAddressEndpoints map[string]*url.URL
+	storageProviders map[uint32]*types.StorageProvider
 	// The default account to use when sending transactions.
 	defaultAccount *types.Account
 	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
@@ -121,23 +121,21 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	}
 
 	c := client{
-		chainClient:    cc,
-		httpClient:     &http.Client{Transport: option.Transport},
-		userAgent:      types.UserAgent,
-		defaultAccount: option.DefaultAccount, // it allows to be nil
-		secure:         option.Secure,
-		host:           option.Host,
+		chainClient:      cc,
+		httpClient:       &http.Client{Transport: option.Transport},
+		userAgent:        types.UserAgent,
+		defaultAccount:   option.DefaultAccount, // it allows to be nil
+		secure:           option.Secure,
+		host:             option.Host,
+		storageProviders: make(map[uint32]*types.StorageProvider),
 	}
 
 	// fetch sp endpoints info from chain
-	spIDInfo, spAddressInfo, err := c.getSPUrlList()
+	err = c.refreshStorageProviders(context.Background())
+
 	if err != nil {
 		return nil, err
 	}
-
-	c.spIDEndpoints = spIDInfo
-	c.spAddressEndpoints = spAddressInfo
-
 	// register off-chain-auth pubkey to all sps
 	if option.OffChainAuthOption != nil {
 		if option.OffChainAuthOption.Seed == "" || option.OffChainAuthOption.Domain == "" {
@@ -145,15 +143,15 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 		}
 		c.offChainAuthOption = option.OffChainAuthOption
 		if option.OffChainAuthOption.ShouldRegisterPubKey {
-			for spAddress, spEndpoint := range c.spAddressEndpoints {
-				registerResult, err := c.RegisterEDDSAPublicKey(spAddress, spEndpoint.Scheme+"://"+spEndpoint.Host)
+			for _, sp := range c.storageProviders {
+				registerResult, err := c.RegisterEDDSAPublicKey(sp.OperatorAddress.String(), sp.EndPoint.Scheme+"://"+sp.EndPoint.Host)
 				if err != nil {
-					log.Error().Msg(fmt.Sprintf("Fail to RegisterEDDSAPublicKey for sp : %s", spEndpoint))
+					log.Error().Msg(fmt.Sprintf("Fail to RegisterEDDSAPublicKey for sp : %s", sp.EndPoint))
 				}
 				log.Info().Msg(fmt.Sprintf("registerResult: %s", registerResult))
+
 			}
 		}
-
 	}
 	return &c, nil
 }
@@ -170,47 +168,49 @@ func (c *client) EnableTrace(output io.Writer, onlyTraceErr bool) {
 	c.isTraceEnabled = true
 }
 
-// getSPUrlByBucket route url of the sp from bucket name
 func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
+	sp, err := c.pickStorageProviderByBucket(bucketName)
+	if err != nil {
+		return nil, err
+	}
+	return sp.EndPoint, nil
+}
+
+func (c *client) pickStorageProviderByBucket(bucketName string) (*types.StorageProvider, error) {
 	ctx := context.Background()
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return nil, err
 	}
 
-	primarySPID := bucketInfo.GetPrimarySpId()
-	if _, ok := c.spIDEndpoints[primarySPID]; ok {
-		return c.spIDEndpoints[primarySPID], nil
-	}
-	// query sp info from chain
-	newSpInfo, _, err := c.getSPUrlList()
+	familyResp, err := c.chainClient.GlobalVirtualGroupFamily(ctx, &types2.QueryGlobalVirtualGroupFamilyRequest{FamilyId: bucketInfo.GlobalVirtualGroupFamilyId})
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := newSpInfo[primarySPID]; ok {
-		c.spIDEndpoints = newSpInfo
-		return newSpInfo[primarySPID], nil
+	sp, ok := c.storageProviders[familyResp.GlobalVirtualGroupFamily.PrimarySpId]
+	if ok {
+		return sp, nil
+	}
+	// refresh the meta from blockchain
+	err = c.refreshStorageProviders(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("the SP endpoint %d not exists on chain", primarySPID)
+	sp, ok = c.storageProviders[familyResp.GlobalVirtualGroupFamily.PrimarySpId]
+	if ok {
+		return sp, nil
+	}
+	return nil, fmt.Errorf("the storage provider %d not exists on chain", familyResp.GlobalVirtualGroupFamily.PrimarySpId)
+
 }
 
 // getSPUrlByID route url of the sp from sp id
 func (c *client) getSPUrlByID(id uint32) (*url.URL, error) {
-	if _, ok := c.spIDEndpoints[id]; ok {
-		return c.spIDEndpoints[id], nil
-
-	}
-	// query sp info from chain
-	newSpIDInfo, _, err := c.getSPUrlList()
-	if err != nil {
-		return nil, err
-	}
-
-	if _, ok := newSpIDInfo[id]; ok {
-		c.spIDEndpoints = newSpIDInfo
-		return newSpIDInfo[id], nil
+	sp, ok := c.storageProviders[id]
+	if ok {
+		return sp.EndPoint, nil
 	}
 
 	return nil, fmt.Errorf("the SP endpoint %d not exists on chain", id)
@@ -218,18 +218,14 @@ func (c *client) getSPUrlByID(id uint32) (*url.URL, error) {
 
 // getSPUrlByAddr route url of the sp from sp address
 func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
-	if _, ok := c.spAddressEndpoints[address]; ok {
-		return c.spAddressEndpoints[address], nil
-	}
-	// query sp info from chain
-	_, newSpAddressInfo, err := c.getSPUrlList()
+	acc, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
 		return nil, err
 	}
-
-	if _, ok := newSpAddressInfo[address]; ok {
-		c.spAddressEndpoints = newSpAddressInfo
-		return newSpAddressInfo[address], nil
+	for _, sp := range c.storageProviders {
+		if sp.OperatorAddress.Equals(acc) {
+			return sp.EndPoint, nil
+		}
 	}
 
 	return nil, fmt.Errorf("the SP endpoint %s not exists on chain", address)

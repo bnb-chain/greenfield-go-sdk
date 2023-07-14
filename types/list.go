@@ -39,6 +39,7 @@ type UploadProgress struct {
 	XMLName             xml.Name `xml:"QueryUploadProgress"`
 	Version             string   `xml:"version,attr"`
 	ProgressDescription string   `xml:"ProgressDescription"`
+	ErrorDescription    string   `xml:"ErrorDescription"`
 }
 
 // UploadOffset indicates the offset of resumable uploading object

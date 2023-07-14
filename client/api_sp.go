@@ -3,11 +3,11 @@ package client
 import (
 	"context"
 	"encoding/hex"
-	"errors"
-	"net/url"
+	math2 "math"
 	"strings"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 
 	"cosmossdk.io/math"
@@ -98,38 +98,36 @@ func (c *client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddre
 	return gnfdRep.StorageProvider, nil
 }
 
-func (c *client) getSPUrlList() (map[uint32]*url.URL, map[string]*url.URL, error) {
-	ctx := context.Background()
-	spIDInfo := make(map[uint32]*url.URL, 0)
-	spAddressInfo := make(map[string]*url.URL, 0)
-	request := &spTypes.QueryStorageProvidersRequest{}
-	gnfdRep, err := c.chainClient.StorageProviders(ctx, request)
+func (c *client) refreshStorageProviders(ctx context.Context) error {
+	gnfdRep, err := c.chainClient.StorageProviders(ctx, &spTypes.QueryStorageProvidersRequest{Pagination: &query.PageRequest{Limit: math2.MaxUint64}})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-
-	spList := gnfdRep.GetSps()
-	if len(spList) == 0 {
-		return nil, nil, errors.New("no SP found on chain")
-	}
-
-	for _, info := range spList {
+	for _, spInfo := range gnfdRep.Sps {
 		var useHttps bool
-		if strings.Contains(info.Endpoint, "https") {
+		if strings.Contains(spInfo.Endpoint, "https") {
 			useHttps = true
 		} else {
 			useHttps = c.secure
 		}
-
-		urlInfo, urlErr := utils.GetEndpointURL(info.Endpoint, useHttps)
+		urlInfo, urlErr := utils.GetEndpointURL(spInfo.Endpoint, useHttps)
 		if urlErr != nil {
-			return nil, nil, urlErr
+			return urlErr
 		}
-		spIDInfo[info.GetId()] = urlInfo
-		spAddressInfo[info.GetOperatorAddress()] = urlInfo
+		sp := &types.StorageProvider{
+			Id:              spInfo.Id,
+			Status:          spInfo.Status,
+			OperatorAddress: sdk.MustAccAddressFromHex(spInfo.OperatorAddress),
+			ApprovalAddress: sdk.MustAccAddressFromHex(spInfo.ApprovalAddress),
+			SealAddress:     sdk.MustAccAddressFromHex(spInfo.SealAddress),
+			GcAddress:       sdk.MustAccAddressFromHex(spInfo.GcAddress),
+			EndPoint:        urlInfo,
+			Description:     spInfo.Description,
+			BlsKey:          spInfo.BlsKey,
+		}
+		c.storageProviders[sp.Id] = sp
 	}
-
-	return spIDInfo, spAddressInfo, nil
+	return nil
 }
 
 // CreateStorageProvider will submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
