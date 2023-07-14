@@ -20,12 +20,16 @@ import (
 type Basic interface {
 	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error)
 
+	GetStatus(ctx context.Context) (*ctypes.ResultStatus, error)
+	GetCommit(ctx context.Context, height int64) (*ctypes.ResultCommit, error)
 	GetLatestBlockHeight(ctx context.Context) (int64, error)
 	GetLatestBlock(ctx context.Context) (*bfttypes.Block, error)
 	GetSyncing(ctx context.Context) (bool, error)
 	GetBlockByHeight(ctx context.Context, height int64) (*bfttypes.Block, error)
+	GetBlockResultByHeight(ctx context.Context, height int64) (*ctypes.ResultBlockResults, error)
 
 	GetValidatorSet(ctx context.Context) (int64, []*bfttypes.Validator, error)
+	GetValidatorsByHeight(ctx context.Context, height int64) ([]*bfttypes.Validator, error)
 
 	WaitForBlockHeight(ctx context.Context, height int64) error
 	WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error)
@@ -46,6 +50,14 @@ func (c *client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmserv
 		return nil, nil, err
 	}
 	return nodeInfoResponse.DefaultNodeInfo, nodeInfoResponse.ApplicationVersion, nil
+}
+
+func (c *client) GetStatus(ctx context.Context) (*ctypes.ResultStatus, error) {
+	return c.chainClient.GetStatus(ctx)
+}
+
+func (c *client) GetCommit(ctx context.Context, height int64) (*ctypes.ResultCommit, error) {
+	return c.chainClient.GetCommit(ctx, height)
 }
 
 // BroadcastRawTx broadcasts raw transaction bytes to a Tendermint node.
@@ -204,6 +216,10 @@ func (c *client) GetBlockByHeight(ctx context.Context, height int64) (*bfttypes.
 	return blockByHeight.Block, nil
 }
 
+func (c *client) GetBlockResultByHeight(ctx context.Context, height int64) (*ctypes.ResultBlockResults, error) {
+	return c.chainClient.GetBlockResults(ctx, &height)
+}
+
 // GetValidatorSet retrieves the latest validator set from the chain.
 func (c *client) GetValidatorSet(ctx context.Context) (int64, []*bfttypes.Validator, error) {
 	validatorSetResponse, err := c.chainClient.GetValidators(ctx, nil)
@@ -211,4 +227,13 @@ func (c *client) GetValidatorSet(ctx context.Context) (int64, []*bfttypes.Valida
 		return 0, nil, err
 	}
 	return validatorSetResponse.BlockHeight, validatorSetResponse.Validators, nil
+}
+
+// GetValidatorsByHeight retrieves the validator set from the chain.
+func (c *client) GetValidatorsByHeight(ctx context.Context, height int64) ([]*bfttypes.Validator, error) {
+	validatorSetResponse, err := c.chainClient.GetValidators(ctx, &height)
+	if err != nil {
+		return nil, err
+	}
+	return validatorSetResponse.Validators, nil
 }
