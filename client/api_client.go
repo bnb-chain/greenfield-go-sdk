@@ -171,9 +171,9 @@ func (c *client) EnableTrace(output io.Writer, onlyTraceErr bool) {
 func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	sp, err := c.pickStorageProviderByBucket(bucketName)
 	if err != nil {
-		return sp.EndPoint, nil
+		return nil, err
 	}
-	return nil, err
+	return sp.EndPoint, nil
 }
 
 func (c *client) pickStorageProviderByBucket(bucketName string) (*types.StorageProvider, error) {
