@@ -1,8 +1,11 @@
 package e2e
 
 import (
-	"cosmossdk.io/math"
 	"encoding/hex"
+	"testing"
+	"time"
+
+	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
@@ -10,8 +13,6 @@ import (
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/stretchr/testify/suite"
-	"testing"
-	"time"
 )
 
 type SPTestSuite struct {
@@ -83,6 +84,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 	s.Client.SetDefaultAccount(s.OperatorAcc)
 
 	blsProofBz, err := s.BlsAcc.GetKeyManager().Sign(tmhash.Sum(s.BlsAcc.GetKeyManager().PubKey().Bytes()))
+	s.Require().NoError(err)
 	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(),
 		hex.EncodeToString(s.BlsAcc.GetKeyManager().PubKey().Bytes()), hex.EncodeToString(blsProofBz),
 		"https://sp0.greenfield.io",
@@ -93,7 +95,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	createTx, err := s.Client.WaitForTx(s.ClientContext, txHash)
 	s.Require().NoError(err)
-	s.T().Log(createTx.Logs.String())
+	s.T().Log(createTx.TxResult.String())
 
 	for {
 		p, err := s.Client.GetProposal(s.ClientContext, proposalID)
@@ -111,7 +113,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	tx, err := s.Client.WaitForTx(s.ClientContext, voteTxHash)
 	s.Require().NoError(err)
-	s.T().Logf("VoteTx: %s", tx.TxHash)
+	s.T().Logf("VoteTx: %s", hex.EncodeToString(tx.Hash))
 
 	for {
 		p, err := s.Client.GetProposal(s.ClientContext, proposalID)

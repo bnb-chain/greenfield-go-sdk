@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("unable to get latest block, %v", err)
 	}
-	log.Printf("latestBlock header: %s", latestBlock.Header.String())
+	log.Printf("latestBlock header: %s", latestBlock.Header)
 
 	heightBefore := latestBlock.Header.Height
 	log.Printf("Wait for block height: %d", heightBefore)
