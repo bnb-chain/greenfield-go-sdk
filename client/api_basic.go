@@ -144,6 +144,7 @@ func (c *client) WaitForNBlocks(ctx context.Context, n int64) error {
 
 // WaitForTx requests the tx from hash, if not found, waits for next block and
 // tries again. Returns an error if ctx is canceled.
+// Note: When Websocket connection is being used,
 func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error) {
 	for {
 		txResponse, err := c.chainClient.Tx(ctx, hash)
