@@ -13,12 +13,14 @@ import (
 )
 
 var (
-	// Endpoint = "gnfd-testnet-fullnode-cosmos-us.nodereal.io:443"
 	//Endpoint = "http://localhost:26750"
 	//ChainID  = "greenfield_9000-121"
 
-	Endpoint = "https://gnfd-dev.qa.bnbchain.world:443"
-	ChainID  = "greenfield_8981-1"
+	//Endpoint = "https://gnfd-dev.qa.bnbchain.world:443"
+	//ChainID  = "greenfield_8981-1"
+
+	Endpoint = "https://gnfd.qa.bnbchain.world:443"
+	ChainID  = "greenfield_9000-1741"
 )
 
 func ParseMnemonicFromFile(fileName string) string {
