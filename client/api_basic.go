@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/cometbft/cometbft/votepool"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"strings"
 	"time"
@@ -40,6 +41,9 @@ type Basic interface {
 	SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
 	BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error)
+
+	BroadcastVote(ctx context.Context, vote votepool.Vote) error
+	QueryVote(ctx context.Context, eventType int, eventHash []byte) (*ctypes.ResultQueryVote, error)
 }
 
 // GetNodeInfo returns the current node info of the greenfield that the client is connected to.
@@ -236,4 +240,12 @@ func (c *client) GetValidatorsByHeight(ctx context.Context, height int64) ([]*bf
 		return nil, err
 	}
 	return validatorSetResponse.Validators, nil
+}
+
+func (c *client) BroadcastVote(ctx context.Context, vote votepool.Vote) error {
+	return c.chainClient.BroadcastVote(ctx, vote)
+}
+
+func (c *client) QueryVote(ctx context.Context, eventType int, eventHash []byte) (*ctypes.ResultQueryVote, error) {
+	return c.chainClient.QueryVote(ctx, eventType, eventHash)
 }
