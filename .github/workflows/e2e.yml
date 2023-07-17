@@ -15,7 +15,7 @@ on:
 
 env:
   GreenfieldTag: df6781d93afaf886b6868ad024473b3d8ce08b99
-  GreenfieldStorageProviderTag: 08588b294aeb6eadafdf5e8ccd4dd39cb375f7b2
+  GreenfieldStorageProviderTag: aa5d2f472f5aa55f803e84a452e2ab469f2d7063
   GOPRIVATE: github.com/bnb-chain
   GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
   MYSQL_USER: root
@@ -82,8 +82,8 @@ jobs:
       - name: Run Greenfield
         run: |
           cd ../greenfield
-          bash ./deployment/localup/localup.sh all 1 7
-          bash ./deployment/localup/localup.sh export_sps 1 7 > sp.json
+          bash ./deployment/localup/localup.sh all 1 8
+          bash ./deployment/localup/localup.sh export_sps 1 8 > sp.json
           cat sp.json
           cd ../greenfield-go-sdk
       # Run Greenfield-SP

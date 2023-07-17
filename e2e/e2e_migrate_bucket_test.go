@@ -53,7 +53,7 @@ func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]
 			buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 		}
 		objectName := storageTestUtil.GenRandomObjectName()
-		s.T().Log("---> CreateObject and HeadObject <---")
+		s.T().Logf("---> CreateObject and HeadObject, bucketname:%s, objectname:%s <---", bucketName, objectName)
 		objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
 		s.Require().NoError(err)
 		_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
@@ -222,10 +222,10 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 	}
 	s.Require().NotNil(destSP)
 
-	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
-
 	// migrate bucket with conflict
 	conflictSPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[0]
+	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", conflictSPID)
+
 	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: conflictSPID, IsAsyncMode: false})
 	s.Require().NoError(err)
 
@@ -243,7 +243,7 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 
 	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
 	s.Require().NoError(err)
-	s.Require().Equal(family.PrimarySpId, destSP.GetId())
+	s.Require().Equal(family.PrimarySpId, conflictSPID)
 	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectDetail.ObjectInfo.ObjectName, types.GetObjectOptions{})
 	s.Require().NoError(err)
 	if err == nil {

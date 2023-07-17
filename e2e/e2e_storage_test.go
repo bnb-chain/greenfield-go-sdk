@@ -167,7 +167,7 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
 	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
-	s.T().Log("---> PutObject and GetObject <---")
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, int64(buffer.Len()))
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
@@ -397,7 +397,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
 	s.Require().NoError(err)
 
-	time.Sleep(30 * time.Second)
+	time.Sleep(80 * time.Second)
 	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
