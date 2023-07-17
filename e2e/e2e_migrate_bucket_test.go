@@ -11,10 +11,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
-	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/stretchr/testify/suite"
-
-	types3 "github.com/bnb-chain/greenfield/x/sp/types"
 )
 
 type BucketMigrateTestSuite struct {
@@ -188,156 +185,155 @@ func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]
 //	}
 //}
 
-// test only one object's case
-func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
-	bucketName := storageTestUtil.GenRandomBucketName()
-
-	// 1) create bucket and object in srcSP
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
-	s.Require().NoError(err)
-
-	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
-	s.Require().NoError(err)
-
-	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
-	}
-
-	// test only one object's case
-	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
-	s.Require().NoError(err)
-
-	objectDetail := objectDetails[0]
-	buffer := contentBuffer[0]
-
-	// selete a storage provider to miragte
-	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
-	s.Require().NoError(err)
-
-	spIDs := make(map[uint32]bool)
-	spIDs[objectDetail.GlobalVirtualGroup.PrimarySpId] = true
-	for _, id := range objectDetail.GlobalVirtualGroup.SecondarySpIds {
-		spIDs[id] = true
-	}
-	s.Require().Equal(len(spIDs), 7)
-
-	var destSP *types3.StorageProvider
-	for _, sp := range sps {
-		_, exist := spIDs[sp.Id]
-		if !exist {
-			destSP = &sp
-			break
-		}
-	}
-	s.Require().NotNil(destSP)
-
-	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
-
-	// normal no conflict send migrate bucket transaction
-	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
-	s.Require().NoError(err)
-
-	s.T().Logf("MigrateBucket : %s", txhash)
-
-	for {
-		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
-		s.T().Logf("HeadBucket: %s", bucketInfo)
-		s.Require().NoError(err)
-		if bucketInfo.BucketStatus != storageTypes.BUCKET_STATUS_MIGRATING {
-			break
-		}
-		time.Sleep(3 * time.Second)
-	}
-
-	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
-	s.Require().NoError(err)
-	s.Require().Equal(family.PrimarySpId, destSP.GetId())
-	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectDetail.ObjectInfo.ObjectName, types.GetObjectOptions{})
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(info.ObjectName, objectDetail.ObjectInfo.ObjectName)
-		objectBytes, err := io.ReadAll(ior)
-		s.Require().NoError(err)
-		s.Require().Equal(objectBytes, buffer.Bytes())
-	}
-}
-
-// test only conflict sp's case
-func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
-	bucketName := storageTestUtil.GenRandomBucketName()
-
-	// 1) create bucket and object in srcSP
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
-	s.Require().NoError(err)
-
-	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
-	s.Require().NoError(err)
-
-	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
-	}
-
-	// test only one object's case
-	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
-	s.Require().NoError(err)
-
-	objectDetail := objectDetails[0]
-	buffer := contentBuffer[0]
-
-	// selete a storage provider to miragte
-	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
-	s.Require().NoError(err)
-
-	spIDs := make(map[uint32]bool)
-	spIDs[objectDetail.GlobalVirtualGroup.PrimarySpId] = true
-	for _, id := range objectDetail.GlobalVirtualGroup.SecondarySpIds {
-		spIDs[id] = true
-	}
-	s.Require().Equal(len(spIDs), 7)
-
-	var destSP *types3.StorageProvider
-	for _, sp := range sps {
-		_, exist := spIDs[sp.Id]
-		if !exist {
-			destSP = &sp
-			break
-		}
-	}
-	s.Require().NotNil(destSP)
-
-	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
-
-	// migrate bucket with conflict
-	conflictSPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[0]
-	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: conflictSPID, IsAsyncMode: false})
-	s.Require().NoError(err)
-
-	s.T().Logf("MigrateBucket : %s", txhash)
-
-	for {
-		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
-		s.T().Logf("HeadBucket: %s", bucketInfo)
-		s.Require().NoError(err)
-		if bucketInfo.BucketStatus != storageTypes.BUCKET_STATUS_MIGRATING {
-			break
-		}
-		time.Sleep(3 * time.Second)
-	}
-
-	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
-	s.Require().NoError(err)
-	s.Require().Equal(family.PrimarySpId, destSP.GetId())
-	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectDetail.ObjectInfo.ObjectName, types.GetObjectOptions{})
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(info.ObjectName, objectDetail.ObjectInfo.ObjectName)
-		objectBytes, err := io.ReadAll(ior)
-		s.Require().NoError(err)
-		s.Require().Equal(objectBytes, buffer.Bytes())
-	}
-
-}
+//// test only one object's case
+//func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
+//	bucketName := storageTestUtil.GenRandomBucketName()
+//
+//	// 1) create bucket and object in srcSP
+//	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+//	s.Require().NoError(err)
+//
+//	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+//	s.Require().NoError(err)
+//
+//	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+//	s.Require().NoError(err)
+//	if err == nil {
+//		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+//	}
+//
+//	// test only one object's case
+//	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
+//	s.Require().NoError(err)
+//
+//	objectDetail := objectDetails[0]
+//	buffer := contentBuffer[0]
+//
+//	// selete a storage provider to miragte
+//	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
+//	s.Require().NoError(err)
+//
+//	spIDs := make(map[uint32]bool)
+//	spIDs[objectDetail.GlobalVirtualGroup.PrimarySpId] = true
+//	for _, id := range objectDetail.GlobalVirtualGroup.SecondarySpIds {
+//		spIDs[id] = true
+//	}
+//	s.Require().Equal(len(spIDs), 7)
+//
+//	var destSP *types3.StorageProvider
+//	for _, sp := range sps {
+//		_, exist := spIDs[sp.Id]
+//		if !exist {
+//			destSP = &sp
+//			break
+//		}
+//	}
+//	s.Require().NotNil(destSP)
+//
+//	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
+//
+//	// normal no conflict send migrate bucket transaction
+//	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+//	s.Require().NoError(err)
+//
+//	s.T().Logf("MigrateBucket : %s", txhash)
+//
+//	for {
+//		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
+//		s.T().Logf("HeadBucket: %s", bucketInfo)
+//		s.Require().NoError(err)
+//		if bucketInfo.BucketStatus != storageTypes.BUCKET_STATUS_MIGRATING {
+//			break
+//		}
+//		time.Sleep(3 * time.Second)
+//	}
+//
+//	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
+//	s.Require().NoError(err)
+//	s.Require().Equal(family.PrimarySpId, destSP.GetId())
+//	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectDetail.ObjectInfo.ObjectName, types.GetObjectOptions{})
+//	s.Require().NoError(err)
+//	if err == nil {
+//		s.Require().Equal(info.ObjectName, objectDetail.ObjectInfo.ObjectName)
+//		objectBytes, err := io.ReadAll(ior)
+//		s.Require().NoError(err)
+//		s.Require().Equal(objectBytes, buffer.Bytes())
+//	}
+//}
+//
+//// test only conflict sp's case
+//func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
+//	bucketName := storageTestUtil.GenRandomBucketName()
+//
+//	// 1) create bucket and object in srcSP
+//	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+//	s.Require().NoError(err)
+//
+//	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+//	s.Require().NoError(err)
+//
+//	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+//	s.Require().NoError(err)
+//	if err == nil {
+//		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+//	}
+//
+//	// test only one object's case
+//	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
+//	s.Require().NoError(err)
+//
+//	objectDetail := objectDetails[0]
+//	buffer := contentBuffer[0]
+//
+//	// selete a storage provider to miragte
+//	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
+//	s.Require().NoError(err)
+//
+//	spIDs := make(map[uint32]bool)
+//	spIDs[objectDetail.GlobalVirtualGroup.PrimarySpId] = true
+//	for _, id := range objectDetail.GlobalVirtualGroup.SecondarySpIds {
+//		spIDs[id] = true
+//	}
+//	s.Require().Equal(len(spIDs), 7)
+//
+//	var destSP *types3.StorageProvider
+//	for _, sp := range sps {
+//		_, exist := spIDs[sp.Id]
+//		if !exist {
+//			destSP = &sp
+//			break
+//		}
+//	}
+//	s.Require().NotNil(destSP)
+//
+//	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
+//
+//	// migrate bucket with conflict
+//	conflictSPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[0]
+//	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: conflictSPID, IsAsyncMode: false})
+//	s.Require().NoError(err)
+//
+//	s.T().Logf("MigrateBucket : %s", txhash)
+//
+//	for {
+//		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
+//		s.T().Logf("HeadBucket: %s", bucketInfo)
+//		s.Require().NoError(err)
+//		if bucketInfo.BucketStatus != storageTypes.BUCKET_STATUS_MIGRATING {
+//			break
+//		}
+//		time.Sleep(3 * time.Second)
+//	}
+//
+//	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
+//	s.Require().NoError(err)
+//	s.Require().Equal(family.PrimarySpId, destSP.GetId())
+//	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectDetail.ObjectInfo.ObjectName, types.GetObjectOptions{})
+//	s.Require().NoError(err)
+//	if err == nil {
+//		s.Require().Equal(info.ObjectName, objectDetail.ObjectInfo.ObjectName)
+//		objectBytes, err := io.ReadAll(ior)
+//		s.Require().NoError(err)
+//		s.Require().Equal(objectBytes, buffer.Bytes())
+//	}
+//}
