@@ -74,6 +74,7 @@ type client struct {
 	traceOutput        io.Writer
 	onlyTraceError     bool
 	offChainAuthOption *OffChainAuthOption
+	useWebsocketConn   bool
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -131,12 +132,13 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	}
 
 	c := client{
-		chainClient:    cc,
-		httpClient:     &http.Client{Transport: option.Transport},
-		userAgent:      types.UserAgent,
-		defaultAccount: option.DefaultAccount, // it allows to be nil
-		secure:         option.Secure,
-		host:           option.Host,
+		chainClient:      cc,
+		httpClient:       &http.Client{Transport: option.Transport},
+		userAgent:        types.UserAgent,
+		defaultAccount:   option.DefaultAccount, // it allows to be nil
+		secure:           option.Secure,
+		host:             option.Host,
+		useWebsocketConn: option.UseWebSocketConn,
 	}
 
 	// fetch sp endpoints info from chain
