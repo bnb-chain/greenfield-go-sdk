@@ -13,14 +13,8 @@ import (
 )
 
 var (
-	//Endpoint = "http://localhost:26750"
-	//ChainID  = "greenfield_9000-121"
-
-	//Endpoint = "https://gnfd-dev.qa.bnbchain.world:443"
-	//ChainID  = "greenfield_8981-1"
-
-	Endpoint = "https://gnfd.qa.bnbchain.world:443"
-	ChainID  = "greenfield_9000-1741"
+	Endpoint = "http://localhost:26750"
+	ChainID  = "greenfield_9000-121"
 )
 
 func ParseMnemonicFromFile(fileName string) string {
@@ -56,13 +50,12 @@ type BaseSuite struct {
 
 // ParseValidatorMnemonic read the validator mnemonic from file
 func ParseValidatorMnemonic(i int) string {
-	return ParseMnemonicFromFile(fmt.Sprintf("/Users/fynn/Workspace/greenfield-local-deploy-script/greenfield/deployment/localup/.local/validator%d/info", i))
+	return ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/validator%d/info", i))
 }
 
 func (s *BaseSuite) SetupSuite() {
-	//mnemonic := ParseValidatorMnemonic(0)
-	//account, err := types.NewAccountFromMnemonic("test", mnemonic)
-	account, err := types.NewAccountFromPrivateKey("test", "d128099d8b107cd1119287cc881dcaceca73469e116a33098102d50286de3353")
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	s.Require().NoError(err)
 	s.Client, err = client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
