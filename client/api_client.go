@@ -184,13 +184,13 @@ func (c *client) EnableTrace(output io.Writer, onlyTraceErr bool) {
 
 // getSPUrlByBucket route url of the sp from bucket name
 func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
-	ctx := context.Background()
-	bucketInfo, err := c.HeadBucket(ctx, bucketName)
-	if err != nil {
-		return nil, err
-	}
+	//_ := context.Background()
+	//bucketInfo, err := c.HeadBucket(ctx, bucketName)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	primarySPID := bucketInfo.GetPrimarySpId()
+	primarySPID := uint32(1)
 	if _, ok := c.spIDEndpoints[primarySPID]; ok {
 		return c.spIDEndpoints[primarySPID], nil
 	}
