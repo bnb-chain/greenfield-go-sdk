@@ -26,15 +26,7 @@ func main() {
 	}
 	ctx := context.Background()
 	// list object
-<<<<<<< HEAD
-	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{
-		true, "", "", "/", "", 10, &types.EndPointOptions{
-			Endpoint:  httpsAddr,
-			SPAddress: "",
-		}})
-=======
 	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{ShowRemovedObject: true, Delimiter: "/", MaxKeys: 10})
->>>>>>> origin/develop
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo
