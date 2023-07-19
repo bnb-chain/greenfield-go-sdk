@@ -167,19 +167,22 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 			txResponse *ctypes.ResultTx
 			err        error
 			waitTxCtx  context.Context
+			cancelFunc context.CancelFunc
 		)
 
 		// when wait for a tx, the context should be short otherwise request will be blocked
 		if c.useWebsocketConn {
-			waitTxCtx, _ = context.WithTimeout(context.Background(), 1*time.Second)
+			waitTxCtx, cancelFunc = context.WithTimeout(context.Background(), 1*time.Second)
 			txResponse, err = c.chainClient.Tx(waitTxCtx, hash)
+			cancelFunc()
 		} else {
 			txResponse, err = c.chainClient.Tx(ctx, hash)
 		}
 		if err != nil {
-			// when websocket conn is enabled, we also want to re-try the GetTx calls by having a timeout context
+			// Tx not found, wait for next block and try again
+			// If websocket conn is enabled, we also want to re-try the GetTx calls by having a timeout context
 			if strings.Contains(err.Error(), "not found") || (c.useWebsocketConn && (waitTxCtx.Err() == context.DeadlineExceeded)) {
-				// Tx not found, wait for next block and try again
+
 				err := c.WaitForNextBlock(ctx)
 				if err != nil {
 					return nil, errors.Wrap(err, "waiting for next block")
