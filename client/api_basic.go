@@ -160,7 +160,6 @@ func (c *client) WaitForNBlocks(ctx context.Context, n int64) error {
 
 // WaitForTx requests the tx from hash, if not found, waits for next block and
 // tries again. Returns an error if ctx is canceled.
-// Note: When Websocket connection is being used,
 func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error) {
 	for {
 		var (
@@ -179,7 +178,7 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 			txResponse, err = c.chainClient.Tx(ctx, hash)
 		}
 		if err != nil {
-			// Tx not found, wait for next block and try again
+			// Tx notfound, wait for next block and try again
 			// If websocket conn is enabled, we also want to re-try the GetTx calls by having a timeout context
 			if strings.Contains(err.Error(), "not found") || (c.useWebsocketConn && (waitTxCtx.Err() == context.DeadlineExceeded)) {
 
