@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"testing"
 	"time"
 
@@ -34,6 +35,7 @@ func (s *StorageTestSuite) SetupSuite() {
 	for _, sp := range spList {
 		if sp.Endpoint != "https://sp0.greenfield.io" {
 			s.PrimarySP = sp
+			break
 		}
 	}
 }
@@ -132,6 +134,8 @@ func (s *StorageTestSuite) Test_Object() {
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
 
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+
 	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
 	s.Require().NoError(err)
 
@@ -163,7 +167,7 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
 	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
-	s.T().Log("---> PutObject and GetObject <---")
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, int64(buffer.Len()))
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
@@ -393,7 +397,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
 	s.Require().NoError(err)
 
-	time.Sleep(30 * time.Second)
+	time.Sleep(120 * time.Second)
 	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
@@ -407,6 +411,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	s.Require().NoError(err)
 
 	fGetObjectFileName := "test-file-" + storageTestUtil.GenRandomObjectName()
+	defer os.Remove(fGetObjectFileName)
 	s.T().Logf("--->  object file :%s <---", fGetObjectFileName)
 	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectFileName, types.GetObjectOptions{})
 	s.Require().NoError(err)
@@ -418,6 +423,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	// 4) Resumabledownload, download a file with default checkpoint
 	client.DownloadSegmentHooker = DownloadErrorHooker
 	resumableDownloadFile := storageTestUtil.GenRandomObjectName()
+	defer os.Remove(resumableDownloadFile)
 	s.T().Logf("---> Resumable download Create newfile:%s, <---", resumableDownloadFile)
 
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{})
