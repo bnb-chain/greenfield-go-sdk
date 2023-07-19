@@ -58,8 +58,7 @@ func (s *BaseSuite) SetupSuite() {
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	s.Require().NoError(err)
 	s.Client, err = client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount:   account,
-		UseWebSocketConn: true,
+		DefaultAccount: account,
 	})
 	s.Require().NoError(err)
 	s.ClientContext = context.Background()
