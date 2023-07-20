@@ -311,6 +311,7 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL,
 ) (req *http.Request, err error) {
 	isVirtualHost := c.isVirtualHostStyleUrl(*endpoint, meta.bucketName)
+
 	// construct the target url
 	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath,
 		meta.urlValues, isAdminAPi, endpoint, isVirtualHost)

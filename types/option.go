@@ -97,12 +97,13 @@ type DeleteGroupOption struct {
 
 // CreateObjectOptions indicates the metadata to construct `createObject` message of storage module
 type CreateObjectOptions struct {
-	Visibility      storageTypes.VisibilityType
-	TxOpts          *gnfdsdktypes.TxOption
-	SecondarySPAccs []sdk.AccAddress
-	ContentType     string
-	IsReplicaType   bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
-	IsAsyncMode     bool // indicate whether to create the object in asynchronous mode
+	Visibility          storageTypes.VisibilityType
+	TxOpts              *gnfdsdktypes.TxOption
+	SecondarySPAccs     []sdk.AccAddress
+	ContentType         string
+	IsReplicaType       bool // indicates whether the object use REDUNDANCY_REPLICA_TYPE
+	IsAsyncMode         bool // indicate whether to create the object in asynchronous mode
+	IsSerialComputeMode bool // indicate whether to compute integrity hash in serial way or parallel way when creating object
 }
 
 // CreateGroupOptions  indicates the meta to construct createGroup msg
