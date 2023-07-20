@@ -68,4 +68,6 @@ const (
 
 	TempFileSuffix = ".temp"           // Temp file suffix
 	FilePermMode   = os.FileMode(0664) // Default file permission
+
+	WaitTxContextTimeOut = 1 * time.Second
 )

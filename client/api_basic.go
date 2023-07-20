@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cosmossdk.io/errors"
+	gosdktypes "github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/bnb-chain/greenfield/sdk/types"
 	"github.com/cometbft/cometbft/proto/tendermint/p2p"
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
@@ -169,9 +170,9 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 			cancelFunc context.CancelFunc
 		)
 
-		// when wait for a tx, the context should be short otherwise request will be blocked
+		// when websocket conn is used, use a short timeout context to achieve the retry mechanism
 		if c.useWebsocketConn {
-			waitTxCtx, cancelFunc = context.WithTimeout(context.Background(), 1*time.Second)
+			waitTxCtx, cancelFunc = context.WithTimeout(context.Background(), gosdktypes.WaitTxContextTimeOut)
 			txResponse, err = c.chainClient.Tx(waitTxCtx, hash)
 			cancelFunc()
 		} else {
