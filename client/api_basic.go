@@ -179,7 +179,7 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 			txResponse, err = c.chainClient.Tx(ctx, hash)
 		}
 		if err != nil {
-			// Tx notfound, wait for next block and try again
+			// Tx not found, wait for next block and try again
 			// If websocket conn is enabled, we also want to re-try the GetTx calls by having a timeout context
 			if strings.Contains(err.Error(), "not found") || (c.useWebsocketConn && (waitTxCtx.Err() == context.DeadlineExceeded)) {
 
