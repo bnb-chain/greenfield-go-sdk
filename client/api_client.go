@@ -311,6 +311,7 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL,
 ) (req *http.Request, err error) {
 	isVirtualHost := c.isVirtualHostStyleUrl(*endpoint, meta.bucketName)
+
 	// construct the target url
 	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath,
 		meta.urlValues, isAdminAPi, endpoint, isVirtualHost)
@@ -666,7 +667,7 @@ func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) {
 func (c *client) GetPieceHashRoots(reader io.Reader, segSize int64,
 	dataShards, parityShards int,
 ) ([]byte, [][]byte, int64, storageTypes.RedundancyType, error) {
-	pieceHashRoots, size, redundancyType, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards)
+	pieceHashRoots, size, redundancyType, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards, false)
 	if err != nil {
 		return nil, nil, 0, storageTypes.REDUNDANCY_EC_TYPE, err
 	}

@@ -68,7 +68,9 @@ type Object interface {
 	IsObjectPermissionAllowed(ctx context.Context, userAddr string, bucketName, objectName string, action permTypes.ActionType) (permTypes.Effect, error)
 	ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
 	// ComputeHashRoots compute the integrity hash, content size and the redundancy type of the file
-	ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error)
+	// If isSerial is true, compute the integrity hash using the serial way
+	// If isSerial is false or not provided, compute the integrity hash using the parallel way
+	ComputeHashRoots(reader io.Reader, isSerial bool) ([][]byte, int64, storageTypes.RedundancyType, error)
 
 	// CreateFolder creates an empty object used as folder.
 	// objectName must ending with a forward slash (/) character
@@ -108,7 +110,7 @@ func (c *client) GetParams() (storageTypes.Params, error) {
 }
 
 // ComputeHashRoots return the integrity hash, content size and the redundancy type of the file
-func (c *client) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTypes.RedundancyType, error) {
+func (c *client) ComputeHashRoots(reader io.Reader, isSerial bool) ([][]byte, int64, storageTypes.RedundancyType, error) {
 	dataBlocks, parityBlocks, segSize, err := c.GetRedundancyParams()
 	if reader == nil {
 		return nil, 0, storageTypes.REDUNDANCY_EC_TYPE, errors.New("fail to compute hash, reader is nil")
@@ -117,7 +119,7 @@ func (c *client) ComputeHashRoots(reader io.Reader) ([][]byte, int64, storageTyp
 		return nil, 0, storageTypes.REDUNDANCY_EC_TYPE, err
 	}
 
-	return hashlib.ComputeIntegrityHash(reader, int64(segSize), int(dataBlocks), int(parityBlocks))
+	return hashlib.ComputeIntegrityHash(reader, int64(segSize), int(dataBlocks), int(parityBlocks), isSerial)
 }
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain,
@@ -138,7 +140,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	}
 
 	// compute hash root of payload
-	expectCheckSums, size, redundancyType, err := c.ComputeHashRoots(reader)
+	expectCheckSums, size, redundancyType, err := c.ComputeHashRoots(reader, opts.IsSerialComputeMode)
 	if err != nil {
 		return "", err
 	}
