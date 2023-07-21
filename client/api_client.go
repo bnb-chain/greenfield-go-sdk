@@ -75,6 +75,7 @@ type client struct {
 	traceOutput        io.Writer
 	onlyTraceError     bool
 	offChainAuthOption *OffChainAuthOption
+	useWebsocketConn   bool
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -93,6 +94,8 @@ type Option struct {
 	// This property should not be set in most cases unless you want to use go-sdk to test if the SP support off-chain-auth feature.
 	// Once this property is set, the request will be signed in "off-chain-auth" way rather than v1
 	OffChainAuthOption *OffChainAuthOption
+	// UseWebSocketConn specifies that connection to Chain is via websocket
+	UseWebSocketConn bool
 }
 
 // OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
@@ -113,7 +116,15 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	if endpoint == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
 	}
-	cc, err := sdkclient.NewGreenfieldClient(endpoint, chainID)
+	var (
+		cc  *sdkclient.GreenfieldClient
+		err error
+	)
+	if option.UseWebSocketConn {
+		cc, err = sdkclient.NewGreenfieldClient(endpoint, chainID, sdkclient.WithWebSocketClient())
+	} else {
+		cc, err = sdkclient.NewGreenfieldClient(endpoint, chainID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +140,7 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 		secure:           option.Secure,
 		host:             option.Host,
 		storageProviders: make(map[uint32]*types.StorageProvider),
+		useWebsocketConn: option.UseWebSocketConn,
 	}
 
 	// fetch sp endpoints info from chain
