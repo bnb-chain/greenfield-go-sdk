@@ -397,7 +397,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
 	s.Require().NoError(err)
 
-	time.Sleep(140 * time.Second)
+	time.Sleep(150 * time.Second)
 	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	if err == nil {
