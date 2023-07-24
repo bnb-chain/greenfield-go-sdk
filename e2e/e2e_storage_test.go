@@ -378,7 +378,6 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 }
 
 func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
-	return
 	// 1) create big object without putobject
 	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
 
