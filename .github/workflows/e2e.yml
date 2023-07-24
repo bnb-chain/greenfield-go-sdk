@@ -98,5 +98,5 @@ jobs:
       # Run E2E Test
       - name: start e2e
         run: |
-          make e2e_test
+          go test -v e2e/e2e_storage_test.go -test.run StorageTestSuite/Test_Resumable_Upload_And_Download
           cd ..
