@@ -5,17 +5,15 @@ on:
     branches:
       - master
       - develop
-      - feat-sp-exit-develop
 
   pull_request:
     branches:
       - master
       - develop
-      - feat-sp-exit-develop
 
 env:
   GreenfieldTag: v0.2.3-alpha.6
-  GreenfieldStorageProviderTag: v0.2.3-alpha.7
+  GreenfieldStorageProviderTag: v0.2.3-alpha.8
   GOPRIVATE: github.com/bnb-chain
   GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
   MYSQL_USER: root
@@ -93,7 +91,7 @@ jobs:
           bash ./deployment/localup/localup.sh --generate $GITHUB_WORKSPACE/../greenfield/sp.json ${{ env.MYSQL_USER }} ${{ env.MYSQL_PASSWORD }} ${{ env.MYSQL_IP }}:${{ env.MYSQL_PORT }}
           bash ./deployment/localup/localup.sh --reset
           bash ./deployment/localup/localup.sh --start
-          sleep 10
+          sleep 20
           ps -ef | grep gnfd-sp | wc -l
           tail -n 1000 deployment/localup/local_env/sp0/gnfd-sp.log
           cd ../greenfield-go-sdk
