@@ -171,12 +171,7 @@ func (s *StorageTestSuite) Test_Object() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
-	time.Sleep(50 * time.Second)
-	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal("OBJECT_STATUS_SEALED", objectDetail.ObjectInfo.GetObjectStatus().String())
-	}
+	s.waitSealObject(bucketName, objectName)
 
 	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
 	s.Require().NoError(err)
