@@ -3,10 +3,13 @@ package types
 import (
 	"io"
 	"math/rand"
+	"net/url"
 	"time"
 
+	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/bnb-chain/greenfield/x/virtualgroup/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var (
@@ -54,4 +57,17 @@ func RandStr(n int) string {
 		b[i] = letters[randMarker.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+type StorageProvider struct {
+	Id              uint32
+	OperatorAddress sdk.AccAddress
+	FundingAddress  sdk.AccAddress
+	SealAddress     sdk.AccAddress
+	ApprovalAddress sdk.AccAddress
+	GcAddress       sdk.AccAddress
+	Status          spTypes.Status
+	EndPoint        *url.URL
+	Description     spTypes.Description
+	BlsKey          []byte
 }

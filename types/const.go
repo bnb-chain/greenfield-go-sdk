@@ -55,7 +55,7 @@ const (
 	ContextTimeout   = time.Second * 30
 	MaxHeadTryTime   = 4
 	HeadBackOffDelay = time.Millisecond * 500
-	NoSuchObjectErr  = "no such object"
+	NoSuchObjectErr  = "object has not been created"
 
 	GetConnectionFail = "connection refused"
 
@@ -68,4 +68,6 @@ const (
 
 	TempFileSuffix = ".temp"           // Temp file suffix
 	FilePermMode   = os.FileMode(0664) // Default file permission
+
+	WaitTxContextTimeOut = 1 * time.Second
 )

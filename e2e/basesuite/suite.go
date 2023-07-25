@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	// Endpoint = "gnfd-testnet-fullnode-cosmos-us.nodereal.io:443"
 	Endpoint = "http://localhost:26750"
 	ChainID  = "greenfield_9000-121"
 )
