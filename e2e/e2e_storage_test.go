@@ -348,9 +348,8 @@ func (s *StorageTestSuite) waitSealObject(bucketName string, objectName string) 
 		time.Sleep(3 * time.Second)
 	}
 
-	endCheckTime := time.Now()
 	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
-	s.T().Logf("---> Wait Seal Object cost %d s, <---", endCheckTime.Second()-startCheckTime.Second())
+	s.T().Logf("---> Wait Seal Object cost %d ms, <---", time.Since(startCheckTime).Milliseconds())
 }
 
 func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, object string, objectbody bytes.Buffer) {
