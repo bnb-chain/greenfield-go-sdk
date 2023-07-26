@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/mimc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/twistededwards"
@@ -24,8 +23,8 @@ import (
 )
 
 type OffChainAuth interface {
-	RegisterEDDSAPublicKey(spEndpoint string, appDomain string, eddsaSeed string) (*storageTypes.MsgCreateObject, error)
-	OffChainAuthSign() string
+	RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error)
+	OffChainAuthSign(unsignBytes []byte) string
 }
 
 func (c *client) OffChainAuthSign(unsignBytes []byte) string {

@@ -47,6 +47,7 @@ type Client interface {
 	CrossChain
 	FeeGrant
 	VirtualGroup
+	OffChainAuth
 
 	GetDefaultAccount() (*types.Account, error)
 	SetDefaultAccount(account *types.Account)
