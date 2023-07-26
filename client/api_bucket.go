@@ -57,7 +57,7 @@ type Bucket interface {
 	// userAddr indicates the HEX-encoded string of the user address
 	IsBucketPermissionAllowed(ctx context.Context, userAddr string, bucketName string, action permTypes.ActionType) (permTypes.Effect, error)
 
-	ListBuckets(ctx context.Context, opts types.EndPointOptions) (types.ListBucketsResult, error)
+	ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)
 
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error)
@@ -371,8 +371,16 @@ func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, princip
 }
 
 // ListBuckets list buckets for the owner
-func (c *client) ListBuckets(ctx context.Context, opts types.EndPointOptions) (types.ListBucketsResult, error) {
+func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error) {
+	includeRemoved := "false"
+	if opts.ShowRemovedBucket {
+		includeRemoved = "true"
+	}
+
+	params := url.Values{}
+	params.Set("include-removed", includeRemoved)
 	reqMeta := requestMeta{
+		urlValues:     params,
 		contentSHA256: types.EmptyStringSHA256,
 		userAddress:   c.MustGetDefaultAccount().GetAddress().String(),
 	}
@@ -382,7 +390,7 @@ func (c *client) ListBuckets(ctx context.Context, opts types.EndPointOptions) (t
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(&opts)
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListBucketsResult{}, err

@@ -886,6 +886,10 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 			return types.ListObjectsResult{}, fmt.Errorf("continuation-token does not match the input prefix")
 		}
 	}
+	includeRemoved := "false"
+	if opts.ShowRemovedObject {
+		includeRemoved = "true"
+	}
 
 	if ok := utils.IsValidObjectPrefix(opts.Prefix); !ok {
 		return types.ListObjectsResult{}, fmt.Errorf("invalid object prefix")
@@ -897,6 +901,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 	params.Set("continuation-token", opts.ContinuationToken)
 	params.Set("delimiter", opts.Delimiter)
 	params.Set("prefix", opts.Prefix)
+	params.Set("include-removed", includeRemoved)
 	reqMeta := requestMeta{
 		urlValues:     params,
 		bucketName:    bucketName,

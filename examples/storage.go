@@ -72,9 +72,9 @@ func main() {
 		handleErr(errors.New("download content not same"), "GetObject")
 	}
 
-	// list object
+	// list objects
 	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{
-		true, "", "", "/", "", 10, &types.EndPointOptions{
+		ShowRemovedObject: false, Delimiter: "", MaxKeys: 100, EndPointOptions: &types.EndPointOptions{
 			Endpoint:  httpsAddr,
 			SPAddress: "",
 		}})
@@ -82,6 +82,18 @@ func main() {
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo
 		log.Printf("object: %s, status: %s\n", i.ObjectName, i.ObjectStatus)
+	}
+
+	// list buckets
+	bucketsList, err := cli.ListBuckets(ctx, types.ListBucketsOptions{
+		ShowRemovedBucket: false, EndPointOptions: &types.EndPointOptions{
+			Endpoint:  httpsAddr,
+			SPAddress: "",
+		}})
+	log.Println("list buckets result:")
+	for _, bucket := range bucketsList.Buckets {
+		i := bucket.BucketInfo
+		log.Printf("bucket: %s, status: %s\n", i.BucketName, i.BucketStatus)
 	}
 
 	// list object by object ids
