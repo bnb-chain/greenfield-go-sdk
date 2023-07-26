@@ -6,7 +6,7 @@ require (
 	cosmossdk.io/errors v1.0.0-beta.7
 	cosmossdk.io/math v1.0.1
 	github.com/bnb-chain/greenfield v0.2.3-alpha.6
-	github.com/bnb-chain/greenfield-common/go v0.0.0-20230720022901-7e7158fd397d
+	github.com/bnb-chain/greenfield-common/go v0.0.0-20230724122553-ecdf648b1937
 	github.com/cometbft/cometbft v0.37.1
 	github.com/consensys/gnark-crypto v0.7.0
 	github.com/cosmos/cosmos-sdk v0.47.3

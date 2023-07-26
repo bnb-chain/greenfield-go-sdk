@@ -19,7 +19,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
 	}
-	cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
+	//cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
+	cli, err := client.New(chainId, rpcAddr, client.Option{
+		DefaultAccount: account,
+		OffChainAuthOption: &client.OffChainAuthOption{
+			Seed:                 "test_seed",
+			Domain:               "https://test.domain.com",
+			ShouldRegisterPubKey: true,
+		},
+	})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
@@ -31,8 +39,8 @@ func main() {
 		log.Fatalf("fail to list in service sps")
 	}
 	// choose the first sp to be the primary SP
-	primarySP := spLists[0].GetOperatorAddress()
-
+	primarySP := spLists[6].GetOperatorAddress()
+	log.Println(primarySP)
 	// create bucket
 	_, err = cli.CreateBucket(ctx, bucketName, primarySP, types.CreateBucketOptions{})
 	handleErr(err, "CreateBucket")
@@ -61,7 +69,6 @@ func main() {
 	log.Printf("object: %s has been uploaded to SP\n", objectName)
 
 	waitObjectSeal(cli, bucketName, objectName)
-	// wait for block_syncer to sync up data from chain
 	time.Sleep(time.Second * 5)
 	// get object
 	reader, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOptions{})

@@ -28,12 +28,11 @@ type OffChainAuth interface {
 	OffChainAuthSign() string
 }
 
-func (c *client) OffChainAuthSign() string {
+func (c *client) OffChainAuthSign(unsignBytes []byte) string {
 	sk, _ := GenerateEddsaPrivateKey(c.offChainAuthOption.Seed)
-	unSignedMsg := fmt.Sprintf("InvokeSPAPI_%v", time.Now().Add(time.Minute*4).UnixMilli())
 	hFunc := mimc.NewMiMC()
-	sig, _ := sk.Sign([]byte(unSignedMsg), hFunc)
-	authString := fmt.Sprintf("OffChainAuth EDDSA,SignedMsg=%v,Signature=%v", unSignedMsg, hex.EncodeToString(sig))
+	sig, _ := sk.Sign(unsignBytes, hFunc)
+	authString := fmt.Sprintf("OffChainAuth EDDSA,SignedMsg=%v,Signature=%v", hex.EncodeToString(unsignBytes), hex.EncodeToString(sig))
 	return authString
 }
 
@@ -103,7 +102,7 @@ func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 	headers["x-gnfd-app-domain"] = appDomain
 	headers["x-gnfd-app-reg-nonce"] = nextNonce
 	headers["x-gnfd-app-reg-public-key"] = userEddsaPublicKeyStr
-	headers["x-gnfd-app-reg-expiry-date"] = ExpiryDate
+	headers["X-Gnfd-Expiry-Timestamp"] = ExpiryDate
 	headers["authorization"] = authString
 	headers["origin"] = appDomain
 	headers["x-gnfd-user-address"] = c.defaultAccount.GetAddress().String()

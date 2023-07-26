@@ -417,6 +417,9 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	stNow := time.Now().UTC()
 	req.Header.Set(types.HTTPHeaderDate, stNow.Format(types.Iso8601DateFormatSecond))
 
+	// set expiry for sig
+	req.Header.Set(httplib.HTTPHeaderExpiryTimestamp, stNow.Add(time.Hour*2).Format(types.Iso8601DateFormatSecond))
+
 	// set user-agent
 	req.Header.Set(types.HTTPHeaderUserAgent, c.userAgent)
 
@@ -565,11 +568,12 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 func (c *client) signRequest(req *http.Request) error {
 	// use offChainAuth if OffChainAuthOption is set
 	if c.offChainAuthOption != nil {
-		authStr := c.OffChainAuthSign()
-		// set auth header
-		req.Header.Set(types.HTTPHeaderAuthorization, authStr)
 		req.Header.Set("X-Gnfd-User-Address", c.defaultAccount.GetAddress().String())
 		req.Header.Set("X-Gnfd-App-Domain", c.offChainAuthOption.Domain)
+		unsignedMsg := httplib.GetMsgToSign(req)
+		authStr := c.OffChainAuthSign(unsignedMsg)
+		// set auth header
+		req.Header.Set(types.HTTPHeaderAuthorization, authStr)
 		return nil
 	}
 
