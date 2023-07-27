@@ -77,6 +77,7 @@ type client struct {
 	onlyTraceError     bool
 	offChainAuthOption *OffChainAuthOption
 	useWebsocketConn   bool
+	expireSeconds      uint64
 }
 
 // Option is a configuration struct used to provide optional parameters to the client constructor.
@@ -97,6 +98,8 @@ type Option struct {
 	OffChainAuthOption *OffChainAuthOption
 	// UseWebSocketConn specifies that connection to Chain is via websocket
 	UseWebSocketConn bool
+	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000
+	ExpireSeconds uint64
 }
 
 // OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
@@ -133,6 +136,10 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 		cc.SetKeyManager(option.DefaultAccount.GetKeyManager())
 	}
 
+	if option.ExpireSeconds > httplib.MaxExpiryAgeInSec {
+		return nil, errors.New("the configured expire time exceeds max expire time")
+	}
+
 	c := client{
 		chainClient:      cc,
 		httpClient:       &http.Client{Transport: option.Transport},
@@ -142,6 +149,7 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 		host:             option.Host,
 		storageProviders: make(map[uint32]*types.StorageProvider),
 		useWebsocketConn: option.UseWebSocketConn,
+		expireSeconds:    option.ExpireSeconds,
 	}
 
 	// fetch sp endpoints info from chain
@@ -418,8 +426,13 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	stNow := time.Now().UTC()
 	req.Header.Set(types.HTTPHeaderDate, stNow.Format(types.Iso8601DateFormatSecond))
 
-	// set expiry for sig
-	req.Header.Set(httplib.HTTPHeaderExpiryTimestamp, stNow.Add(time.Hour*2).Format(types.Iso8601DateFormatSecond))
+	// set expiry for authorization
+	// if the user has set the expiry seconds num, use the user option value, if not , use the default expiry value
+	if c.expireSeconds == 0 {
+		req.Header.Set(httplib.HTTPHeaderExpiryTimestamp, stNow.Add(time.Second*types.DefaultExpireSeconds).Format(types.Iso8601DateFormatSecond))
+	} else {
+		req.Header.Set(httplib.HTTPHeaderExpiryTimestamp, stNow.Add(time.Second*time.Duration(c.expireSeconds)).Format(types.Iso8601DateFormatSecond))
+	}
 
 	// set user-agent
 	req.Header.Set(types.HTTPHeaderUserAgent, c.userAgent)
