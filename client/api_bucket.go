@@ -372,13 +372,8 @@ func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, princip
 
 // ListBuckets list buckets for the owner
 func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error) {
-	includeRemoved := "false"
-	if opts.ShowRemovedBucket {
-		includeRemoved = "true"
-	}
-
 	params := url.Values{}
-	params.Set("include-removed", includeRemoved)
+	params.Set("include-removed", strconv.FormatBool(opts.ShowRemovedBucket))
 	reqMeta := requestMeta{
 		urlValues:     params,
 		contentSHA256: types.EmptyStringSHA256,
