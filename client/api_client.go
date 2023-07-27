@@ -601,7 +601,6 @@ func (c *client) signRequest(req *http.Request) error {
 
 	authStr := []string{
 		types.AuthV1 + " " + types.SignAlgorithm,
-		" SignedMsg=" + hex.EncodeToString(unsignedMsg),
 		"Signature=" + hex.EncodeToString(signature),
 	}
 

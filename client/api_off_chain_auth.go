@@ -31,7 +31,7 @@ func (c *client) OffChainAuthSign(unsignBytes []byte) string {
 	sk, _ := GenerateEddsaPrivateKey(c.offChainAuthOption.Seed)
 	hFunc := mimc.NewMiMC()
 	sig, _ := sk.Sign(unsignBytes, hFunc)
-	authString := fmt.Sprintf("OffChainAuth EDDSA,SignedMsg=%v,Signature=%v", hex.EncodeToString(unsignBytes), hex.EncodeToString(sig))
+	authString := fmt.Sprintf("OffChainAuth EDDSA,Signature=%v", hex.EncodeToString(sig))
 	return authString
 }
 
