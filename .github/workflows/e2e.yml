@@ -99,4 +99,12 @@ jobs:
       - name: start e2e
         run: |
           make e2e_test
+          cat deployment/localup/local_env/sp0/log.txt
+          cat deployment/localup/local_env/sp1/log.txt
+          cat deployment/localup/local_env/sp2/log.txt
+          cat deployment/localup/local_env/sp3/log.txt
+          cat deployment/localup/local_env/sp4/log.txt
+          cat deployment/localup/local_env/sp5/log.txt
+          cat deployment/localup/local_env/sp6/log.txt
+          cat deployment/localup/local_env/sp7/log.txt
           cd ..
