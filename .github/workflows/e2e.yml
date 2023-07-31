@@ -105,14 +105,14 @@ jobs:
             echo "make e2e_test successful."
           else
             cd ../greenfield-storage-provider
-            cat ${workspace}/deployment/localup/local_env/sp0/log.txt
-            cat ${workspace}/deployment/localup/local_env/sp1/log.txt
-            cat ${workspace}/deployment/localup/local_env/sp2/log.txt
-            cat ${workspace}/deployment/localup/local_env/sp3/log.txt
-            cat ${workspace}/deployment/localup/local_env/sp4/log.txt
-            cat ${workspace}/deployment/localup/local_env/sp5/log.txt
-            cat ${workspace}/deployment/localup/local_env/sp6/log.txt
-            cat ${workspace}/deployment/localup/local_env/sp7/log.txt
+            cat ./deployment/localup/local_env/sp0/log.txt
+            cat ./deployment/localup/local_env/sp1/log.txt
+            cat ./deployment/localup/local_env/sp2/log.txt
+            cat ./deployment/localup/local_env/sp3/log.txt
+            cat ./deployment/localup/local_env/sp4/log.txt
+            cat ./deployment/localup/local_env/sp5/log.txt
+            cat ./deployment/localup/local_env/sp6/log.txt
+            cat ./deployment/localup/local_env/sp7/log.txt
             exit $exit_status_command
           fi
           cd ..
