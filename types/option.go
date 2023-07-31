@@ -243,3 +243,11 @@ type EndPointOptions struct {
 	Endpoint  string // indicates the endpoint of sp
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
+
+type ListBucketsOptions struct {
+	// ShowRemovedObject determines whether to include buckets that have been marked as removed in the list.
+	// If set to false, these buckets will be skipped.
+	ShowRemovedBucket bool
+
+	EndPointOptions *EndPointOptions
+}
