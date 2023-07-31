@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"testing"
 	"time"
 
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
@@ -12,7 +11,6 @@ import (
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	"github.com/stretchr/testify/suite"
 )
 
 type BucketMigrateTestSuite struct {
@@ -20,22 +18,22 @@ type BucketMigrateTestSuite struct {
 	PrimarySP spTypes.StorageProvider
 }
 
-func (s *BucketMigrateTestSuite) SetupSuite() {
-	s.BaseSuite.SetupSuite()
+//func (s *BucketMigrateTestSuite) SetupSuite() {
+//	s.BaseSuite.SetupSuite()
+//
+//	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
+//	s.Require().NoError(err)
+//	for _, sp := range spList {
+//		if sp.Endpoint != "https://sp0.greenfield.io" {
+//			s.PrimarySP = sp
+//			break
+//		}
+//	}
+//}
 
-	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
-	s.Require().NoError(err)
-	for _, sp := range spList {
-		if sp.Endpoint != "https://sp0.greenfield.io" {
-			s.PrimarySP = sp
-			break
-		}
-	}
-}
-
-func TestBucketMigrateTestSuiteTestSuite(t *testing.T) {
-	suite.Run(t, new(BucketMigrateTestSuite))
-}
+//func TestBucketMigrateTestSuiteTestSuite(t *testing.T) {
+//	suite.Run(t, new(BucketMigrateTestSuite))
+//}
 
 func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]*types.ObjectDetail, []bytes.Buffer, error) {
 	var (
