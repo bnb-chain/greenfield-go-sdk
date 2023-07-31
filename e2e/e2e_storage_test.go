@@ -443,7 +443,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.Require().NoError(err)
-	//download success, checkpoint file has been deleted
+	// download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadFile, fGetObjectFileName)
 	s.Require().True(isSame)
