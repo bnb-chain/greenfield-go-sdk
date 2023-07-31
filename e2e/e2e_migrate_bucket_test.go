@@ -37,6 +37,21 @@ func TestBucketMigrateTestSuiteTestSuite(t *testing.T) {
 	suite.Run(t, new(BucketMigrateTestSuite))
 }
 
+func (s *BucketMigrateTestSuite) CreateOneObject(bucketName string) {
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for j := 0; j < 1024*3; j++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", j, line))
+	}
+	objectName := storageTestUtil.GenRandomObjectName()
+	s.T().Logf("---> CreateObject and HeadObject, bucketname:%s, objectname:%s <---", bucketName, objectName)
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+}
+
 func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]*types.ObjectDetail, []bytes.Buffer, error) {
 	var (
 		objectNames   []string
@@ -49,8 +64,8 @@ func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]
 		var buffer bytes.Buffer
 		line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
 		// Create 1MiB content where each line contains 1024 characters.
-		for i := 0; i < 1024*3; i++ {
-			buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+		for j := 0; j < 1024*3; j++ {
+			buffer.WriteString(fmt.Sprintf("[%05d] %s\n", j, line))
 		}
 		objectName := storageTestUtil.GenRandomObjectName()
 		s.T().Logf("---> CreateObject and HeadObject, bucketname:%s, objectname:%s <---", bucketName, objectName)
@@ -125,7 +140,7 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 	objectDetail := objectDetails[0]
 	buffer := contentBuffer[0]
 
-	// selete a storage provider to miragte
+	// select a storage provider to migrate
 	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
 	s.Require().NoError(err)
 
@@ -149,10 +164,27 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
 
 	// normal no conflict send migrate bucket transaction
-	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+	txHash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
 	s.Require().NoError(err)
+	s.T().Logf("MigrateBucket : %s", txHash)
 
-	s.T().Logf("MigrateBucket : %s", txhash)
+	// test when bucket is in migrating, try to put an object will result in an error
+	bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.T().Logf("HeadBucket: %s", bucketInfo)
+	s.Require().NoError(err)
+	s.Require().Equal(bucketInfo.GetBucketStatus(), storageTypes.BUCKET_STATUS_MIGRATING)
+
+	var buffer1 bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for j := 0; j < 1024*3; j++ {
+		buffer1.WriteString(fmt.Sprintf("[%05d] %s\n", j, line))
+	}
+	objectName := storageTestUtil.GenRandomObjectName()
+	s.T().Logf("---> CreateObject and HeadObject, bucketname:%s, objectname:%s <---", bucketName, objectName)
+	_, err = s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer1.Bytes()), types.CreateObjectOptions{})
+	s.T().Logf("failed to create object when bucket is in migrating")
+	s.Require().NotNil(err)
 
 	for {
 		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
@@ -201,7 +233,7 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 	objectDetail := objectDetails[0]
 	buffer := contentBuffer[0]
 
-	// selete a storage provider to miragte
+	// select a storage provider to migrate
 	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
 	s.Require().NoError(err)
 
@@ -226,10 +258,17 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 	conflictSPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[0]
 	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", conflictSPID)
 
-	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: conflictSPID, IsAsyncMode: false})
+	txHash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: conflictSPID, IsAsyncMode: false})
 	s.Require().NoError(err)
+	s.T().Logf("MigrateBucket : %s", txHash)
 
-	s.T().Logf("MigrateBucket : %s", txhash)
+	// test when bucket is in migrating, try to put an object will result in an error
+	bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.T().Logf("HeadBucket: %s", bucketInfo)
+	s.Require().NoError(err)
+	s.Require().Equal(bucketInfo.GetBucketStatus(), storageTypes.BUCKET_STATUS_MIGRATING)
+	_, _, err = s.CreateObjects(bucketName, 1)
+	s.Require().Error(err)
 
 	for {
 		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
@@ -252,5 +291,4 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
-
 }
