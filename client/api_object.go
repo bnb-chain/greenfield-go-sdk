@@ -897,6 +897,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 	params.Set("continuation-token", opts.ContinuationToken)
 	params.Set("delimiter", opts.Delimiter)
 	params.Set("prefix", opts.Prefix)
+	params.Set("include-removed", strconv.FormatBool(opts.ShowRemovedObject))
 	reqMeta := requestMeta{
 		urlValues:     params,
 		bucketName:    bucketName,
