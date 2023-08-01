@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -392,6 +394,34 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 	return bucketName, objectName, buffer
 }
 
+func getTmpFilesInDirectory(directory string) ([]string, error) {
+	var tmpFiles []string
+
+	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && filepath.Ext(path) == ".temp" {
+			tmpFiles = append(tmpFiles, path)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(tmpFiles, func(i, j int) bool {
+		fileInfoI, _ := os.Stat(tmpFiles[i])
+		fileInfoJ, _ := os.Stat(tmpFiles[j])
+		return fileInfoI.ModTime().After(fileInfoJ.ModTime())
+	})
+
+	return tmpFiles, nil
+}
+
 func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	// 1) create big object without putobject
 	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
@@ -446,6 +476,45 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	//download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadFile, fGetObjectFileName)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+
+	// when the downloaded file size is less than a part size
+	client.DownloadSegmentHooker = DownloadErrorHooker
+	resumableDownloadLessPartFile := storageTestUtil.GenRandomObjectName()
+	defer os.Remove(resumableDownloadLessPartFile)
+	s.T().Logf("---> Resumable download for less part size , Create newfile:%s, <---", resumableDownloadLessPartFile)
+
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadLessPartFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
+	s.Require().ErrorContains(err, "DownloadErrorHooker")
+
+	{
+		// Truncate file to less part size
+		dir, err := os.Getwd()
+		s.Require().NoError(err)
+		files, err := getTmpFilesInDirectory(dir)
+		s.Require().NoError(err)
+		tempFilePath := files[0]
+
+		file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0666)
+		s.Require().NoError(err)
+		defer file.Close()
+
+		fileInfo, err := file.Stat()
+		s.Require().NoError(err)
+		currentSize := fileInfo.Size()
+
+		err = file.Truncate(currentSize - 3*1024*1024)
+		s.Require().NoError(err)
+	}
+
+	client.DownloadSegmentHooker = client.DefaultDownloadSegmentHook
+
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadLessPartFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
+	s.Require().NoError(err)
+	//download success, checkpoint file has been deleted
+
+	isSame, err = types.CompareFiles(resumableDownloadLessPartFile, fGetObjectFileName)
 	s.Require().True(isSame)
 	s.Require().NoError(err)
 
