@@ -326,7 +326,7 @@ func UploadErrorHooker(id int) error {
 
 // DownloadErrorHooker requests hook by downloadSegment
 func DownloadErrorHooker(segment int64) error {
-	if segment == 1 {
+	if segment == 2 {
 		time.Sleep(time.Second)
 		return fmt.Errorf("DownloadErrorHooker")
 	}
@@ -371,8 +371,8 @@ func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, obj
 	}
 
 	var buffer bytes.Buffer
-	// Create 29 MiB content.
-	for i := 0; i < 1024*1000; i++ {
+	// Create 45 MiB content, 3 segment
+	for i := 0; i < 1024*1500; i++ {
 		line := types.RandStr(20)
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
@@ -422,24 +422,46 @@ func getTmpFilesInDirectory(directory string) ([]string, error) {
 	return tmpFiles, nil
 }
 
+func (s *StorageTestSuite) TruncateDownloadTempFileToLessPartsize() {
+	// Truncate file to less part size
+	dir, err := os.Getwd()
+	s.Require().NoError(err)
+	files, err := getTmpFilesInDirectory(dir)
+	s.Require().NoError(err)
+	tempFilePath := files[0]
+
+	file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0666)
+	s.Require().NoError(err)
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	s.Require().NoError(err)
+	currentSize := fileInfo.Size()
+	targetSize := currentSize - 3*1024*1024
+
+	err = file.Truncate(targetSize)
+	s.T().Logf("---> Truncate file:%s to %d <---", tempFilePath, targetSize)
+	s.Require().NoError(err)
+}
+
 func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	// 1) create big object without putobject
 	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
 
 	s.T().Log("---> Resumable PutObject <---")
-	partSize := uint64(1024 * 1024 * 16)
-	// 2) put an object(29MB), the secondary segment will error, then resumable upload
+	partSize16MB := uint64(1024 * 1024 * 16)
+	// 2) put a big object, the secondary segment will error, then resumable upload
 	client.UploadSegmentHooker = UploadErrorHooker
 	err := s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize16MB})
 	s.Require().ErrorContains(err, "UploadErrorHooker")
 	client.UploadSegmentHooker = client.DefaultUploadSegment
 	offset, err := s.Client.GetObjectResumableUploadOffset(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
-	s.Require().Equal(offset, partSize)
+	s.Require().Equal(offset, partSize16MB)
 
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
-		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize})
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize16MB})
 	s.Require().NoError(err)
 
 	s.waitSealObject(bucketName, objectName)
@@ -488,25 +510,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadLessPartFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.Require().ErrorContains(err, "DownloadErrorHooker")
 
-	{
-		// Truncate file to less part size
-		dir, err := os.Getwd()
-		s.Require().NoError(err)
-		files, err := getTmpFilesInDirectory(dir)
-		s.Require().NoError(err)
-		tempFilePath := files[0]
-
-		file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0666)
-		s.Require().NoError(err)
-		defer file.Close()
-
-		fileInfo, err := file.Stat()
-		s.Require().NoError(err)
-		currentSize := fileInfo.Size()
-
-		err = file.Truncate(currentSize - 3*1024*1024)
-		s.Require().NoError(err)
-	}
+	s.TruncateDownloadTempFileToLessPartsize()
 
 	client.DownloadSegmentHooker = client.DefaultDownloadSegmentHook
 
@@ -519,19 +523,39 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	s.Require().NoError(err)
 
 	// 5) Resumabledownload, download a file with range
+	s.T().Logf("--->  Resumabledownload, download a file with range <---")
+	rangeOptions := types.GetObjectOptions{Range: "bytes=1000-94131999", PartSize: partSize16MB}
 	resumableDownloadWithRangeFile := "test-file-" + storageTestUtil.GenRandomObjectName()
 	defer os.Remove(resumableDownloadWithRangeFile)
-	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadWithRangeFile, types.GetObjectOptions{Range: "bytes=1000-94131999"})
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadWithRangeFile, rangeOptions)
 	s.T().Logf("--->  object file :%s <---", resumableDownloadWithRangeFile)
 	s.Require().NoError(err)
 
 	fGetObjectWithRangeFile := "test-file-" + storageTestUtil.GenRandomObjectName()
 	defer os.Remove(fGetObjectWithRangeFile)
 	s.T().Logf("--->  object file :%s <---", fGetObjectWithRangeFile)
-	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectWithRangeFile, types.GetObjectOptions{Range: "bytes=1000-94131999"})
+	err = s.Client.FGetObject(s.ClientContext, bucketName, objectName, fGetObjectWithRangeFile, rangeOptions)
 	s.Require().NoError(err)
 
 	isSame, err = types.CompareFiles(resumableDownloadWithRangeFile, fGetObjectWithRangeFile)
+	s.Require().True(isSame)
+	s.Require().NoError(err)
+
+	// 6) Resumabledownload, download a file with range and Truncate
+	s.T().Logf("--->  Resumabledownload, download a file with range and Truncate <---")
+	rDownloadTruncateFile := "test-file-" + storageTestUtil.GenRandomObjectName()
+	defer os.Remove(rDownloadTruncateFile)
+	client.DownloadSegmentHooker = DownloadErrorHooker
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, rDownloadTruncateFile, rangeOptions)
+	s.T().Logf("--->  object file :%s <---", rDownloadTruncateFile)
+	s.Require().ErrorContains(err, "DownloadErrorHooker")
+	s.TruncateDownloadTempFileToLessPartsize()
+
+	client.DownloadSegmentHooker = client.DefaultDownloadSegmentHook
+	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, rDownloadTruncateFile, rangeOptions)
+	s.Require().NoError(err)
+
+	isSame, err = types.CompareFiles(rDownloadTruncateFile, fGetObjectWithRangeFile)
 	s.Require().True(isSame)
 	s.Require().NoError(err)
 }

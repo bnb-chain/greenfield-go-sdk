@@ -638,17 +638,24 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 		*/
 		fileSize := fileInfo.Size()
 		var (
-			firstSegSize int64
-			file         *os.File
+			firstSegSize   int64
+			file           *os.File
+			truncateOffset int64
 		)
 
 		if isRange {
 			firstSegSize = partSize - rangeStart%partSize
 		} else {
-			firstSegSize = 0
+			firstSegSize = partSize
 		}
 		fileSizeWithoutFirstSeg := fileSize - firstSegSize
-		startOffset = (fileSize/partSize)*partSize + firstSegSize
+		if fileSize > firstSegSize {
+			truncateOffset = ((fileSize-firstSegSize)/partSize)*partSize + firstSegSize
+			startOffset = ((fileSize-firstSegSize)/partSize)*partSize + partSize
+		} else {
+			truncateOffset = 0
+			startOffset = 0
+		}
 		log.Debug().Msgf("The file:%s size:%d, startOffset:%d, range:%s\n", tempFilePath, fileSize, startOffset, opts.Range)
 
 		// truncated file to part size integer multiples
@@ -659,11 +666,11 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 			}
 			defer file.Close()
 
-			err = file.Truncate(startOffset)
+			err = file.Truncate(truncateOffset)
 			if err != nil {
 				return err
 			}
-			log.Debug().Msgf("The file was truncated to the specified size.%d\n", startOffset)
+			log.Debug().Msgf("The file was truncated to the specified size.%d\n", truncateOffset)
 			// TODO(chris): verify file's segment
 		}
 	}
