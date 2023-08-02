@@ -471,6 +471,9 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 		if c.isTraceEnabled {
 			c.dumpSPMsg(req, resp)
 		}
+		if !closeBody {
+			resp.Body.Close()
+		}
 		return resp, err
 	}
 
