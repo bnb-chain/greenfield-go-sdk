@@ -471,6 +471,9 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 		if c.isTraceEnabled {
 			c.dumpSPMsg(req, resp)
 		}
+		if !closeBody {
+			resp.Body.Close()
+		}
 		return resp, err
 	}
 
@@ -745,8 +748,13 @@ func (c *client) getEndpointByOpt(opts *types.EndPointOptions) (*url.URL, error)
 		useHttps bool
 		err      error
 	)
-
-	if opts.Endpoint != "" {
+	if opts == nil || (opts.Endpoint == "" && opts.SPAddress == "") {
+		endpoint, err = c.getInServiceSP()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
+			return nil, err
+		}
+	} else if opts.Endpoint != "" {
 		if strings.Contains(opts.Endpoint, "https") {
 			useHttps = true
 		} else {
@@ -763,12 +771,6 @@ func (c *client) getEndpointByOpt(opts *types.EndPointOptions) (*url.URL, error)
 		endpoint, err = c.getSPUrlByAddr(opts.SPAddress)
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("route endpoint by sp address: %s failed, err: %v", opts.SPAddress, err))
-			return nil, err
-		}
-	} else {
-		endpoint, err = c.getInServiceSP()
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("get in-service SP fail %s", err.Error()))
 			return nil, err
 		}
 	}

@@ -14,7 +14,7 @@ Rich SDKs is provided to operate Greenfield resources or query status of resourc
 
 ### Requirement
 
-Go version above 1.19
+Go version above 1.20
 
 ## Getting started
 To get started working with the SDK setup your project for Go modules, and retrieve the SDK dependencies with `go get`.
