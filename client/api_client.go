@@ -225,7 +225,6 @@ func (c *client) pickStorageProviderByBucket(bucketName string) (*types.StorageP
 		return sp, nil
 	}
 	return nil, fmt.Errorf("the storage provider %d not exists on chain", familyResp.GlobalVirtualGroupFamily.PrimarySpId)
-
 }
 
 // getSPUrlByID route url of the sp from sp id

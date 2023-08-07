@@ -20,7 +20,8 @@ func main() {
 				Seed:                 "test_seed",
 				Domain:               "https://test.domain.com",
 				ShouldRegisterPubKey: true,
-			}})
+			},
+		})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
@@ -30,7 +31,8 @@ func main() {
 		true, "", "", "/", "", 10, &types.EndPointOptions{
 			Endpoint:  "",
 			SPAddress: "",
-		}})
+		},
+	})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo

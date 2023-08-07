@@ -6,6 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/mimc"
@@ -15,12 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/blake2b"
-	"io"
-	"math/big"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type OffChainAuth interface {
@@ -135,7 +136,7 @@ func HttpGetWithHeader(url string, header map[string]string) (string, error) {
 }
 
 func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (string, error) {
-	var json = []byte(jsonStr)
+	json := []byte(jsonStr)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
 	if err != nil {
 		return "", err
@@ -160,7 +161,6 @@ func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (s
 }
 
 func GetEddsaCompressedPublicKey(seed string) string {
-
 	sk, err := GenerateEddsaPrivateKey(seed)
 	if err != nil {
 		return err.Error()
@@ -190,7 +190,6 @@ const (
 type PublicKey = eddsa.PublicKey
 
 func GenerateKey(r io.Reader) (*PrivateKey, error) {
-
 	c := twistededwards.GetEdwardsCurve()
 
 	var (
@@ -245,7 +244,7 @@ func GenerateKey(r io.Reader) (*PrivateKey, error) {
 	subtle.ConstantTimeCopy(1, res[sizeFr:2*sizeFr], scalar[:])
 	subtle.ConstantTimeCopy(1, res[2*sizeFr:], randSrc[:])
 
-	var sk = &PrivateKey{}
+	sk := &PrivateKey{}
 	// make sure sk is not nil
 
 	_, err = sk.SetBytes(res[:])

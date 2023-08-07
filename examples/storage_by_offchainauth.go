@@ -19,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
 	}
-	//cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
+	// cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
 	cli, err := client.New(chainId, rpcAddr, client.Option{
 		DefaultAccount: account,
 		OffChainAuthOption: &client.OffChainAuthOption{
@@ -85,7 +85,8 @@ func main() {
 		true, "", "", "/", "", 10, &types.EndPointOptions{
 			Endpoint:  httpsAddr,
 			SPAddress: "",
-		}})
+		},
+	})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo

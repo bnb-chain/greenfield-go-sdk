@@ -78,7 +78,8 @@ func main() {
 		ShowRemovedObject: false, Delimiter: "", MaxKeys: 100, EndPointOptions: &types.EndPointOptions{
 			Endpoint:  httpsAddr,
 			SPAddress: "",
-		}})
+		},
+	})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo
@@ -90,7 +91,8 @@ func main() {
 		ShowRemovedBucket: false, EndPointOptions: &types.EndPointOptions{
 			Endpoint:  httpsAddr,
 			SPAddress: "",
-		}})
+		},
+	})
 	log.Println("list buckets result:")
 	for _, bucket := range bucketsList.Buckets {
 		i := bucket.BucketInfo
