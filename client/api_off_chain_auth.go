@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
+	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/mimc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/twistededwards"
@@ -32,7 +32,7 @@ func (c *client) OffChainAuthSign(unsignBytes []byte) string {
 	sk, _ := GenerateEddsaPrivateKey(c.offChainAuthOption.Seed)
 	hFunc := mimc.NewMiMC()
 	sig, _ := sk.Sign(unsignBytes, hFunc)
-	authString := fmt.Sprintf("%s,Signature=%v", types.GNFD1_EDDSA, hex.EncodeToString(sig))
+	authString := fmt.Sprintf("%s,Signature=%v", httplib.Gnfd1Eddsa, hex.EncodeToString(sig))
 	return authString
 }
 

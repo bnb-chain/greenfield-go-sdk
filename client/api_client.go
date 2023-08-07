@@ -603,7 +603,7 @@ func (c *client) signRequest(req *http.Request) error {
 	}
 
 	authStr := []string{
-		types.GNFD1_ECDSA,
+		httplib.Gnfd1Ecdsa,
 		"Signature=" + hex.EncodeToString(signature),
 	}
 

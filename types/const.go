@@ -13,9 +13,6 @@ const (
 
 	HTTPHeaderAuthorization = "Authorization"
 
-	GNFD1_ECDSA = "GNFD1-ECDSA" // The original name is authTypeV1
-	GNFD1_EDDSA = "GNFD1-EDDSA" // this is used for off-chain auth, usually in web application
-
 	HTTPHeaderContentLength   = "Content-Length"
 	HTTPHeaderContentMD5      = "Content-MD5"
 	HTTPHeaderContentType     = "Content-Type"

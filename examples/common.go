@@ -54,3 +54,26 @@ func waitObjectSeal(cli client.Client, bucketName, objectName string) {
 		}
 	}
 }
+
+func waitObjectSeal(cli client.Client, bucketName, objectName string) {
+	ctx := context.Background()
+	// wait for the object to be sealed
+	timeout := time.After(15 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
+
+	for {
+		select {
+		case <-timeout:
+			err := errors.New("object not sealed after 15 seconds")
+			handleErr(err, "HeadObject")
+		case <-ticker.C:
+			objectDetail, err := cli.HeadObject(ctx, bucketName, objectName)
+			handleErr(err, "HeadObject")
+			if objectDetail.ObjectInfo.GetObjectStatus().String() == "OBJECT_STATUS_SEALED" {
+				ticker.Stop()
+				fmt.Printf("put object %s successfully \n", objectName)
+				return
+			}
+		}
+	}
+}
