@@ -19,7 +19,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
 	}
-	cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
+	//cli, err := client.New(chainId, rpcAddr, client.Option{DefaultAccount: account})
+	cli, err := client.New(chainId, rpcAddr, client.Option{
+		DefaultAccount: account,
+		OffChainAuthOption: &client.OffChainAuthOption{
+			Seed:                 "test_seed",
+			Domain:               "https://test.domain.com",
+			ShouldRegisterPubKey: true,
+		},
+	})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
@@ -31,8 +39,8 @@ func main() {
 		log.Fatalf("fail to list in service sps")
 	}
 	// choose the first sp to be the primary SP
-	primarySP := spLists[0].GetOperatorAddress()
-
+	primarySP := spLists[6].GetOperatorAddress()
+	log.Println(primarySP)
 	// create bucket
 	_, err = cli.CreateBucket(ctx, bucketName, primarySP, types.CreateBucketOptions{})
 	handleErr(err, "CreateBucket")
@@ -61,7 +69,6 @@ func main() {
 	log.Printf("object: %s has been uploaded to SP\n", objectName)
 
 	waitObjectSeal(cli, bucketName, objectName)
-	// wait for block_syncer to sync up data from chain
 	time.Sleep(time.Second * 5)
 	// get object
 	reader, info, err := cli.GetObject(ctx, bucketName, objectName, types.GetObjectOptions{})
@@ -73,9 +80,9 @@ func main() {
 		handleErr(errors.New("download content not same"), "GetObject")
 	}
 
-	// list objects
+	// list object
 	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{
-		ShowRemovedObject: false, Delimiter: "", MaxKeys: 100, EndPointOptions: &types.EndPointOptions{
+		true, "", "", "/", "", 10, &types.EndPointOptions{
 			Endpoint:  httpsAddr,
 			SPAddress: "",
 		}})
@@ -83,18 +90,6 @@ func main() {
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo
 		log.Printf("object: %s, status: %s\n", i.ObjectName, i.ObjectStatus)
-	}
-
-	// list buckets
-	bucketsList, err := cli.ListBuckets(ctx, types.ListBucketsOptions{
-		ShowRemovedBucket: false, EndPointOptions: &types.EndPointOptions{
-			Endpoint:  httpsAddr,
-			SPAddress: "",
-		}})
-	log.Println("list buckets result:")
-	for _, bucket := range bucketsList.Buckets {
-		i := bucket.BucketInfo
-		log.Printf("bucket: %s, status: %s\n", i.BucketName, i.BucketStatus)
 	}
 
 	// list object by object ids

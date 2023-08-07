@@ -12,8 +12,9 @@ const (
 	UserAgent = "Greenfield (" + runtime.GOOS + "; " + runtime.GOARCH + ") " + libName + "/" + Version
 
 	HTTPHeaderAuthorization = "Authorization"
-	SignAlgorithm           = "ECDSA-secp256k1"
-	AuthV1                  = "authTypeV1"
+
+	GNFD1_ECDSA = "GNFD1-ECDSA" // The original name is authTypeV1
+	GNFD1_EDDSA = "GNFD1-EDDSA" // this is used for off-chain auth, usually in web application
 
 	HTTPHeaderContentLength   = "Content-Length"
 	HTTPHeaderContentMD5      = "Content-MD5"
@@ -70,4 +71,5 @@ const (
 	FilePermMode   = os.FileMode(0664) // Default file permission
 
 	WaitTxContextTimeOut = 1 * time.Second
+	DefaultExpireSeconds = 1000
 )
