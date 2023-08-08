@@ -124,7 +124,7 @@ func (c *client) GetPaymentAccount(ctx context.Context, address string) (*paymen
 	if err != nil {
 		return nil, err
 	}
-	pa, err := c.chainClient.PaymentAccount(ctx, &paymentTypes.QueryGetPaymentAccountRequest{Addr: accAddress.String()})
+	pa, err := c.chainClient.PaymentAccount(ctx, &paymentTypes.QueryPaymentAccountRequest{Addr: accAddress.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 		return nil, err
 	}
 	// Call the GetPaymentAccountsByOwner method of the chain client with a QueryGetPaymentAccountsByOwnerRequest containing the owner address.
-	accountsByOwnerResponse, err := c.chainClient.GetPaymentAccountsByOwner(ctx, &paymentTypes.QueryGetPaymentAccountsByOwnerRequest{Owner: ownerAcc.String()})
+	accountsByOwnerResponse, err := c.chainClient.PaymentAccountsByOwner(ctx, &paymentTypes.QueryPaymentAccountsByOwnerRequest{Owner: ownerAcc.String()})
 	if err != nil {
 		return nil, err
 	}
