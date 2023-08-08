@@ -6,7 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
+	"io"
+	"math/big"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/mimc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/twistededwards"
@@ -15,25 +22,18 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/blake2b"
-	"io"
-	"math/big"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type OffChainAuth interface {
-	RegisterEDDSAPublicKey(spEndpoint string, appDomain string, eddsaSeed string) (*storageTypes.MsgCreateObject, error)
-	OffChainAuthSign() string
+	RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error)
+	OffChainAuthSign(unsignBytes []byte) string
 }
 
-func (c *client) OffChainAuthSign() string {
+func (c *client) OffChainAuthSign(unsignBytes []byte) string {
 	sk, _ := GenerateEddsaPrivateKey(c.offChainAuthOption.Seed)
-	unSignedMsg := fmt.Sprintf("InvokeSPAPI_%v", time.Now().Add(time.Minute*4).UnixMilli())
 	hFunc := mimc.NewMiMC()
-	sig, _ := sk.Sign([]byte(unSignedMsg), hFunc)
-	authString := fmt.Sprintf("OffChainAuth EDDSA,SignedMsg=%v,Signature=%v", unSignedMsg, hex.EncodeToString(sig))
+	sig, _ := sk.Sign(unsignBytes, hFunc)
+	authString := fmt.Sprintf("%s,Signature=%v", httplib.Gnfd1Eddsa, hex.EncodeToString(sig))
 	return authString
 }
 
@@ -103,7 +103,7 @@ func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 	headers["x-gnfd-app-domain"] = appDomain
 	headers["x-gnfd-app-reg-nonce"] = nextNonce
 	headers["x-gnfd-app-reg-public-key"] = userEddsaPublicKeyStr
-	headers["x-gnfd-app-reg-expiry-date"] = ExpiryDate
+	headers["X-Gnfd-Expiry-Timestamp"] = ExpiryDate
 	headers["authorization"] = authString
 	headers["origin"] = appDomain
 	headers["x-gnfd-user-address"] = c.defaultAccount.GetAddress().String()
@@ -136,7 +136,7 @@ func HttpGetWithHeader(url string, header map[string]string) (string, error) {
 }
 
 func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (string, error) {
-	var json = []byte(jsonStr)
+	json := []byte(jsonStr)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
 	if err != nil {
 		return "", err
@@ -161,7 +161,6 @@ func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (s
 }
 
 func GetEddsaCompressedPublicKey(seed string) string {
-
 	sk, err := GenerateEddsaPrivateKey(seed)
 	if err != nil {
 		return err.Error()
@@ -191,7 +190,6 @@ const (
 type PublicKey = eddsa.PublicKey
 
 func GenerateKey(r io.Reader) (*PrivateKey, error) {
-
 	c := twistededwards.GetEdwardsCurve()
 
 	var (
@@ -246,7 +244,7 @@ func GenerateKey(r io.Reader) (*PrivateKey, error) {
 	subtle.ConstantTimeCopy(1, res[sizeFr:2*sizeFr], scalar[:])
 	subtle.ConstantTimeCopy(1, res[2*sizeFr:], randSrc[:])
 
-	var sk = &PrivateKey{}
+	sk := &PrivateKey{}
 	// make sure sk is not nil
 
 	_, err = sk.SetBytes(res[:])

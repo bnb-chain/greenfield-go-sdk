@@ -20,13 +20,19 @@ func main() {
 				Seed:                 "test_seed",
 				Domain:               "https://test.domain.com",
 				ShouldRegisterPubKey: true,
-			}})
+			},
+		})
 	if err != nil {
 		log.Fatalf("unable to new greenfield client, %v", err)
 	}
 	ctx := context.Background()
 	// list object
-	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{ShowRemovedObject: true, Delimiter: "/", MaxKeys: 10})
+	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{
+		true, "", "", "/", "", 10, &types.EndPointOptions{
+			Endpoint:  "",
+			SPAddress: "",
+		},
+	})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
 		i := obj.ObjectInfo

@@ -660,7 +660,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 
 		// truncated file to part size integer multiples
 		if fileSizeWithoutFirstSeg%partSize != 0 {
-			file, err = os.OpenFile(tempFilePath, os.O_RDWR, 0644)
+			file, err = os.OpenFile(tempFilePath, os.O_RDWR, 0o644)
 			if err != nil {
 				return err
 			}
@@ -1091,7 +1091,6 @@ func (c *client) getObjectOffsetFromSP(ctx context.Context, bucketName, objectNa
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
-
 	if err != nil {
 		// not exist
 		if find := strings.Contains(err.Error(), "no uploading record"); find {

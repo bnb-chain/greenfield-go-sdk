@@ -250,5 +250,4 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
-
 }
