@@ -408,7 +408,6 @@ func getTmpFilesInDirectory(directory string) ([]string, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +429,7 @@ func (s *StorageTestSuite) TruncateDownloadTempFileToLessPartsize() {
 	s.Require().NoError(err)
 	tempFilePath := files[0]
 
-	file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0666)
+	file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0o666)
 	s.Require().NoError(err)
 	defer file.Close()
 
@@ -495,7 +494,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.Require().NoError(err)
-	//download success, checkpoint file has been deleted
+	// download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadFile, fGetObjectFileName)
 	s.Require().True(isSame)
@@ -516,7 +515,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadLessPartFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.Require().NoError(err)
-	//download success, checkpoint file has been deleted
+	// download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadLessPartFile, fGetObjectFileName)
 	s.Require().True(isSame)

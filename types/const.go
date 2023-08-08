@@ -12,8 +12,6 @@ const (
 	UserAgent = "Greenfield (" + runtime.GOOS + "; " + runtime.GOARCH + ") " + libName + "/" + Version
 
 	HTTPHeaderAuthorization = "Authorization"
-	SignAlgorithm           = "ECDSA-secp256k1"
-	AuthV1                  = "authTypeV1"
 
 	HTTPHeaderContentLength   = "Content-Length"
 	HTTPHeaderContentMD5      = "Content-MD5"
@@ -66,8 +64,9 @@ const (
 	// putObject behaves internally as multipart.
 	MinPartSize = 1024 * 1024 * 32
 
-	TempFileSuffix = ".temp"           // Temp file suffix
-	FilePermMode   = os.FileMode(0664) // Default file permission
+	TempFileSuffix = ".temp"            // Temp file suffix
+	FilePermMode   = os.FileMode(0o664) // Default file permission
 
 	WaitTxContextTimeOut = 1 * time.Second
+	DefaultExpireSeconds = 1000
 )
