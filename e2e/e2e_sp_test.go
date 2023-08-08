@@ -9,6 +9,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
+	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	types3 "github.com/bnb-chain/greenfield/x/sp/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -130,6 +131,27 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 		}
 		time.Sleep(1 * time.Second)
 	}
+
+	info, err := s.Client.GetStorageProviderInfo(s.ClientContext, s.OperatorAcc.GetAddress())
+	s.Require().NoError(err)
+	s.Require().Equal(info.Status, spTypes.STATUS_IN_MAINTENANCE)
+
+	// sp activate itself
+	s.Client.SetDefaultAccount(s.OperatorAcc)
+
+	updateStatusTxHash, err := s.Client.UpdateSpStatus(s.ClientContext,
+		s.OperatorAcc.GetAddress().String(),
+		spTypes.STATUS_IN_SERVICE,
+		0,
+		types2.TxOption{},
+	)
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, updateStatusTxHash)
+	s.Require().NoError(err)
+
+	info, err = s.Client.GetStorageProviderInfo(s.ClientContext, s.OperatorAcc.GetAddress())
+	s.Require().NoError(err)
+	s.Require().Equal(info.Status, spTypes.STATUS_IN_SERVICE)
 }
 
 func TestSPTestSuite(t *testing.T) {

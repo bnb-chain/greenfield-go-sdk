@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -32,7 +33,7 @@ type Group interface {
 	// addAddresses indicates the HEX-encoded string list of the member addresses to be added
 	// removeAddresses indicates the HEX-encoded string list of the member addresses to be removed
 	UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-		addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption) (string, error)
+		addAddresses, removeAddresses []string, expirationTime []time.Time, opts types.UpdateGroupMemberOption) (string, error)
 	// LeaveGroup make the member leave the specific group
 	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error)
@@ -78,7 +79,7 @@ func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.De
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
 func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption,
+	addAddresses, removeAddresses []string, expirationTime []time.Time, opts types.UpdateGroupMemberOption,
 ) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
@@ -95,14 +96,18 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 	addMembers := make([]*storageTypes.MsgGroupMember, 0)
 	removeMembers := make([]sdk.AccAddress, 0)
 
-	for _, addr := range addAddresses {
+	if len(addAddresses) != len(expirationTime) {
+		return "", errors.New("please provide expirationTime for every new add member")
+	}
+
+	for idx, addr := range addAddresses {
 		_, err := sdk.AccAddressFromHexUnsafe(addr)
 		if err != nil {
 			return "", err
 		}
 		m := &storageTypes.MsgGroupMember{
 			Member:         addr,
-			ExpirationTime: storageTypes.MaxTimeStamp,
+			ExpirationTime: expirationTime[idx],
 		}
 		addMembers = append(addMembers, m)
 	}

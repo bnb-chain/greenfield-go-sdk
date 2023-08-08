@@ -36,6 +36,8 @@ type SP interface {
 	CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, maintenanceAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error)
 	// UpdateSpStoragePrice updates the read price, storage price and free read quota for a particular storage provider
 	UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error)
+	// UpdateSpStatus set an SP status between STATUS_IN_SERVICE and STATUS_IN_MAINTENANCE
+	UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, TxOption gnfdSdkTypes.TxOption) (string, error)
 }
 
 func (c *client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.SpStoragePrice, error) {
@@ -239,6 +241,23 @@ func (c *client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPr
 		FreeReadQuota: freeReadQuota,
 	}
 	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateStoragePrice}, &TxOption)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, nil
+}
+
+func (c *client) UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, TxOption gnfdSdkTypes.TxOption) (string, error) {
+	spAcc, err := sdk.AccAddressFromHexUnsafe(spAddr)
+	if err != nil {
+		return "", err
+	}
+	msgUpdateSpStatus := &spTypes.MsgUpdateStorageProviderStatus{
+		SpAddress: spAcc.String(),
+		Status:    status,
+		Duration:  duration,
+	}
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateSpStatus}, &TxOption)
 	if err != nil {
 		return "", err
 	}
