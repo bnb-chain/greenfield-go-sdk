@@ -52,11 +52,6 @@ func (s *StorageTestSuite) Test_Bucket() {
 	s.T().Log("---> CreateBucket and HeadBucket <---")
 	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota}
 
-	fmt.Println(bucketName)
-	sp0TestAcc, _ := types.NewAccountFromMnemonic("sp0_test", "early divert chest dynamic angry figure inherit emerge edge decade library bright column unveil resist elite scout armed potato layer razor gorilla surprise vicious")
-	fmt.Printf("test acct is %s\n", sp0TestAcc.GetAddress().String())
-
-	s.Client.SetDefaultAccount(sp0TestAcc)
 	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, opts)
 	s.Require().NoError(err)
 
@@ -70,71 +65,71 @@ func (s *StorageTestSuite) Test_Bucket() {
 		s.Require().Equal(bucketInfo.ChargedReadQuota, chargedQuota)
 	}
 
-	//s.T().Log("--->  UpdateBucket <---")
-	//updateBucketTx, err := s.Client.UpdateBucketVisibility(s.ClientContext, bucketName,
-	//	storageTypes.VISIBILITY_TYPE_PUBLIC_READ, types.UpdateVisibilityOption{})
-	//s.Require().NoError(err)
-	//_, err = s.Client.WaitForTx(s.ClientContext, updateBucketTx)
-	//s.Require().NoError(err)
-	//
-	//s.T().Log("---> BuyQuotaForBucket <---")
-	//targetQuota := uint64(300)
-	//buyQuotaTx, err := s.Client.BuyQuotaForBucket(s.ClientContext, bucketName, targetQuota, types.BuyQuotaOption{})
-	//s.Require().NoError(err)
-	//_, err = s.Client.WaitForTx(s.ClientContext, buyQuotaTx)
-	//s.Require().NoError(err)
-	//
-	//s.T().Log("---> Query Quota info <---")
-	//quota, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
-	//s.Require().NoError(err)
-	//s.Require().Equal(quota.ReadQuotaSize, targetQuota)
+	s.T().Log("--->  UpdateBucket <---")
+	updateBucketTx, err := s.Client.UpdateBucketVisibility(s.ClientContext, bucketName,
+		storageTypes.VISIBILITY_TYPE_PUBLIC_READ, types.UpdateVisibilityOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, updateBucketTx)
+	s.Require().NoError(err)
 
-	//s.T().Log("---> PutBucketPolicy <---")
-	//principal, _, err := types.NewAccount("principal")
-	//s.Require().NoError(err)
-	//
-	//principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
-	//s.Require().NoError(err)
-	//statements := []*permTypes.Statement{
-	//	{
-	//		Effect: permTypes.EFFECT_ALLOW,
-	//		Actions: []permTypes.ActionType{
-	//			permTypes.ACTION_UPDATE_BUCKET_INFO,
-	//			permTypes.ACTION_DELETE_BUCKET,
-	//			permTypes.ACTION_CREATE_OBJECT,
-	//		},
-	//		Resources:      []string{},
-	//		ExpirationTime: nil,
-	//		LimitSize:      nil,
-	//	},
-	//}
-	//policy, err := s.Client.PutBucketPolicy(s.ClientContext, bucketName, principalStr, statements, types.PutPolicyOption{})
-	//s.Require().NoError(err)
-	//
-	//_, err = s.Client.WaitForTx(s.ClientContext, policy)
-	//s.Require().NoError(err)
+	s.T().Log("---> BuyQuotaForBucket <---")
+	targetQuota := uint64(300)
+	buyQuotaTx, err := s.Client.BuyQuotaForBucket(s.ClientContext, bucketName, targetQuota, types.BuyQuotaOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, buyQuotaTx)
+	s.Require().NoError(err)
 
-	//s.T().Log("---> GetBucketPolicy <---")
-	//bucketPolicy, err := s.Client.GetBucketPolicy(s.ClientContext, bucketName, principal.GetAddress().String())
-	//s.Require().NoError(err)
-	//s.T().Logf("get bucket policy:%s\n", bucketPolicy.String())
-	//
-	//s.T().Log("---> DeleteBucketPolicy <---")
-	//deleteBucketPolicy, err := s.Client.DeleteBucketPolicy(s.ClientContext, bucketName, principalStr, types.DeletePolicyOption{})
-	//s.Require().NoError(err)
-	//_, err = s.Client.WaitForTx(s.ClientContext, deleteBucketPolicy)
-	//s.Require().NoError(err)
-	//_, err = s.Client.GetBucketPolicy(s.ClientContext, bucketName, principal.GetAddress().String())
-	//s.Require().Error(err)
+	s.T().Log("---> Query Quota info <---")
+	quota, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	s.Require().Equal(quota.ReadQuotaSize, targetQuota)
 
-	//s.T().Log("--->  DeleteBucket <---")
-	//delBucket, err := s.Client.DeleteBucket(s.ClientContext, bucketName, types.DeleteBucketOption{})
-	//s.Require().NoError(err)
-	//_, err = s.Client.WaitForTx(s.ClientContext, delBucket)
-	//s.Require().NoError(err)
-	//
-	//_, err = s.Client.HeadBucket(s.ClientContext, bucketName)
-	//s.Require().Error(err)
+	s.T().Log("---> PutBucketPolicy <---")
+	principal, _, err := types.NewAccount("principal")
+	s.Require().NoError(err)
+
+	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	s.Require().NoError(err)
+	statements := []*permTypes.Statement{
+		{
+			Effect: permTypes.EFFECT_ALLOW,
+			Actions: []permTypes.ActionType{
+				permTypes.ACTION_UPDATE_BUCKET_INFO,
+				permTypes.ACTION_DELETE_BUCKET,
+				permTypes.ACTION_CREATE_OBJECT,
+			},
+			Resources:      []string{},
+			ExpirationTime: nil,
+			LimitSize:      nil,
+		},
+	}
+	policy, err := s.Client.PutBucketPolicy(s.ClientContext, bucketName, principalStr, statements, types.PutPolicyOption{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, policy)
+	s.Require().NoError(err)
+
+	s.T().Log("---> GetBucketPolicy <---")
+	bucketPolicy, err := s.Client.GetBucketPolicy(s.ClientContext, bucketName, principal.GetAddress().String())
+	s.Require().NoError(err)
+	s.T().Logf("get bucket policy:%s\n", bucketPolicy.String())
+
+	s.T().Log("---> DeleteBucketPolicy <---")
+	deleteBucketPolicy, err := s.Client.DeleteBucketPolicy(s.ClientContext, bucketName, principalStr, types.DeletePolicyOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteBucketPolicy)
+	s.Require().NoError(err)
+	_, err = s.Client.GetBucketPolicy(s.ClientContext, bucketName, principal.GetAddress().String())
+	s.Require().Error(err)
+
+	s.T().Log("--->  DeleteBucket <---")
+	delBucket, err := s.Client.DeleteBucket(s.ClientContext, bucketName, types.DeleteBucketOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, delBucket)
+	s.Require().NoError(err)
+
+	_, err = s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().Error(err)
 }
 
 func (s *StorageTestSuite) Test_Object() {
@@ -143,9 +138,6 @@ func (s *StorageTestSuite) Test_Object() {
 
 	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
 
-	sp0TestAcc, _ := types.NewAccountFromMnemonic("sp0_test", "early divert chest dynamic angry figure inherit emerge edge decade library bright column unveil resist elite scout armed potato layer razor gorilla surprise vicious")
-
-	s.Client.SetDefaultAccount(sp0TestAcc)
 	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
 	s.Require().NoError(err)
 
@@ -161,7 +153,7 @@ func (s *StorageTestSuite) Test_Object() {
 	var buffer bytes.Buffer
 	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
 	// Create 1MiB content where each line contains 1024 characters.
-	for i := 0; i < 1024*1; i++ {
+	for i := 0; i < 1024*300; i++ {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
@@ -193,48 +185,48 @@ func (s *StorageTestSuite) Test_Object() {
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
 
-	//s.T().Log("---> PutObjectPolicy <---")
-	//principal, _, err := types.NewAccount("principal")
-	//s.Require().NoError(err)
-	//principalWithAccount, err := utils.NewPrincipalWithAccount(principal.GetAddress())
-	//s.Require().NoError(err)
-	//statements := []*permTypes.Statement{
-	//	{
-	//		Effect: permTypes.EFFECT_ALLOW,
-	//		Actions: []permTypes.ActionType{
-	//			permTypes.ACTION_GET_OBJECT,
-	//		},
-	//		Resources:      nil,
-	//		ExpirationTime: nil,
-	//		LimitSize:      nil,
-	//	},
-	//}
-	//policy, err := s.Client.PutObjectPolicy(s.ClientContext, bucketName, objectName, principalWithAccount, statements, types.PutPolicyOption{})
-	//s.Require().NoError(err)
-	//_, err = s.Client.WaitForTx(s.ClientContext, policy)
-	//s.Require().NoError(err)
-	//
-	//s.T().Log("--->  GetObjectPolicy <---")
-	//objectPolicy, err := s.Client.GetObjectPolicy(s.ClientContext, bucketName, objectName, principal.GetAddress().String())
-	//s.Require().NoError(err)
-	//s.T().Logf("get object policy:%s\n", objectPolicy.String())
-	//
-	//s.T().Log("---> DeleteObjectPolicy <---")
-	//
-	//principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
-	//s.Require().NoError(err)
-	//deleteObjectPolicy, err := s.Client.DeleteObjectPolicy(s.ClientContext, bucketName, objectName, principalStr, types.DeletePolicyOption{})
-	//s.Require().NoError(err)
-	//_, err = s.Client.WaitForTx(s.ClientContext, deleteObjectPolicy)
-	//s.Require().NoError(err)
-	//
-	//s.T().Log("---> DeleteObject <---")
-	//deleteObject, err := s.Client.DeleteObject(s.ClientContext, bucketName, objectName, types.DeleteObjectOption{})
-	//s.Require().NoError(err)
-	//_, err = s.Client.WaitForTx(s.ClientContext, deleteObject)
-	//s.Require().NoError(err)
-	//_, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-	//s.Require().Error(err)
+	s.T().Log("---> PutObjectPolicy <---")
+	principal, _, err := types.NewAccount("principal")
+	s.Require().NoError(err)
+	principalWithAccount, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	s.Require().NoError(err)
+	statements := []*permTypes.Statement{
+		{
+			Effect: permTypes.EFFECT_ALLOW,
+			Actions: []permTypes.ActionType{
+				permTypes.ACTION_GET_OBJECT,
+			},
+			Resources:      nil,
+			ExpirationTime: nil,
+			LimitSize:      nil,
+		},
+	}
+	policy, err := s.Client.PutObjectPolicy(s.ClientContext, bucketName, objectName, principalWithAccount, statements, types.PutPolicyOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, policy)
+	s.Require().NoError(err)
+
+	s.T().Log("--->  GetObjectPolicy <---")
+	objectPolicy, err := s.Client.GetObjectPolicy(s.ClientContext, bucketName, objectName, principal.GetAddress().String())
+	s.Require().NoError(err)
+	s.T().Logf("get object policy:%s\n", objectPolicy.String())
+
+	s.T().Log("---> DeleteObjectPolicy <---")
+
+	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	s.Require().NoError(err)
+	deleteObjectPolicy, err := s.Client.DeleteObjectPolicy(s.ClientContext, bucketName, objectName, principalStr, types.DeletePolicyOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteObjectPolicy)
+	s.Require().NoError(err)
+
+	s.T().Log("---> DeleteObject <---")
+	deleteObject, err := s.Client.DeleteObject(s.ClientContext, bucketName, objectName, types.DeleteObjectOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteObject)
+	s.Require().NoError(err)
+	_, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().Error(err)
 }
 
 func (s *StorageTestSuite) Test_Group() {

@@ -40,11 +40,11 @@ func (s *SPTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.GcAcc, _, err = types.NewAccount("gc")
 	s.Require().NoError(err)
-	s.MaintenanceAcc, _, err = types.NewAccount("test")
+	s.MaintenanceAcc, _, err = types.NewAccount("maintenance")
 	s.Require().NoError(err)
 	s.BlsAcc, _, err = types.NewBlsAccount("bls")
 	s.Require().NoError(err)
-	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s, testAddr: %s,, blsPubKey: %s",
+	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s, maintenanceAddr: %s, blsPubKey: %s",
 		s.FundingAcc.GetAddress().String(),
 		s.SealAcc.GetAddress().String(),
 		s.ApprovalAcc.GetAddress().String(),
