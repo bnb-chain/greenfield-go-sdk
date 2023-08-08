@@ -66,7 +66,7 @@ type Group interface {
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
 func (c *client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
-	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.InitGroupMember, opt.Extra)
+	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.Extra)
 	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
 }
 
@@ -92,15 +92,19 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 		return "", errors.New("no update member")
 	}
 
-	addMembers := make([]sdk.AccAddress, 0)
+	addMembers := make([]*storageTypes.MsgGroupMember, 0)
 	removeMembers := make([]sdk.AccAddress, 0)
 
 	for _, addr := range addAddresses {
-		member, err := sdk.AccAddressFromHexUnsafe(addr)
+		_, err := sdk.AccAddressFromHexUnsafe(addr)
 		if err != nil {
 			return "", err
 		}
-		addMembers = append(addMembers, member)
+		m := &storageTypes.MsgGroupMember{
+			Member:         addr,
+			ExpirationTime: storageTypes.MaxTimeStamp,
+		}
+		addMembers = append(addMembers, m)
 	}
 
 	for _, addr := range removeAddresses {
