@@ -33,7 +33,7 @@ type SP interface {
 	// GrantDepositForStorageProvider submit a grant transaction to allow gov module account to deduct the specified number of tokens
 	GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error)
 	// CreateStorageProvider submits a proposal to create a storage provider to the greenfield blockchain, and it returns a proposal ID
-	CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, Addr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error)
+	CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, maintenanceAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error)
 	// UpdateSpStoragePrice updates the read price, storage price and free read quota for a particular storage provider
 	UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error)
 }
@@ -131,7 +131,7 @@ func (c *client) refreshStorageProviders(ctx context.Context) error {
 }
 
 // CreateStorageProvider will submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
-func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, testAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error) {
+func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, maintenanceAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error) {
 	defaultAccount := c.MustGetDefaultAccount()
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
@@ -163,7 +163,7 @@ func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 	if err != nil {
 		return 0, "", err
 	}
-	testAcc, err := sdk.AccAddressFromHexUnsafe(testAddr)
+	maintenanceAcc, err := sdk.AccAddressFromHexUnsafe(maintenanceAddr)
 	if err != nil {
 		return 0, "", err
 	}
@@ -178,7 +178,7 @@ func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 	msgCreateStorageProvider, err := spTypes.NewMsgCreateStorageProvider(
 		govModuleAddress.GetAddress(),
 		defaultAccount.GetAddress(),
-		fundingAcc, sealAcc, approvalAcc, gcAcc, testAcc,
+		fundingAcc, sealAcc, approvalAcc, gcAcc, maintenanceAcc,
 		description,
 		endpoint,
 		sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount),

@@ -17,13 +17,13 @@ import (
 
 type SPTestSuite struct {
 	basesuite.BaseSuite
-	OperatorAcc *types.Account
-	FundingAcc  *types.Account
-	SealAcc     *types.Account
-	ApprovalAcc *types.Account
-	GcAcc       *types.Account
-	TestAcc     *types.Account
-	BlsAcc      *types.Account
+	OperatorAcc    *types.Account
+	FundingAcc     *types.Account
+	SealAcc        *types.Account
+	ApprovalAcc    *types.Account
+	GcAcc          *types.Account
+	MaintenanceAcc *types.Account
+	BlsAcc         *types.Account
 }
 
 func (s *SPTestSuite) SetupSuite() {
@@ -39,7 +39,7 @@ func (s *SPTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.GcAcc, _, err = types.NewAccount("gc")
 	s.Require().NoError(err)
-	s.TestAcc, _, err = types.NewAccount("test")
+	s.MaintenanceAcc, _, err = types.NewAccount("test")
 	s.Require().NoError(err)
 	s.BlsAcc, _, err = types.NewBlsAccount("bls")
 	s.Require().NoError(err)
@@ -49,7 +49,7 @@ func (s *SPTestSuite) SetupSuite() {
 		s.ApprovalAcc.GetAddress().String(),
 		s.OperatorAcc.GetAddress().String(),
 		s.GcAcc.GetAddress().String(),
-		s.TestAcc.GetAddress().String(),
+		s.MaintenanceAcc.GetAddress().String(),
 		s.BlsAcc.GetKeyManager().PubKey().String(),
 	)
 }
@@ -89,7 +89,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	blsProofBz, err := s.BlsAcc.GetKeyManager().Sign(tmhash.Sum(s.BlsAcc.GetKeyManager().PubKey().Bytes()))
 	s.Require().NoError(err)
-	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(), s.TestAcc.GetAddress().String(),
+	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(), s.MaintenanceAcc.GetAddress().String(),
 		hex.EncodeToString(s.BlsAcc.GetKeyManager().PubKey().Bytes()), hex.EncodeToString(blsProofBz),
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
