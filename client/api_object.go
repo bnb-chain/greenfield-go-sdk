@@ -660,7 +660,7 @@ func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 
 		// truncated file to part size integer multiples
 		if fileSizeWithoutFirstSeg%partSize != 0 {
-			file, err = os.OpenFile(tempFilePath, os.O_RDWR, 0644)
+			file, err = os.OpenFile(tempFilePath, os.O_RDWR, 0o644)
 			if err != nil {
 				return err
 			}
@@ -874,7 +874,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		return types.ListObjectsResult{}, err
 	}
 
-	const listObjectsDefaultMaxKeys = 50
+	const listObjectsDefaultMaxKeys = 1000
 	if opts.MaxKeys == 0 {
 		opts.MaxKeys = listObjectsDefaultMaxKeys
 	}
@@ -890,13 +890,11 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		if err != nil {
 			return types.ListObjectsResult{}, err
 		}
-		opts.ContinuationToken = string(decodedContinuationToken)
-
-		if err = s3util.CheckValidObjectName(opts.ContinuationToken); err != nil {
+		objectName := string(decodedContinuationToken)
+		if err = s3util.CheckValidObjectName(objectName); err != nil {
 			return types.ListObjectsResult{}, err
 		}
-
-		if !strings.HasPrefix(opts.ContinuationToken, opts.Prefix) {
+		if !strings.HasPrefix(objectName, opts.Prefix) {
 			return types.ListObjectsResult{}, fmt.Errorf("continuation-token does not match the input prefix")
 		}
 	}
@@ -1093,7 +1091,6 @@ func (c *client) getObjectOffsetFromSP(ctx context.Context, bucketName, objectNa
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
-
 	if err != nil {
 		// not exist
 		if find := strings.Contains(err.Error(), "no uploading record"); find {
