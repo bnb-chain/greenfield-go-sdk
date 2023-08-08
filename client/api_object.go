@@ -874,7 +874,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		return types.ListObjectsResult{}, err
 	}
 
-	const listObjectsDefaultMaxKeys = 50
+	const listObjectsDefaultMaxKeys = 1000
 	if opts.MaxKeys == 0 {
 		opts.MaxKeys = listObjectsDefaultMaxKeys
 	}
@@ -890,13 +890,11 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		if err != nil {
 			return types.ListObjectsResult{}, err
 		}
-		opts.ContinuationToken = string(decodedContinuationToken)
-
-		if err = s3util.CheckValidObjectName(opts.ContinuationToken); err != nil {
+		objectName := string(decodedContinuationToken)
+		if err = s3util.CheckValidObjectName(objectName); err != nil {
 			return types.ListObjectsResult{}, err
 		}
-
-		if !strings.HasPrefix(opts.ContinuationToken, opts.Prefix) {
+		if !strings.HasPrefix(objectName, opts.Prefix) {
 			return types.ListObjectsResult{}, fmt.Errorf("continuation-token does not match the input prefix")
 		}
 	}
