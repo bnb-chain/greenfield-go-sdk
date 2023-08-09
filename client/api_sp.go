@@ -36,7 +36,8 @@ type SP interface {
 	CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, maintenanceAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error)
 	// UpdateSpStoragePrice updates the read price, storage price and free read quota for a particular storage provider
 	UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error)
-	// UpdateSpStatus set an SP status between STATUS_IN_SERVICE and STATUS_IN_MAINTENANCE
+	// UpdateSpStatus set an SP status between STATUS_IN_SERVICE and STATUS_IN_MAINTENANCE, duration is requested time an SP wish to stay in maintenance mode
+	// for setting to STATUS_IN_SERVICE, duration is set to 0
 	UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, TxOption gnfdSdkTypes.TxOption) (string, error)
 }
 
