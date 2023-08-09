@@ -32,6 +32,7 @@ type Group interface {
 	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	// addAddresses indicates the HEX-encoded string list of the member addresses to be added
 	// removeAddresses indicates the HEX-encoded string list of the member addresses to be removed
+	// expirationTime  indicates the expiration time of the group member, user need set the expiration time for the addAddresses
 	UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
 		addAddresses, removeAddresses []string, expirationTime []time.Time, opts types.UpdateGroupMemberOption) (string, error)
 	// LeaveGroup make the member leave the specific group
@@ -63,6 +64,8 @@ type Group interface {
 	// name is the ending of the search pattern.
 	// it providers fuzzy searches by inputting a specific name and prefix
 	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
+	// RenewGroupMember renew a list of group members and their expiration time
+	RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string, memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption) (string, error)
 }
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
@@ -335,4 +338,33 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 	}
 
 	return listGroupsResult, nil
+}
+
+func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string,
+	memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption,
+) (string, error) {
+	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
+	if err != nil {
+		return "", err
+	}
+	if groupName == "" {
+		return "", errors.New("group name is empty")
+	}
+	renewMembers := make([]*storageTypes.MsgGroupMember, 0)
+	if len(memberAddresses) != len(expirationTime) {
+		return "", errors.New("please provide expirationTime for every new add member")
+	}
+	for idx, addr := range memberAddresses {
+		_, err := sdk.AccAddressFromHexUnsafe(addr)
+		if err != nil {
+			return "", err
+		}
+		m := &storageTypes.MsgGroupMember{
+			Member:         addr,
+			ExpirationTime: expirationTime[idx],
+		}
+		renewMembers = append(renewMembers, m)
+	}
+	msg := storageTypes.NewMsgRenewGroupMember(c.MustGetDefaultAccount().GetAddress(), groupOwner, groupName, renewMembers)
+	return c.sendTxn(ctx, msg, opts.TxOpts)
 }

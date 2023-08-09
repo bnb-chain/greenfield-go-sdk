@@ -121,6 +121,11 @@ type LeaveGroupOption struct {
 	TxOpts *gnfdsdktypes.TxOption
 }
 
+// RenewGroupMemberOption indicates the info to update group member
+type RenewGroupMemberOption struct {
+	TxOpts *gnfdsdktypes.TxOption
+}
+
 // ComputeHashOptions indicates the metadata of redundancy strategy
 type ComputeHashOptions struct {
 	SegmentSize  uint64
