@@ -51,6 +51,7 @@ func (s *StorageTestSuite) Test_Bucket() {
 	chargedQuota := uint64(100)
 	s.T().Log("---> CreateBucket and HeadBucket <---")
 	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota}
+
 	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, opts)
 	s.Require().NoError(err)
 
@@ -247,7 +248,8 @@ func (s *StorageTestSuite) Test_Group() {
 	s.Require().NoError(err)
 	updateMember := addAccount.GetAddress().String()
 	updateMembers := []string{updateMember}
-	txnHash, err := s.Client.UpdateGroupMember(s.ClientContext, groupName, groupOwner.String(), updateMembers, nil, types.UpdateGroupMemberOption{})
+	expirationTimes := []time.Time{storageTypes.MaxTimeStamp}
+	txnHash, err := s.Client.UpdateGroupMember(s.ClientContext, groupName, groupOwner.String(), updateMembers, nil, expirationTimes, types.UpdateGroupMemberOption{})
 	s.T().Logf("add groupMember: %s", updateMembers[0])
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, txnHash)
@@ -261,7 +263,7 @@ func (s *StorageTestSuite) Test_Group() {
 	}
 
 	// remove groupMember
-	txnHash, err = s.Client.UpdateGroupMember(s.ClientContext, groupName, groupOwner.String(), nil, updateMembers, types.UpdateGroupMemberOption{})
+	txnHash, err = s.Client.UpdateGroupMember(s.ClientContext, groupName, groupOwner.String(), nil, updateMembers, nil, types.UpdateGroupMemberOption{})
 	s.T().Logf("remove groupMember: %s", updateMembers[0])
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, txnHash)
@@ -300,7 +302,7 @@ func (s *StorageTestSuite) Test_Group() {
 
 	// check permission, add back the member by grantClient
 	updateHash, err := s.Client.UpdateGroupMember(s.ClientContext, groupName, groupOwner.String(), updateMembers,
-		nil, types.UpdateGroupMemberOption{})
+		nil, expirationTimes, types.UpdateGroupMemberOption{})
 	s.Require().NoError(err)
 
 	_, err = s.Client.WaitForTx(s.ClientContext, updateHash)
@@ -408,7 +410,6 @@ func getTmpFilesInDirectory(directory string) ([]string, error) {
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +431,7 @@ func (s *StorageTestSuite) TruncateDownloadTempFileToLessPartsize() {
 	s.Require().NoError(err)
 	tempFilePath := files[0]
 
-	file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0666)
+	file, err := os.OpenFile(tempFilePath, os.O_RDWR, 0o666)
 	s.Require().NoError(err)
 	defer file.Close()
 
@@ -495,7 +496,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.Require().NoError(err)
-	//download success, checkpoint file has been deleted
+	// download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadFile, fGetObjectFileName)
 	s.Require().True(isSame)
@@ -516,7 +517,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 
 	err = s.Client.FGetObjectResumable(s.ClientContext, bucketName, objectName, resumableDownloadLessPartFile, types.GetObjectOptions{PartSize: 16 * 1024 * 1024})
 	s.Require().NoError(err)
-	//download success, checkpoint file has been deleted
+	// download success, checkpoint file has been deleted
 
 	isSame, err = types.CompareFiles(resumableDownloadLessPartFile, fGetObjectFileName)
 	s.Require().True(isSame)

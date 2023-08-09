@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -31,8 +32,9 @@ type Group interface {
 	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	// addAddresses indicates the HEX-encoded string list of the member addresses to be added
 	// removeAddresses indicates the HEX-encoded string list of the member addresses to be removed
+	// expirationTime  indicates the expiration time of the group member, user need set the expiration time for the addAddresses
 	UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-		addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption) (string, error)
+		addAddresses, removeAddresses []string, expirationTime []time.Time, opts types.UpdateGroupMemberOption) (string, error)
 	// LeaveGroup make the member leave the specific group
 	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error)
@@ -62,11 +64,13 @@ type Group interface {
 	// name is the ending of the search pattern.
 	// it providers fuzzy searches by inputting a specific name and prefix
 	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
+	// RenewGroupMember renew a list of group members and their expiration time
+	RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string, memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption) (string, error)
 }
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
 func (c *client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
-	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.InitGroupMember, opt.Extra)
+	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.Extra)
 	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
 }
 
@@ -78,7 +82,7 @@ func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.De
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
 func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption,
+	addAddresses, removeAddresses []string, expirationTime []time.Time, opts types.UpdateGroupMemberOption,
 ) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
@@ -92,15 +96,23 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 		return "", errors.New("no update member")
 	}
 
-	addMembers := make([]sdk.AccAddress, 0)
+	addMembers := make([]*storageTypes.MsgGroupMember, 0)
 	removeMembers := make([]sdk.AccAddress, 0)
 
-	for _, addr := range addAddresses {
-		member, err := sdk.AccAddressFromHexUnsafe(addr)
+	if len(addAddresses) != len(expirationTime) {
+		return "", errors.New("please provide expirationTime for every new add member")
+	}
+
+	for idx, addr := range addAddresses {
+		_, err := sdk.AccAddressFromHexUnsafe(addr)
 		if err != nil {
 			return "", err
 		}
-		addMembers = append(addMembers, member)
+		m := &storageTypes.MsgGroupMember{
+			Member:         addr,
+			ExpirationTime: expirationTime[idx],
+		}
+		addMembers = append(addMembers, m)
 	}
 
 	for _, addr := range removeAddresses {
@@ -326,4 +338,33 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 	}
 
 	return listGroupsResult, nil
+}
+
+func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string,
+	memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption,
+) (string, error) {
+	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
+	if err != nil {
+		return "", err
+	}
+	if groupName == "" {
+		return "", errors.New("group name is empty")
+	}
+	renewMembers := make([]*storageTypes.MsgGroupMember, 0)
+	if len(memberAddresses) != len(expirationTime) {
+		return "", errors.New("please provide expirationTime for every new add member")
+	}
+	for idx, addr := range memberAddresses {
+		_, err := sdk.AccAddressFromHexUnsafe(addr)
+		if err != nil {
+			return "", err
+		}
+		m := &storageTypes.MsgGroupMember{
+			Member:         addr,
+			ExpirationTime: expirationTime[idx],
+		}
+		renewMembers = append(renewMembers, m)
+	}
+	msg := storageTypes.NewMsgRenewGroupMember(c.MustGetDefaultAccount().GetAddress(), groupOwner, groupName, renewMembers)
+	return c.sendTxn(ctx, msg, opts.TxOpts)
 }

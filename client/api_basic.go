@@ -2,10 +2,11 @@ package client
 
 import (
 	"context"
-	"github.com/cometbft/cometbft/votepool"
-	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"strings"
 	"time"
+
+	"github.com/cometbft/cometbft/votepool"
+	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 
 	"cosmossdk.io/errors"
 	gosdktypes "github.com/bnb-chain/greenfield-go-sdk/types"
