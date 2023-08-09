@@ -9,6 +9,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
+	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	types3 "github.com/bnb-chain/greenfield/x/sp/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -17,12 +18,13 @@ import (
 
 type SPTestSuite struct {
 	basesuite.BaseSuite
-	OperatorAcc *types.Account
-	FundingAcc  *types.Account
-	SealAcc     *types.Account
-	ApprovalAcc *types.Account
-	GcAcc       *types.Account
-	BlsAcc      *types.Account
+	OperatorAcc    *types.Account
+	FundingAcc     *types.Account
+	SealAcc        *types.Account
+	ApprovalAcc    *types.Account
+	GcAcc          *types.Account
+	MaintenanceAcc *types.Account
+	BlsAcc         *types.Account
 }
 
 func (s *SPTestSuite) SetupSuite() {
@@ -38,14 +40,17 @@ func (s *SPTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.GcAcc, _, err = types.NewAccount("gc")
 	s.Require().NoError(err)
+	s.MaintenanceAcc, _, err = types.NewAccount("maintenance")
+	s.Require().NoError(err)
 	s.BlsAcc, _, err = types.NewBlsAccount("bls")
 	s.Require().NoError(err)
-	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s, blsPubKey: %s",
+	s.T().Logf("FundingAddr: %s, sealAddr: %s, approvalAddr: %s, operatorAddr: %s, gcAddr: %s, maintenanceAddr: %s, blsPubKey: %s",
 		s.FundingAcc.GetAddress().String(),
 		s.SealAcc.GetAddress().String(),
 		s.ApprovalAcc.GetAddress().String(),
 		s.OperatorAcc.GetAddress().String(),
 		s.GcAcc.GetAddress().String(),
+		s.MaintenanceAcc.GetAddress().String(),
 		s.BlsAcc.GetKeyManager().PubKey().String(),
 	)
 }
@@ -85,7 +90,7 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 
 	blsProofBz, err := s.BlsAcc.GetKeyManager().Sign(tmhash.Sum(s.BlsAcc.GetKeyManager().PubKey().Bytes()))
 	s.Require().NoError(err)
-	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(),
+	proposalID, txHash, err := s.Client.CreateStorageProvider(s.ClientContext, s.FundingAcc.GetAddress().String(), s.SealAcc.GetAddress().String(), s.ApprovalAcc.GetAddress().String(), s.GcAcc.GetAddress().String(), s.MaintenanceAcc.GetAddress().String(),
 		hex.EncodeToString(s.BlsAcc.GetKeyManager().PubKey().Bytes()), hex.EncodeToString(blsProofBz),
 		"https://sp0.greenfield.io",
 		math.NewIntWithDecimal(10000, types2.DecimalBNB),
@@ -126,6 +131,27 @@ func (s *SPTestSuite) Test_CreateStorageProvider() {
 		}
 		time.Sleep(1 * time.Second)
 	}
+
+	info, err := s.Client.GetStorageProviderInfo(s.ClientContext, s.OperatorAcc.GetAddress())
+	s.Require().NoError(err)
+	s.Require().Equal(info.Status, spTypes.STATUS_IN_MAINTENANCE)
+
+	// sp activate itself
+	s.Client.SetDefaultAccount(s.OperatorAcc)
+
+	updateStatusTxHash, err := s.Client.UpdateSpStatus(s.ClientContext,
+		s.OperatorAcc.GetAddress().String(),
+		spTypes.STATUS_IN_SERVICE,
+		0,
+		types2.TxOption{},
+	)
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, updateStatusTxHash)
+	s.Require().NoError(err)
+
+	info, err = s.Client.GetStorageProviderInfo(s.ClientContext, s.OperatorAcc.GetAddress())
+	s.Require().NoError(err)
+	s.Require().Equal(info.Status, spTypes.STATUS_IN_SERVICE)
 }
 
 func TestSPTestSuite(t *testing.T) {

@@ -108,9 +108,8 @@ type CreateObjectOptions struct {
 
 // CreateGroupOptions  indicates the meta to construct createGroup msg
 type CreateGroupOptions struct {
-	InitGroupMember []sdk.AccAddress
-	Extra           string
-	TxOpts          *gnfdsdktypes.TxOption
+	Extra  string
+	TxOpts *gnfdsdktypes.TxOption
 }
 
 // UpdateGroupMemberOption indicates the info to update group member
@@ -119,6 +118,11 @@ type UpdateGroupMemberOption struct {
 }
 
 type LeaveGroupOption struct {
+	TxOpts *gnfdsdktypes.TxOption
+}
+
+// RenewGroupMemberOption indicates the info to update group member
+type RenewGroupMemberOption struct {
 	TxOpts *gnfdsdktypes.TxOption
 }
 
