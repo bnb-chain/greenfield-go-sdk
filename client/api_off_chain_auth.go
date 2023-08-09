@@ -97,7 +97,7 @@ func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 
 	unSignedContentHash := accounts.TextHash([]byte(unSignedContent))
 	sig, _ := c.defaultAccount.GetKeyManager().Sign(unSignedContentHash)
-	authString := fmt.Sprintf("PersonalSign ECDSA-secp256k1,SignedMsg=%s,Signature=%s", unSignedContent, hexutil.Encode(sig))
+	authString := fmt.Sprintf("%s,SignedMsg=%s,Signature=%s", httplib.Gnfd1EthPersonalSign, unSignedContent, hexutil.Encode(sig))
 	authString = strings.ReplaceAll(authString, "\n", "\\n")
 	headers := make(map[string]string)
 	headers["x-gnfd-app-domain"] = appDomain
