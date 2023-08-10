@@ -179,7 +179,7 @@ func (s *StorageTestSuite) Test_Object() {
 
 	concurrentNumber := 5
 	downloadCount := 5
-	quota0, err := s.Client.GetBucketReadQuota(s.ClientContext,, bucketName)
+	quota0, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
 	fmt.Println("get quota;", quota0)
 
