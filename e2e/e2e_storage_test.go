@@ -205,9 +205,10 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 	wg.Wait()
 
-	expectQuotaUsed := int(1024*300*100) * concurrentNumber * downloadCount * 1024
+	expectQuotaUsed := int(1024*300*100) * concurrentNumber * downloadCount
 	fmt.Println("expect quota:", expectQuotaUsed)
 	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
 	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	fmt.Println("actual quota:", consumedQuota)
 
