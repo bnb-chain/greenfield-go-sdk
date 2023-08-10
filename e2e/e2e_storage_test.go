@@ -222,6 +222,7 @@ func (s *StorageTestSuite) Test_Object() {
 	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	fmt.Println("actual quota:", consumedQuota)
 
+	s.Require().Equal(expectQuotaUsed, consumedQuota)
 }
 
 func (s *StorageTestSuite) Test_Group() {
