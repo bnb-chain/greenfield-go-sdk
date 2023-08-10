@@ -9,6 +9,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // it is the example of cross-chain SDKs usage
@@ -63,7 +64,7 @@ func mirrorBucket(cli client.Client, ctx context.Context) {
 	log.Println("bucket info:", bucketInfo.String())
 
 	// mirror bucket
-	txResp, err := cli.MirrorBucket(ctx, bucketInfo.Id, bucketName, gnfdSdkTypes.TxOption{})
+	txResp, err := cli.MirrorBucket(ctx, sdk.ChainID(crossChainDestBsChainId), bucketInfo.Id, bucketName, gnfdSdkTypes.TxOption{})
 	handleErr(err, "MirrorBucket")
 	waitForTx, _ = cli.WaitForTx(ctx, txResp.TxHash)
 	log.Printf("Wait for tx: %s", waitForTx.TxResult.String())
