@@ -165,10 +165,13 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().NoError(err)
 
 	time.Sleep(5 * time.Second)
+	var contentLen uint64
 	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().NoError(err)
 	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
 	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	fmt.Println("content length:", objectDetail.ObjectInfo.PayloadSize, "buf len", buffer.Len())
+	contentLen = objectDetail.ObjectInfo.PayloadSize
 
 	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, int64(buffer.Len()))
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
@@ -198,7 +201,7 @@ func (s *StorageTestSuite) Test_Object() {
 		}
 	}
 
-	expectQuotaUsed := int(1024*300*100) * concurrentNumber * downloadCount
+	expectQuotaUsed := int(contentLen) * concurrentNumber * downloadCount
 	fmt.Println("expect quota:", expectQuotaUsed)
 	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
@@ -230,12 +233,76 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 	wg.Wait()
 
-	expectQuotaUsed = int(1024*300*100) * concurrentNumber * downloadCount
+	expectQuotaUsed = int(contentLen) * concurrentNumber * downloadCount
 	fmt.Println("expect quota:", expectQuotaUsed)
 	quota1, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	fmt.Println("Get quota:", quota1.ReadConsumedSize, "free :", quota1.SPFreeReadQuotaSize)
 	s.Require().NoError(err)
 	consumedQuota = quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	fmt.Println("actual quota:", consumedQuota)
+
+	s.Require().Equal(expectQuotaUsed, consumedQuota)
+
+	buffer.Reset()
+	line = `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*30; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err = s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	fmt.Println("content length:", objectDetail.ObjectInfo.PayloadSize, "buf len", buffer.Len())
+	contentLen = objectDetail.ObjectInfo.PayloadSize
+
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, int64(buffer.Len()))
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	s.waitSealObject(bucketName, objectName)
+
+	quota0, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	fmt.Println("get quota;", quota0)
+
+	var wg2 sync.WaitGroup
+	wg2.Add(concurrentNumber)
+	for i := 0; i < concurrentNumber; i++ {
+		go func() {
+			defer wg2.Done()
+			for i := 0; i < 5; i++ {
+				objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+				if err != nil {
+					fmt.Printf("error: %v", err)
+					quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+					//	s.NoError(err, quota2)
+					fmt.Printf("quota: %v", quota2)
+				}
+				objectBytes, err := io.ReadAll(objectContent)
+				s.Require().NoError(err)
+				s.Require().Equal(objectBytes, buffer.Bytes())
+			}
+		}()
+	}
+	wg2.Wait()
+
+	expectQuotaUsed = int(contentLen) * concurrentNumber * downloadCount
+	fmt.Println("expect quota2:", expectQuotaUsed)
+	quota1, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	fmt.Println("Get quota:", quota1.ReadConsumedSize, "free :", quota1.SPFreeReadQuotaSize)
+	s.Require().NoError(err)
+	consumedQuota = quota1.ReadConsumedSize - quota0.ReadConsumedSize
+	fmt.Println("actual quota2:", consumedQuota)
 
 	s.Require().Equal(expectQuotaUsed, consumedQuota)
 
