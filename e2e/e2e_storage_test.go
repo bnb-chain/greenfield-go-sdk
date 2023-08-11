@@ -207,7 +207,7 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().NoError(err)
 	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	fmt.Println("actual quota:", consumedQuota)
-	s.Require().Equal(expectQuotaUsed, consumedQuota)
+	s.Require().Equal(uint64(expectQuotaUsed), consumedQuota)
 
 	quota0, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
@@ -241,7 +241,7 @@ func (s *StorageTestSuite) Test_Object() {
 	consumedQuota = quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	fmt.Println("actual quota:", consumedQuota)
 
-	s.Require().Equal(expectQuotaUsed, consumedQuota)
+	s.Require().Equal(uint64(expectQuotaUsed), consumedQuota)
 
 	buffer.Reset()
 	line = `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
@@ -304,7 +304,7 @@ func (s *StorageTestSuite) Test_Object() {
 	consumedQuota = quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	fmt.Println("actual quota2:", consumedQuota)
 
-	s.Require().Equal(expectQuotaUsed, consumedQuota)
+	s.Require().Equal(uint64(expectQuotaUsed), consumedQuota)
 
 	s.T().Log("---> PutObjectPolicy <---")
 	principal, _, err := types.NewAccount("principal")
