@@ -251,7 +251,8 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 
 	s.T().Log("---> CreateObject and HeadObject <---")
-	objectTx, err = s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	objectName = objectName + "xx1"
+	objectTx, err = s.Client.CreateObject(s.ClientContext, bucketName, objectName+"2", bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
 	s.Require().NoError(err)
@@ -277,7 +278,7 @@ func (s *StorageTestSuite) Test_Object() {
 
 	var wg2 sync.WaitGroup
 	wg2.Add(concurrentNumber)
-	for i := 0; i < concurrentNumber; i++ {
+	for i := 0; i < concurrentNumber+5; i++ {
 		go func() {
 			defer wg2.Done()
 			for i := 0; i < 5; i++ {
@@ -296,7 +297,7 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 	wg2.Wait()
 
-	expectQuotaUsed = int(contentLen) * concurrentNumber * downloadCount
+	expectQuotaUsed = int(contentLen) * (concurrentNumber + 5) * downloadCount
 	fmt.Println("expect quota2:", expectQuotaUsed)
 	quota1, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	fmt.Println("Get quota:", quota1.ReadConsumedSize, "free :", quota1.SPFreeReadQuotaSize)
