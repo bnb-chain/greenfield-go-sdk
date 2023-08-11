@@ -183,13 +183,38 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().NoError(err)
 	fmt.Println("get quota;", quota0)
 
+	for i := 0; i < concurrentNumber; i++ {
+		for j := 0; j < downloadCount; j++ {
+			objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+			if err != nil {
+				fmt.Printf("error: %v", err)
+				quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+				//	s.NoError(err, quota2)
+				fmt.Printf("quota: %v", quota2)
+			}
+			objectBytes, err := io.ReadAll(objectContent)
+			s.Require().NoError(err)
+			s.Require().Equal(objectBytes, buffer.Bytes())
+		}
+	}
+
+	expectQuotaUsed := int(1024*300*100) * concurrentNumber * downloadCount
+	fmt.Println("expect quota:", expectQuotaUsed)
+	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
+	fmt.Println("actual quota:", consumedQuota)
+	s.Require().Equal(expectQuotaUsed, consumedQuota)
+
+	quota0, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+
 	var wg sync.WaitGroup
 	wg.Add(concurrentNumber)
-
 	for i := 0; i < concurrentNumber; i++ {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < downloadCount; i++ {
+			for i := 0; i < 5; i++ {
 				objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
 				if err != nil {
 					fmt.Printf("error: %v", err)
@@ -205,11 +230,11 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 	wg.Wait()
 
-	expectQuotaUsed := int(1024*300*100) * concurrentNumber * downloadCount
+	expectQuotaUsed = int(1024*300*100) * concurrentNumber * downloadCount
 	fmt.Println("expect quota:", expectQuotaUsed)
-	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	quota1, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
-	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
+	consumedQuota = quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	fmt.Println("actual quota:", consumedQuota)
 
 	s.Require().Equal(expectQuotaUsed, consumedQuota)
