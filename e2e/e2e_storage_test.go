@@ -213,8 +213,8 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().NoError(err)
 
 	var wg sync.WaitGroup
-	wg.Add(concurrentNumber)
-	for i := 0; i < concurrentNumber+5; i++ {
+	wg.Add(concurrentNumber + 10)
+	for i := 0; i < concurrentNumber+10; i++ {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 5; i++ {
@@ -233,7 +233,7 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 	wg.Wait()
 
-	expectQuotaUsed = int(contentLen) * (concurrentNumber + 5) * downloadCount
+	expectQuotaUsed = int(contentLen) * (concurrentNumber + 10) * downloadCount
 	fmt.Println("expect quota:", expectQuotaUsed)
 	quota1, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	fmt.Println("Get quota:", quota1.ReadConsumedSize, "free :", quota1.SPFreeReadQuotaSize)
