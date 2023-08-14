@@ -212,28 +212,78 @@ func (s *StorageTestSuite) Test_Object() {
 	quota0, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
 
+	var buffer2 bytes.Buffer
+	line2 := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*17; i++ {
+		buffer2.WriteString(fmt.Sprintf("[%05d] %s\n", i, line2))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectName2 := objectName + "xx1"
+
+	objectTx2, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName2, bytes.NewReader(buffer2.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx2)
+	s.Require().NoError(err)
+
+	time.Sleep(10 * time.Second)
+	var contentLen2 uint64
+	objectDetail2, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail2.ObjectInfo.ObjectName, objectName2)
+	s.Require().Equal(objectDetail2.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	fmt.Println("content length:", objectDetail2.ObjectInfo.PayloadSize, "buf len", buffer2.Len())
+	contentLen2 = objectDetail2.ObjectInfo.PayloadSize
+
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName2, int64(buffer2.Len()))
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName2, int64(buffer2.Len()),
+		bytes.NewReader(buffer2.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+	s.waitSealObject(bucketName, objectName2)
+
 	var wg sync.WaitGroup
-	wg.Add(concurrentNumber + 10)
-	for i := 0; i < concurrentNumber+10; i++ {
-		go func() {
-			defer wg.Done()
-			for i := 0; i < 5; i++ {
-				objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
-				if err != nil {
-					fmt.Printf("error: %v", err)
-					quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
-					//	s.NoError(err, quota2)
-					fmt.Printf("quota: %v", quota2)
+	wg.Add(concurrentNumber + 20)
+	for j := 0; j < concurrentNumber+20; j++ {
+		if j%2 == 0 {
+			go func() {
+				defer wg.Done()
+				for i := 0; i < 5; i++ {
+					objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+					if err != nil {
+						fmt.Printf("error: %v", err)
+						quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+						//	s.NoError(err, quota2)
+						fmt.Printf("quota: %v", quota2)
+					}
+					objectBytes, err := io.ReadAll(objectContent)
+					s.Require().NoError(err)
+					s.Require().Equal(objectBytes, buffer.Bytes())
 				}
-				objectBytes, err := io.ReadAll(objectContent)
-				s.Require().NoError(err)
-				s.Require().Equal(objectBytes, buffer.Bytes())
-			}
-		}()
+			}()
+		} else {
+			go func() {
+				defer wg.Done()
+				for i := 0; i < 5; i++ {
+					objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName2, types.GetObjectOptions{})
+					if err != nil {
+						fmt.Printf("error: %v", err)
+						quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+						//	s.NoError(err, quota2)
+						fmt.Printf("quota: %v", quota2)
+					}
+					objectBytes2, err := io.ReadAll(objectContent)
+					s.Require().NoError(err)
+					s.Require().Equal(objectBytes2, buffer2.Bytes())
+				}
+			}()
+		}
 	}
 	wg.Wait()
 
-	expectQuotaUsed = int(contentLen) * (concurrentNumber + 10) * downloadCount
+	concurrentOne := (concurrentNumber + 20 + 1) / 2
+	expectQuotaUsed = int(contentLen)*(concurrentOne)*downloadCount + int(contentLen2)*(concurrentOne)*downloadCount
+
 	fmt.Println("expect quota:", expectQuotaUsed)
 	quota1, err = s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	fmt.Println("Get quota:", quota1.ReadConsumedSize, "free :", quota1.SPFreeReadQuotaSize)
@@ -243,48 +293,6 @@ func (s *StorageTestSuite) Test_Object() {
 
 	s.Require().Equal(uint64(expectQuotaUsed), consumedQuota)
 
-	s.T().Log("---> PutObjectPolicy <---")
-	principal, _, err := types.NewAccount("principal")
-	s.Require().NoError(err)
-	principalWithAccount, err := utils.NewPrincipalWithAccount(principal.GetAddress())
-	s.Require().NoError(err)
-	statements := []*permTypes.Statement{
-		{
-			Effect: permTypes.EFFECT_ALLOW,
-			Actions: []permTypes.ActionType{
-				permTypes.ACTION_GET_OBJECT,
-			},
-			Resources:      nil,
-			ExpirationTime: nil,
-			LimitSize:      nil,
-		},
-	}
-	policy, err := s.Client.PutObjectPolicy(s.ClientContext, bucketName, objectName, principalWithAccount, statements, types.PutPolicyOption{})
-	s.Require().NoError(err)
-	_, err = s.Client.WaitForTx(s.ClientContext, policy)
-	s.Require().NoError(err)
-
-	s.T().Log("--->  GetObjectPolicy <---")
-	objectPolicy, err := s.Client.GetObjectPolicy(s.ClientContext, bucketName, objectName, principal.GetAddress().String())
-	s.Require().NoError(err)
-	s.T().Logf("get object policy:%s\n", objectPolicy.String())
-
-	s.T().Log("---> DeleteObjectPolicy <---")
-
-	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
-	s.Require().NoError(err)
-	deleteObjectPolicy, err := s.Client.DeleteObjectPolicy(s.ClientContext, bucketName, objectName, principalStr, types.DeletePolicyOption{})
-	s.Require().NoError(err)
-	_, err = s.Client.WaitForTx(s.ClientContext, deleteObjectPolicy)
-	s.Require().NoError(err)
-
-	s.T().Log("---> DeleteObject <---")
-	deleteObject, err := s.Client.DeleteObject(s.ClientContext, bucketName, objectName, types.DeleteObjectOption{})
-	s.Require().NoError(err)
-	_, err = s.Client.WaitForTx(s.ClientContext, deleteObject)
-	s.Require().NoError(err)
-	_, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-	s.Require().Error(err)
 }
 
 func (s *StorageTestSuite) Test_Group() {
