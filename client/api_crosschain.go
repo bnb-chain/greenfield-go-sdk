@@ -20,7 +20,7 @@ type CrossChain interface {
 	GetChannelSendSequence(ctx context.Context, channelId uint32) (uint64, error)
 	GetChannelReceiveSequence(ctx context.Context, channelId uint32) (uint64, error)
 	GetInturnRelayer(ctx context.Context, req *oracletypes.QueryInturnRelayerRequest) (*oracletypes.QueryInturnRelayerResponse, error)
-	GetCrossChainPackage(ctx context.Context, channelId uint32, sequence uint64) ([]byte, error)
+	GetCrossChainPackage(ctx context.Context, destChainId sdk.ChainID, channelId uint32, sequence uint64) ([]byte, error)
 
 	MirrorGroup(ctx context.Context, destChainId sdk.ChainID, groupId math.Uint, groupName string, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 	MirrorBucket(ctx context.Context, destChainId sdk.ChainID, bucketId math.Uint, bucketName string, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
@@ -90,8 +90,15 @@ func (c *client) GetInturnRelayer(ctx context.Context, req *oracletypes.QueryInt
 	return c.chainClient.InturnRelayer(ctx, req)
 }
 
-func (c *client) GetCrossChainPackage(ctx context.Context, channelId uint32, sequence uint64) ([]byte, error) {
-	resp, err := c.chainClient.CrossChainPackage(ctx, &crosschaintypes.QueryCrossChainPackageRequest{ChannelId: channelId, Sequence: sequence})
+func (c *client) GetCrossChainPackage(ctx context.Context, destChainId sdk.ChainID, channelId uint32, sequence uint64) ([]byte, error) {
+	resp, err := c.chainClient.CrossChainPackage(
+		ctx,
+		&crosschaintypes.QueryCrossChainPackageRequest{
+			DestChainId: uint32(destChainId),
+			ChannelId:   channelId,
+			Sequence:    sequence,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
