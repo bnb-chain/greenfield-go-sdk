@@ -17,8 +17,8 @@ type CrossChain interface {
 	TransferOut(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
 
 	Claims(ctx context.Context, srcShainId, destChainId uint32, sequence uint64, timestamp uint64, payload []byte, voteAddrSet []uint64, aggSignature []byte, txOption gnfdSdkTypes.TxOption) (*sdk.TxResponse, error)
-	GetChannelSendSequence(ctx context.Context, channelId uint32) (uint64, error)
-	GetChannelReceiveSequence(ctx context.Context, channelId uint32) (uint64, error)
+	GetChannelSendSequence(ctx context.Context, destChainId sdk.ChainID, channelId uint32) (uint64, error)
+	GetChannelReceiveSequence(ctx context.Context, destChainId sdk.ChainID, channelId uint32) (uint64, error)
 	GetInturnRelayer(ctx context.Context, req *oracletypes.QueryInturnRelayerRequest) (*oracletypes.QueryInturnRelayerResponse, error)
 	GetCrossChainPackage(ctx context.Context, destChainId sdk.ChainID, channelId uint32, sequence uint64) ([]byte, error)
 
@@ -62,10 +62,13 @@ func (c *client) Claims(ctx context.Context, srcShainId, destChainId uint32, seq
 }
 
 // GetChannelSendSequence gets the next send sequence for a channel
-func (c *client) GetChannelSendSequence(ctx context.Context, channelId uint32) (uint64, error) {
+func (c *client) GetChannelSendSequence(ctx context.Context, destChainId sdk.ChainID, channelId uint32) (uint64, error) {
 	resp, err := c.chainClient.CrosschainQueryClient.SendSequence(
 		ctx,
-		&crosschaintypes.QuerySendSequenceRequest{ChannelId: channelId},
+		&crosschaintypes.QuerySendSequenceRequest{
+			DestChainId: uint32(destChainId),
+			ChannelId:   channelId,
+		},
 	)
 	if err != nil {
 		return 0, err
@@ -74,10 +77,13 @@ func (c *client) GetChannelSendSequence(ctx context.Context, channelId uint32) (
 }
 
 // GetChannelReceiveSequence gets the next receive sequence for a channel
-func (c *client) GetChannelReceiveSequence(ctx context.Context, channelId uint32) (uint64, error) {
+func (c *client) GetChannelReceiveSequence(ctx context.Context, destChainId sdk.ChainID, channelId uint32) (uint64, error) {
 	resp, err := c.chainClient.CrosschainQueryClient.ReceiveSequence(
 		ctx,
-		&crosschaintypes.QueryReceiveSequenceRequest{ChannelId: channelId},
+		&crosschaintypes.QueryReceiveSequenceRequest{
+			DestChainId: uint32(destChainId),
+			ChannelId:   channelId,
+		},
 	)
 	if err != nil {
 		return 0, err
