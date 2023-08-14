@@ -148,10 +148,10 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().NoError(err)
 
 	var wg sync.WaitGroup
-	wg.Add(concurrentNumber + 20)
+	wg.Add(concurrentNumber + 40)
 	downloadTime1 := 0
 	downloadTime2 := 0
-	for j := 0; j < concurrentNumber+20; j++ {
+	for j := 0; j < concurrentNumber+40; j++ {
 		if j%2 == 0 {
 			go func() {
 				downloadTime1++
@@ -190,7 +190,7 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 	wg.Wait()
 
-	concurrentOne := (concurrentNumber + 20 + 1) / 2
+	concurrentOne := (concurrentNumber + 40 + 1) / 2
 	fmt.Println("concurrentOne", concurrentOne, "download time,", downloadTime1, downloadTime2)
 	expectQuotaUsed = int(contentLen)*(downloadTime1)*downloadCount + int(contentLen2)*(downloadTime2)*downloadCount
 
