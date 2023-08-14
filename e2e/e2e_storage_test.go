@@ -229,7 +229,7 @@ func (s *StorageTestSuite) Test_Object() {
 
 	time.Sleep(10 * time.Second)
 	var contentLen2 uint64
-	objectDetail2, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	objectDetail2, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName2)
 	s.Require().NoError(err)
 	s.Require().Equal(objectDetail2.ObjectInfo.ObjectName, objectName2)
 	s.Require().Equal(objectDetail2.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
