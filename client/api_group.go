@@ -82,7 +82,7 @@ func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.De
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
 func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-	addAddresses, removeAddresses []string, expirationTime []time.Time, opts types.UpdateGroupMemberOption,
+	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption,
 ) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
@@ -99,7 +99,7 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 	addMembers := make([]*storageTypes.MsgGroupMember, 0)
 	removeMembers := make([]sdk.AccAddress, 0)
 
-	if len(addAddresses) != len(expirationTime) {
+	if len(addAddresses) != len(opts.ExpirationTime) {
 		return "", errors.New("please provide expirationTime for every new add member")
 	}
 
@@ -110,7 +110,7 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 		}
 		m := &storageTypes.MsgGroupMember{
 			Member:         addr,
-			ExpirationTime: expirationTime[idx],
+			ExpirationTime: opts.ExpirationTime[idx],
 		}
 		addMembers = append(addMembers, m)
 	}
@@ -341,7 +341,7 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 }
 
 func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string,
-	memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption,
+	memberAddresses []string, opts types.RenewGroupMemberOption,
 ) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
@@ -351,7 +351,7 @@ func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName
 		return "", errors.New("group name is empty")
 	}
 	renewMembers := make([]*storageTypes.MsgGroupMember, 0)
-	if len(memberAddresses) != len(expirationTime) {
+	if len(memberAddresses) != len(opts.ExpirationTime) {
 		return "", errors.New("please provide expirationTime for every new add member")
 	}
 	for idx, addr := range memberAddresses {
@@ -361,7 +361,7 @@ func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName
 		}
 		m := &storageTypes.MsgGroupMember{
 			Member:         addr,
-			ExpirationTime: expirationTime[idx],
+			ExpirationTime: opts.ExpirationTime[idx],
 		}
 		renewMembers = append(renewMembers, m)
 	}

@@ -114,7 +114,8 @@ type CreateGroupOptions struct {
 
 // UpdateGroupMemberOption indicates the info to update group member
 type UpdateGroupMemberOption struct {
-	TxOpts *gnfdsdktypes.TxOption
+	TxOpts         *gnfdsdktypes.TxOption
+	ExpirationTime []*time.Time
 }
 
 type LeaveGroupOption struct {
@@ -123,7 +124,8 @@ type LeaveGroupOption struct {
 
 // RenewGroupMemberOption indicates the info to update group member
 type RenewGroupMemberOption struct {
-	TxOpts *gnfdsdktypes.TxOption
+	TxOpts         *gnfdsdktypes.TxOption
+	ExpirationTime []*time.Time
 }
 
 // ComputeHashOptions indicates the metadata of redundancy strategy
