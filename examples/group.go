@@ -71,6 +71,48 @@ func main() {
 		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
 	}
 
+	// get group members
+	groups, err := cli.GetGroupMembers(ctx, 10, types.GroupsPaginationOptions{
+		Limit:      10,
+		StartAfter: "",
+		EndPointOptions: &types.EndPointOptions{
+			Endpoint:  httpsAddr,
+			SPAddress: "",
+		},
+	})
+	log.Println("list groups result:")
+	for _, group := range groups.Groups {
+		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
+	}
+
+	// get user groups
+	userGroups, err := cli.GetUserGroups(ctx, types.GroupsPaginationOptions{
+		Limit:      10,
+		StartAfter: "",
+		EndPointOptions: &types.EndPointOptions{
+			Endpoint:  httpsAddr,
+			SPAddress: "",
+		},
+	})
+	log.Println("get user groups result:")
+	for _, group := range userGroups.Groups {
+		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
+	}
+
+	// get group members
+	members, err := cli.GetUserOwnedGroups(ctx, types.GroupsPaginationOptions{
+		Limit:      10,
+		StartAfter: "",
+		EndPointOptions: &types.EndPointOptions{
+			Endpoint:  httpsAddr,
+			SPAddress: "",
+		},
+	})
+	log.Println("list groups result:")
+	for _, group := range members.Groups {
+		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
+	}
+
 	// delete group
 	delTx, err := cli.DeleteGroup(ctx, groupName, types.DeleteGroupOption{})
 	handleErr(err, "DeleteGroup")

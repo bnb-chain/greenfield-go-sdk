@@ -226,6 +226,12 @@ type ListGroupsOptions struct {
 	EndPointOptions *EndPointOptions
 }
 
+type GroupsPaginationOptions struct {
+	Limit           int64
+	StartAfter      string
+	EndPointOptions *EndPointOptions
+}
+
 func (o *GetObjectOptions) SetRange(start, end int64) error {
 	switch {
 	case 0 < start && end == 0:
