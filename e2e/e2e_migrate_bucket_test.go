@@ -206,7 +206,7 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 // test only conflict sp's case
 func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 	// 1) create bucket and object in srcSP
-	bucketName, bucketInfo := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PRIVATE)
+	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PRIVATE)
 
 	// test only one object's case
 	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
@@ -244,6 +244,8 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 	s.Require().NoError(err)
 
 	s.T().Logf("MigrateBucket : %s", txhash)
+
+	var bucketInfo *storageTypes.BucketInfo
 
 	for {
 		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)

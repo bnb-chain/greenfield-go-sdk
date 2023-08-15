@@ -747,6 +747,9 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 // CancelMigrateBucket get approval of migrating bucket and send migrateBucket txn to greenfield chain, it returns the transaction hash value and error
 func (c *client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error) {
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
+	if err != nil {
+		return 0, "", err
+	}
 	cancelBucketMsg := storageTypes.NewMsgCancelMigrateBucket(
 		govModuleAddress.GetAddress(), bucketName,
 	)
