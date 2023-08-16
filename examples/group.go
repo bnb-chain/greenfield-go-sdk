@@ -72,7 +72,7 @@ func main() {
 	}
 
 	// get group members
-	groups, err := cli.GetGroupMembers(ctx, 10, types.GroupsPaginationOptions{
+	groupMembers, err := cli.ListGroupMembers(ctx, 10, types.GroupsPaginationOptions{
 		Limit:      10,
 		StartAfter: "",
 		EndPointOptions: &types.EndPointOptions{
@@ -81,35 +81,35 @@ func main() {
 		},
 	})
 	log.Println("list groups result:")
-	for _, group := range groups.Groups {
+	for _, group := range groupMembers.Groups {
 		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
 	}
 
 	// get user groups
-	userGroups, err := cli.GetUserGroups(ctx, types.GroupsPaginationOptions{
-		Limit:      10,
+	userGroups, err := cli.ListGroupsByAccount(ctx, types.GroupsPaginationOptions{
 		StartAfter: "",
+		Account:    "0x6a45de47a2cd53084b4793fca7c1e706b9f54ed1",
 		EndPointOptions: &types.EndPointOptions{
 			Endpoint:  httpsAddr,
 			SPAddress: "",
 		},
 	})
-	log.Println("get user groups result:")
+	log.Println("list groups result:")
 	for _, group := range userGroups.Groups {
 		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
 	}
 
 	// get group members
-	members, err := cli.GetUserOwnedGroups(ctx, types.GroupsPaginationOptions{
-		Limit:      10,
+	ownedGroups, err := cli.ListGroupsByOwner(ctx, types.GroupsPaginationOptions{
 		StartAfter: "",
+		Account:    "0x6a45de47a2cd53084b4793fca7c1e706b9f54ed1",
 		EndPointOptions: &types.EndPointOptions{
 			Endpoint:  httpsAddr,
 			SPAddress: "",
 		},
 	})
 	log.Println("list groups result:")
-	for _, group := range members.Groups {
+	for _, group := range ownedGroups.Groups {
 		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
 	}
 
