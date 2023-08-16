@@ -66,12 +66,14 @@ type Group interface {
 	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
 	// RenewGroupMember renew a list of group members and their expiration time
 	RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string, memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption) (string, error)
-	// GetGroupMembers get groups info by a user address
-	GetGroupMembers(ctx context.Context, groupID int64, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error)
-	// GetUserGroups get group members by group id
-	GetUserGroups(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error)
-	// GetUserOwnedGroups retrieve groups where the user is the owner
-	GetUserOwnedGroups(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error)
+	// ListGroupMembers returns a list of members contained within the group specified by the group id, including those for which the user's expiration time has already elapsed
+	ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error)
+	// ListGroupsByAccount  returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
+	// By default, the user is the sender. Other users can be set using the option
+	ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error)
+	// ListGroupsByOwner returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
+	// By default, the user is the sender. Other users can be set using the option
+	ListGroupsByOwner(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error)
 }
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
@@ -375,8 +377,8 @@ func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName
 	return c.sendTxn(ctx, msg, opts.TxOpts)
 }
 
-// GetGroupMembers get groups info by a user address
-func (c *client) GetGroupMembers(ctx context.Context, groupID int64, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error) {
+// ListGroupMembers returns a list of members contained within the group specified by the group id, including those for which the user's expiration time has already elapsed
+func (c *client) ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error) {
 	params := url.Values{}
 	params.Set("group-members", "")
 	params.Set("group-id", strconv.FormatInt(groupID, 10))
@@ -415,6 +417,7 @@ func (c *client) GetGroupMembers(ctx context.Context, groupID int64, opts types.
 
 	var groups *types.GroupMembersResult
 	bufStr := buf.String()
+	// TODO change the format to XML later
 	err = json.Unmarshal([]byte(bufStr), &groups)
 	if err != nil {
 		log.Error().Msgf("get groups info by a user address in group id:%v failed: %s", groupID, err.Error())
@@ -424,17 +427,28 @@ func (c *client) GetGroupMembers(ctx context.Context, groupID int64, opts types.
 	return groups, nil
 }
 
-// GetUserGroups get group members by group id
-func (c *client) GetUserGroups(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error) {
+// ListGroupsByAccount  returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
+// By default, the user is the sender. Other users can be set using the option
+func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error) {
 	params := url.Values{}
 	params.Set("user-groups", "")
 	params.Set("start-after", opts.StartAfter)
 	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
 
+	account := opts.Account
+	if account == "" {
+		acc, err := c.GetDefaultAccount()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			return &types.GroupMembersResult{}, err
+		}
+		account = acc.GetAddress().String()
+	}
+
 	reqMeta := requestMeta{
 		urlValues:     params,
 		contentSHA256: types.EmptyStringSHA256,
-		userAddress:   c.MustGetDefaultAccount().GetAddress().String(),
+		userAddress:   account,
 	}
 
 	sendOpt := sendOptions{
@@ -458,32 +472,44 @@ func (c *client) GetUserGroups(ctx context.Context, opts types.GroupsPaginationO
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
-		log.Error().Msgf("get group members by group id in account id:%v failed: %s", c.MustGetDefaultAccount().GetAddress().String(), err.Error())
+		log.Error().Msgf("get group members by group id in account id:%v failed: %s", account, err.Error())
 		return &types.GroupMembersResult{}, err
 	}
 
 	var groups *types.GroupMembersResult
 	bufStr := buf.String()
+	// TODO change the format to XML later
 	err = json.Unmarshal([]byte(bufStr), &groups)
 	if err != nil {
-		log.Error().Msgf("get group members by group id in account id:%v failed: %s", c.MustGetDefaultAccount().GetAddress().String(), err.Error())
+		log.Error().Msgf("get group members by group id in account id:%v failed: %s", account, err.Error())
 		return &types.GroupMembersResult{}, err
 	}
 
 	return groups, nil
 }
 
-// GetUserOwnedGroups retrieve groups where the user is the owner
-func (c *client) GetUserOwnedGroups(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error) {
+// ListGroupsByOwner returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
+// By default, the user is the sender. Other users can be set using the option
+func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupMembersResult, error) {
 	params := url.Values{}
 	params.Set("owned-groups", "")
 	params.Set("start-after", opts.StartAfter)
 	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
 
+	account := opts.Account
+	if account == "" {
+		acc, err := c.GetDefaultAccount()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			return &types.GroupMembersResult{}, err
+		}
+		account = acc.GetAddress().String()
+	}
+
 	reqMeta := requestMeta{
 		urlValues:     params,
 		contentSHA256: types.EmptyStringSHA256,
-		userAddress:   c.MustGetDefaultAccount().GetAddress().String(),
+		userAddress:   account,
 	}
 
 	sendOpt := sendOptions{
@@ -507,15 +533,16 @@ func (c *client) GetUserOwnedGroups(ctx context.Context, opts types.GroupsPagina
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
-		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", c.MustGetDefaultAccount().GetAddress().String(), err.Error())
+		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", account, err.Error())
 		return &types.GroupMembersResult{}, err
 	}
 
 	var groups *types.GroupMembersResult
+	// TODO change the format to XML later
 	bufStr := buf.String()
 	err = json.Unmarshal([]byte(bufStr), &groups)
 	if err != nil {
-		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", c.MustGetDefaultAccount().GetAddress().String(), err.Error())
+		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", account, err.Error())
 		return &types.GroupMembersResult{}, err
 	}
 

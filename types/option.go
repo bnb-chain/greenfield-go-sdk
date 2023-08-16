@@ -227,8 +227,14 @@ type ListGroupsOptions struct {
 }
 
 type GroupsPaginationOptions struct {
-	Limit           int64
-	StartAfter      string
+	// Limit determines the number of group data records to be returned.
+	// If the limit is set to 0, it will default to 50.
+	// If the limit exceeds 1000, only 1000 records will be returned.
+	Limit      int64
+	StartAfter string
+	// Account defines the user account address
+	// if account is set to "", it will default to current user address
+	Account         string
 	EndPointOptions *EndPointOptions
 }
 
