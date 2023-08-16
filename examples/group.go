@@ -72,7 +72,7 @@ func main() {
 	}
 
 	// get group members
-	groupMembers, err := cli.ListGroupMembers(ctx, 10, types.GroupsPaginationOptions{
+	groupMembers, err := cli.ListGroupMembers(ctx, 10, types.GroupMembersPaginationOptions{
 		Limit:      10,
 		StartAfter: "",
 		EndPointOptions: &types.EndPointOptions{

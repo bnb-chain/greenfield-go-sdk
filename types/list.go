@@ -80,6 +80,11 @@ type GroupMembersResult struct {
 	Groups []*GroupMembers `json:"groups"`
 }
 
+type GroupsResult struct {
+	// groups defines the response of group member list
+	Groups []*GroupMembers `json:"groups"`
+}
+
 type GroupMembers struct {
 	// group defines the basic group info
 	Group *GroupInfo `json:"group"`
