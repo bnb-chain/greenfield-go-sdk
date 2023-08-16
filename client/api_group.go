@@ -68,10 +68,10 @@ type Group interface {
 	RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string, memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption) (string, error)
 	// ListGroupMembers returns a list of members contained within the group specified by the group id, including those for which the user's expiration time has already elapsed
 	ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupMembersPaginationOptions) (*types.GroupMembersResult, error)
-	// ListGroupsByAccount  returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
+	// ListGroupsByAccount returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
 	// By default, the user is the sender. Other users can be set using the option
 	ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error)
-	// ListGroupsByOwner returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
+	// ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
 	// By default, the user is the sender. Other users can be set using the option
 	ListGroupsByOwner(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error)
 }
@@ -427,7 +427,7 @@ func (c *client) ListGroupMembers(ctx context.Context, groupID int64, opts types
 	return groups, nil
 }
 
-// ListGroupsByAccount  returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
+// ListGroupsByAccount returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
 // By default, the user is the sender. Other users can be set using the option
 func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error) {
 	params := url.Values{}
@@ -488,7 +488,7 @@ func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPagin
 	return groups, nil
 }
 
-// ListGroupsByOwner returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
+// ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
 // By default, the user is the sender. Other users can be set using the option
 func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error) {
 	params := url.Values{}
