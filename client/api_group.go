@@ -73,7 +73,7 @@ type Group interface {
 	ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error)
 	// ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
 	// By default, the user is the sender. Other users can be set using the option
-	ListGroupsByOwner(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error)
+	ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error)
 }
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
@@ -490,26 +490,26 @@ func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPagin
 
 // ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
 // By default, the user is the sender. Other users can be set using the option
-func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error) {
+func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error) {
 	params := url.Values{}
 	params.Set("owned-groups", "")
 	params.Set("start-after", opts.StartAfter)
 	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
 
-	account := opts.Account
-	if account == "" {
+	owner := opts.Owner
+	if owner == "" {
 		acc, err := c.GetDefaultAccount()
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			log.Error().Msg(fmt.Sprintf("get default owner failed %s", err.Error()))
 			return &types.GroupsResult{}, err
 		}
-		account = acc.GetAddress().String()
+		owner = acc.GetAddress().String()
 	}
 
 	reqMeta := requestMeta{
 		urlValues:     params,
 		contentSHA256: types.EmptyStringSHA256,
-		userAddress:   account,
+		userAddress:   owner,
 	}
 
 	sendOpt := sendOptions{
@@ -533,7 +533,7 @@ func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsPaginat
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
-		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", account, err.Error())
+		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", owner, err.Error())
 		return &types.GroupsResult{}, err
 	}
 
@@ -542,7 +542,7 @@ func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsPaginat
 	bufStr := buf.String()
 	err = json.Unmarshal([]byte(bufStr), &groups)
 	if err != nil {
-		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", account, err.Error())
+		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", owner, err.Error())
 		return &types.GroupsResult{}, err
 	}
 

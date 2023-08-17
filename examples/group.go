@@ -100,9 +100,9 @@ func main() {
 	}
 
 	// get group members
-	ownedGroups, err := cli.ListGroupsByOwner(ctx, types.GroupsPaginationOptions{
+	ownedGroups, err := cli.ListGroupsByOwner(ctx, types.GroupsOwnerPaginationOptions{
 		StartAfter: "",
-		Account:    "0x6a45de47a2cd53084b4793fca7c1e706b9f54ed1",
+		Owner:      "0x6a45de47a2cd53084b4793fca7c1e706b9f54ed1",
 		EndPointOptions: &types.EndPointOptions{
 			Endpoint:  httpsAddr,
 			SPAddress: "",
