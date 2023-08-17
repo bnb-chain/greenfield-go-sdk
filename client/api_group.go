@@ -34,7 +34,7 @@ type Group interface {
 	// removeAddresses indicates the HEX-encoded string list of the member addresses to be removed
 	// expirationTime  indicates the expiration time of the group member, user need set the expiration time for the addAddresses
 	UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-		addAddresses, removeAddresses []string, expirationTime []time.Time, opts types.UpdateGroupMemberOption) (string, error)
+		addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption) (string, error)
 	// LeaveGroup make the member leave the specific group
 	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error)
@@ -65,7 +65,15 @@ type Group interface {
 	// it providers fuzzy searches by inputting a specific name and prefix
 	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
 	// RenewGroupMember renew a list of group members and their expiration time
-	RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string, memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption) (string, error)
+	RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string, memberAddresses []string, opts types.RenewGroupMemberOption) (string, error)
+	// ListGroupMembers returns a list of members contained within the group specified by the group id, including those for which the user's expiration time has already elapsed
+	ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupMembersPaginationOptions) (*types.GroupMembersResult, error)
+	// ListGroupsByAccount returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
+	// By default, the user is the sender. Other users can be set using the option
+	ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error)
+	// ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
+	// By default, the user is the sender. Other users can be set using the option
+	ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error)
 }
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
@@ -82,7 +90,7 @@ func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.De
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
 func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-	addAddresses, removeAddresses []string, expirationTime []time.Time, opts types.UpdateGroupMemberOption,
+	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption,
 ) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
@@ -91,22 +99,24 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 	if groupName == "" {
 		return "", errors.New("group name is empty")
 	}
-
 	if len(addAddresses) == 0 && len(removeAddresses) == 0 {
 		return "", errors.New("no update member")
 	}
-
-	addMembers := make([]*storageTypes.MsgGroupMember, 0)
-	removeMembers := make([]sdk.AccAddress, 0)
-
-	if len(addAddresses) != len(expirationTime) {
+	if opts.ExpirationTime != nil && len(addAddresses) != len(opts.ExpirationTime) {
 		return "", errors.New("please provide expirationTime for every new add member")
 	}
-
+	addMembers := make([]*storageTypes.MsgGroupMember, 0)
+	removeMembers := make([]sdk.AccAddress, 0)
+	expirationTime := make([]*time.Time, len(addAddresses))
 	for idx, addr := range addAddresses {
 		_, err := sdk.AccAddressFromHexUnsafe(addr)
 		if err != nil {
 			return "", err
+		}
+		if opts.ExpirationTime != nil && opts.ExpirationTime[idx] != nil {
+			expirationTime[idx] = opts.ExpirationTime[idx]
+		} else {
+			expirationTime[idx] = &storageTypes.MaxTimeStamp
 		}
 		m := &storageTypes.MsgGroupMember{
 			Member:         addr,
@@ -341,7 +351,7 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 }
 
 func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string,
-	memberAddresses []string, expirationTime []time.Time, opts types.RenewGroupMemberOption,
+	memberAddresses []string, opts types.RenewGroupMemberOption,
 ) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
@@ -351,13 +361,19 @@ func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName
 		return "", errors.New("group name is empty")
 	}
 	renewMembers := make([]*storageTypes.MsgGroupMember, 0)
-	if len(memberAddresses) != len(expirationTime) {
+	if opts.ExpirationTime != nil && len(memberAddresses) != len(opts.ExpirationTime) {
 		return "", errors.New("please provide expirationTime for every new add member")
 	}
+	expirationTime := make([]*time.Time, len(memberAddresses))
 	for idx, addr := range memberAddresses {
 		_, err := sdk.AccAddressFromHexUnsafe(addr)
 		if err != nil {
 			return "", err
+		}
+		if opts.ExpirationTime != nil && opts.ExpirationTime[idx] != nil {
+			expirationTime[idx] = opts.ExpirationTime[idx]
+		} else {
+			expirationTime[idx] = &storageTypes.MaxTimeStamp
 		}
 		m := &storageTypes.MsgGroupMember{
 			Member:         addr,
@@ -367,4 +383,176 @@ func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName
 	}
 	msg := storageTypes.NewMsgRenewGroupMember(c.MustGetDefaultAccount().GetAddress(), groupOwner, groupName, renewMembers)
 	return c.sendTxn(ctx, msg, opts.TxOpts)
+}
+
+// ListGroupMembers returns a list of members contained within the group specified by the group id, including those for which the user's expiration time has already elapsed
+func (c *client) ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupMembersPaginationOptions) (*types.GroupMembersResult, error) {
+	params := url.Values{}
+	params.Set("group-members", "")
+	params.Set("group-id", strconv.FormatInt(groupID, 10))
+	params.Set("start-after", opts.StartAfter)
+	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return &types.GroupMembersResult{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return &types.GroupMembersResult{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("get groups info by a user address in group id:%v failed: %s", groupID, err.Error())
+		return &types.GroupMembersResult{}, err
+	}
+
+	var groups *types.GroupMembersResult
+	bufStr := buf.String()
+	// TODO change the format to XML later
+	err = json.Unmarshal([]byte(bufStr), &groups)
+	if err != nil {
+		log.Error().Msgf("get groups info by a user address in group id:%v failed: %s", groupID, err.Error())
+		return &types.GroupMembersResult{}, err
+	}
+
+	return groups, nil
+}
+
+// ListGroupsByAccount returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
+// By default, the user is the sender. Other users can be set using the option
+func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error) {
+	params := url.Values{}
+	params.Set("user-groups", "")
+	params.Set("start-after", opts.StartAfter)
+	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
+
+	account := opts.Account
+	if account == "" {
+		acc, err := c.GetDefaultAccount()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			return &types.GroupsResult{}, err
+		}
+		account = acc.GetAddress().String()
+	}
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+		userAddress:   account,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return &types.GroupsResult{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return &types.GroupsResult{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("get group members by group id in account id:%v failed: %s", account, err.Error())
+		return &types.GroupsResult{}, err
+	}
+
+	var groups *types.GroupsResult
+	bufStr := buf.String()
+	// TODO change the format to XML later
+	err = json.Unmarshal([]byte(bufStr), &groups)
+	if err != nil {
+		log.Error().Msgf("get group members by group id in account id:%v failed: %s", account, err.Error())
+		return &types.GroupsResult{}, err
+	}
+
+	return groups, nil
+}
+
+// ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
+// By default, the user is the sender. Other users can be set using the option
+func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error) {
+	params := url.Values{}
+	params.Set("owned-groups", "")
+	params.Set("start-after", opts.StartAfter)
+	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
+
+	owner := opts.Owner
+	if owner == "" {
+		acc, err := c.GetDefaultAccount()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get default owner failed %s", err.Error()))
+			return &types.GroupsResult{}, err
+		}
+		owner = acc.GetAddress().String()
+	}
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+		userAddress:   owner,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return &types.GroupsResult{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return &types.GroupsResult{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", owner, err.Error())
+		return &types.GroupsResult{}, err
+	}
+
+	var groups *types.GroupsResult
+	// TODO change the format to XML later
+	bufStr := buf.String()
+	err = json.Unmarshal([]byte(bufStr), &groups)
+	if err != nil {
+		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", owner, err.Error())
+		return &types.GroupsResult{}, err
+	}
+
+	return groups, nil
 }

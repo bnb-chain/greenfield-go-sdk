@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -569,31 +568,32 @@ func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, 
 		return types.ListBucketsByBucketIDResponse{}, nil
 	}
 
-	objectIDMap := make(map[uint64]bool)
+	bucketIDMap := make(map[uint64]bool)
 	for _, id := range bucketIds {
-		if _, ok := objectIDMap[id]; ok {
+		if _, ok := bucketIDMap[id]; ok {
 			// repeat id keys in request
 			return types.ListBucketsByBucketIDResponse{}, nil
 		}
-		objectIDMap[id] = true
+		bucketIDMap[id] = true
 	}
+
+	idStr := make([]string, len(bucketIds))
+	for i, id := range bucketIds {
+		idStr[i] = strconv.FormatUint(id, 10)
+	}
+	IDs := strings.Join(idStr, ",")
 
 	params := url.Values{}
 	params.Set("buckets-query", "")
+	params.Set("ids", IDs)
 
 	reqMeta := requestMeta{
 		urlValues:     params,
 		contentSHA256: types.EmptyStringSHA256,
 	}
 
-	b, err := json.Marshal(types.ObjectAndBucketIDs{IDs: bucketIds})
-	if err != nil {
-		return types.ListBucketsByBucketIDResponse{}, err
-	}
-
 	sendOpt := sendOptions{
-		method:           http.MethodPost,
-		body:             bytes.NewBuffer(b),
+		method:           http.MethodGet,
 		disableCloseBody: true,
 	}
 
