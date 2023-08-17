@@ -593,7 +593,7 @@ func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, 
 	}
 
 	sendOpt := sendOptions{
-		method:           http.MethodPost,
+		method:           http.MethodGet,
 		disableCloseBody: true,
 	}
 

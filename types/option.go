@@ -236,6 +236,19 @@ type GroupMembersPaginationOptions struct {
 	EndPointOptions *EndPointOptions
 }
 
+type GroupsOwnerPaginationOptions struct {
+	// Limit determines the number of group data records to be returned.
+	// If the limit is set to 0, it will default to 50.
+	// If the limit exceeds 1000, only 1000 records will be returned.
+	Limit int64
+	// StartAfter is used to input the group id for pagination purposes
+	StartAfter string
+	// Owner defines the owner account address of groups
+	// if owner is set to "", it will default to current user address
+	Owner           string
+	EndPointOptions *EndPointOptions
+}
+
 type GroupsPaginationOptions struct {
 	// Limit determines the number of group data records to be returned.
 	// If the limit is set to 0, it will default to 50.
