@@ -28,8 +28,8 @@ type SP interface {
 	GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
 	// GetStoragePrice returns the storage price for a particular storage provider, including update time, read price, store price and .etc.
 	GetStoragePrice(ctx context.Context, SPAddr string) (*spTypes.SpStoragePrice, error)
-	// GetSecondarySpStorePrice returns the secondary storage price, including update time and store price
-	GetSecondarySpStorePrice(ctx context.Context) (*spTypes.SecondarySpStorePrice, error)
+	// GetGlobalSpStorePrice returns the global storage price, including update time and store price
+	GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpStorePrice, error)
 	// GrantDepositForStorageProvider submit a grant transaction to allow gov module account to deduct the specified number of tokens
 	GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error)
 	// CreateStorageProvider submits a proposal to create a storage provider to the greenfield blockchain, and it returns a proposal ID
@@ -46,9 +46,8 @@ func (c *client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.S
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.chainClient.QueryGetSpStoragePriceByTime(ctx, &spTypes.QueryGetSpStoragePriceByTimeRequest{
-		SpAddr:    spAcc.String(),
-		Timestamp: 0,
+	resp, err := c.chainClient.QuerySpStoragePrice(ctx, &spTypes.QuerySpStoragePriceRequest{
+		SpAddr: spAcc.String(),
 	})
 	if err != nil {
 		return nil, err
@@ -56,14 +55,14 @@ func (c *client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.S
 	return &resp.SpStoragePrice, nil
 }
 
-func (c *client) GetSecondarySpStorePrice(ctx context.Context) (*spTypes.SecondarySpStorePrice, error) {
-	resp, err := c.chainClient.QueryGetSecondarySpStorePriceByTime(ctx, &spTypes.QueryGetSecondarySpStorePriceByTimeRequest{
+func (c *client) GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpStorePrice, error) {
+	resp, err := c.chainClient.QueryGlobalSpStorePriceByTime(ctx, &spTypes.QueryGlobalSpStorePriceByTimeRequest{
 		Timestamp: 0,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &resp.SecondarySpStorePrice, nil
+	return &resp.GlobalSpStorePrice, nil
 }
 
 // ListStorageProviders return the storage provider info on chain
