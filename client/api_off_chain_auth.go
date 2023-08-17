@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/subtle"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"math/big"
@@ -37,15 +37,15 @@ func (c *client) OffChainAuthSign(unsignBytes []byte) string {
 	return authString
 }
 
-// AuthNonce is the structure for off chain auth nonce response
-type AuthNonce struct {
-	CurrentNonce     int    `json:"current_nonce"`
-	CurrentPublicKey string `json:"current_public_key"`
-	ExpiryDate       int64  `json:"expiry_date"`
-	NextNonce        int    `json:"next_nonce"`
+// RequestNonceResp is the structure for off chain auth nonce response
+type RequestNonceResp struct {
+	CurrentNonce     int32  `xml:"CurrentNonce"`
+	NextNonce        int32  `xml:"NextNonce"`
+	CurrentPublicKey string `xml:"CurrentPublicKey"`
+	ExpiryDate       int64  `xml:"ExpiryDate"`
 }
 
-// getNonce
+// GetNextNonce get the nonce value by giving user account and domain
 func (c *client) GetNextNonce(spEndpoint string) (string, error) {
 	header := make(map[string]string)
 	header["X-Gnfd-User-Address"] = c.defaultAccount.GetAddress().String()
@@ -55,12 +55,13 @@ func (c *client) GetNextNonce(spEndpoint string) (string, error) {
 	if err != nil {
 		return "0", err
 	}
-	authNonce := AuthNonce{}
-	err = json.Unmarshal([]byte(response), &authNonce)
+	authNonce := RequestNonceResp{}
+	// decode the xml content from response body
+	err = xml.NewDecoder(bytes.NewBufferString(response)).Decode(&authNonce)
 	if err != nil {
 		return "0", err
 	}
-	return strconv.Itoa(authNonce.NextNonce), nil
+	return strconv.Itoa(int(authNonce.NextNonce)), nil
 }
 
 const (

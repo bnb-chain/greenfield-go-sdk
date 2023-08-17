@@ -1177,7 +1177,7 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 // By inputting a collection of object IDs, we can retrieve the corresponding object data.
 // If the object is nonexistent or has been deleted, a null value will be returned
 func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error) {
-	const MaximumListObjectsSize = 1000
+	const MaximumListObjectsSize = 100
 	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
 		return types.ListObjectsByObjectIDResponse{}, nil
 	}
@@ -1191,22 +1191,23 @@ func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, 
 		objectIDMap[id] = true
 	}
 
+	idStr := make([]string, len(objectIds))
+	for i, id := range objectIds {
+		idStr[i] = strconv.FormatUint(id, 10)
+	}
+	IDs := strings.Join(idStr, ",")
+
 	params := url.Values{}
 	params.Set("objects-query", "")
+	params.Set("ids", IDs)
 
 	reqMeta := requestMeta{
 		urlValues:     params,
 		contentSHA256: types.EmptyStringSHA256,
 	}
 
-	b, err := json.Marshal(types.ObjectAndBucketIDs{IDs: objectIds})
-	if err != nil {
-		return types.ListObjectsByObjectIDResponse{}, err
-	}
-
 	sendOpt := sendOptions{
-		method:           http.MethodPost,
-		body:             bytes.NewBuffer(b),
+		method:           http.MethodGet,
 		disableCloseBody: true,
 	}
 

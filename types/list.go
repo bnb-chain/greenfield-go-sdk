@@ -75,6 +75,37 @@ type ListGroupsResult struct {
 	Count int64 `json:"count,string"`
 }
 
+type GroupMembersResult struct {
+	// groups defines the response of group member list
+	Groups []*GroupMembers `json:"groups"`
+}
+
+type GroupsResult struct {
+	// groups defines the response of group member list
+	Groups []*GroupMembers `json:"groups"`
+}
+
+type GroupMembers struct {
+	// group defines the basic group info
+	Group *GroupInfo `json:"group"`
+	// operator defines operator address of group
+	Operator string `json:"operator"`
+	// create_at defines the block number when the group created
+	CreateAt int64 `json:"create_at,string"`
+	// create_time defines the timestamp when the group created
+	CreateTime int64 `json:"create_time,string"`
+	// update_at defines the block number when the group updated
+	UpdateAt int64 `json:"update_at,string"`
+	// update_time defines the timestamp when the group updated
+	UpdateTime int64 `json:"update_time,string"`
+	// removed defines the group is deleted or not
+	Removed bool `json:"removed"`
+	// the address of account
+	AccountID string `json:"account_id"`
+	// ExpirationTime is the user expiration time for this group
+	ExpirationTime string `json:"expiration_time"`
+}
+
 // ObjectMeta is the structure for metadata service user object
 type ObjectMeta struct {
 	// object_info defines the information of the object.
