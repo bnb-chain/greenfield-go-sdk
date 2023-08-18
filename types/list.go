@@ -70,40 +70,40 @@ type ListBucketsResult struct {
 
 type ListGroupsResult struct {
 	// groups defines the response of group list
-	Groups []*GroupMeta `json:"groups"`
+	Groups []*GroupMeta `json:"Groups"`
 	// count defines total groups amount
-	Count int64 `json:"count,string"`
+	Count int64 `xml:"Count,string"`
 }
 
 type GroupMembersResult struct {
 	// groups defines the response of group member list
-	Groups []*GroupMembers `json:"groups"`
+	Groups []*GroupMembers `xml:"Groups"`
 }
 
 type GroupsResult struct {
 	// groups defines the response of group member list
-	Groups []*GroupMembers `json:"groups"`
+	Groups []*GroupMembers `xml:"Groups"`
 }
 
 type GroupMembers struct {
 	// group defines the basic group info
-	Group *GroupInfo `json:"group"`
+	Group *GroupInfo `xml:"Group"`
 	// operator defines operator address of group
-	Operator string `json:"operator"`
+	Operator string `xml:"Operator"`
 	// create_at defines the block number when the group created
-	CreateAt int64 `json:"create_at,string"`
+	CreateAt int64 `xml:"CreateAt,string"`
 	// create_time defines the timestamp when the group created
-	CreateTime int64 `json:"create_time,string"`
+	CreateTime int64 `xml:"CreateTime,string"`
 	// update_at defines the block number when the group updated
-	UpdateAt int64 `json:"update_at,string"`
+	UpdateAt int64 `xml:"UpdateAt,string"`
 	// update_time defines the timestamp when the group updated
-	UpdateTime int64 `json:"update_time,string"`
+	UpdateTime int64 `xml:"UpdateTime,string"`
 	// removed defines the group is deleted or not
-	Removed bool `json:"removed"`
+	Removed bool `xml:"Removed"`
 	// the address of account
-	AccountID string `json:"account_id"`
+	AccountID string `xml:"AccountId"`
 	// ExpirationTime is the user expiration time for this group
-	ExpirationTime string `json:"expiration_time"`
+	ExpirationTime string `xml:"ExpirationTime"`
 }
 
 // ObjectMeta is the structure for metadata service user object
@@ -229,31 +229,31 @@ type ListBucketsByBucketIDResponse struct {
 // GroupMeta is the structure for group information
 type GroupMeta struct {
 	// group defines the basic group info
-	Group *GroupInfo `json:"group"`
+	Group *GroupInfo `xml:"Group"`
 	// operator defines operator address of group
-	Operator string `json:"operator"`
+	Operator string `xml:"Operator"`
 	// create_at defines the block number when the group created
-	CreateAt int64 `json:"create_at,string"`
+	CreateAt int64 `xml:"CreateAt,string"`
 	// create_time defines the timestamp when the group created
-	CreateTime int64 `json:"create_time,string"`
+	CreateTime int64 `xml:"CreateTime,string"`
 	// update_at defines the block number when the group updated
-	UpdateAt int64 `json:"update_at,string"`
+	UpdateAt int64 `xml:"UpdateAt,string"`
 	// update_time defines the timestamp when the group updated
-	UpdateTime int64 `json:"update_time,string"`
+	UpdateTime int64 `xml:"UpdateTime,string"`
 	// removed defines the group is deleted or not
-	Removed bool `json:"removed"`
+	Removed bool `xml:"Removed"`
 }
 
 // GroupInfo differ from GroupInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
 type GroupInfo struct {
 	// owner is the owner of the group. It can not changed once it created.
-	Owner string `json:"owner"`
+	Owner string `xml:"Owner"`
 	// group_name is the name of group which is unique under an account.
-	GroupName string `json:"group_name"`
+	GroupName string `xml:"GroupName"`
 	// source_type
-	SourceType storageType.SourceType `json:"source_type"`
+	SourceType storageType.SourceType `xml:"SourceType"`
 	// id is the unique identifier of group
-	Id uint64 `json:"id"`
+	Id uint64 `xml:"Id"`
 	// extra is used to store extra info for the group
-	Extra string `json:"extra"`
+	Extra string `xml:"Extra"`
 }
