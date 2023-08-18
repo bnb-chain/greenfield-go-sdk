@@ -566,3 +566,84 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	s.Require().True(isSame)
 	s.Require().NoError(err)
 }
+
+func (s *StorageTestSuite) Test_Resumable_Upload_Fix_Size() {
+	// 1) create big object without putobject
+	bucketName := "xhb4j420gduj"
+	objectName := "1221x"
+	startTime := time.Now()
+
+	s.T().Logf("---> Open file :%s <---", startTime)
+	file, err := os.Open("/data/chris/greenfield-go-sdk/e2e/File32GB")
+	// File8GB
+	s.NoError(err)
+	defer file.Close()
+
+	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
+
+	stat, err := file.Stat()
+	s.NoError(err)
+	s.T().Logf("resume upload size: %d...", stat.Size())
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, stat.Size(),
+		file, types.PutObjectOptions{})
+	s.Require().NoError(err)
+}
+
+func (s *StorageTestSuite) Test_Resumable_Upload_64G_Size() {
+	// 1) create big object without putobject
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+	startTime := time.Now()
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	file, err := os.Open("/data/chris/greenfield-go-sdk/e2e/File32GB")
+	// File8GB
+	s.NoError(err)
+	defer file.Close()
+
+	s.T().Log("---> CreateObject <---")
+	s.T().Logf("---> CreateObject start %s <-- ", time.Since(startTime))
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, file, types.CreateObjectOptions{})
+	s.T().Logf("---> CreateObject end %s <-- ", time.Since(startTime))
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	s.T().Logf("---> WaitForTx end %s <-- ", time.Since(startTime))
+	//time.Sleep(120 * time.Second)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	s.T().Logf("---> Create Bucket:%s, Object:%s <---", bucketName, objectName)
+
+	stat, err := file.Stat()
+	s.NoError(err)
+	s.T().Logf("Begin to PutObject time: %s, resume upload size: %d...", time.Since(startTime), stat.Size())
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, stat.Size(),
+		file, types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	for {
+		objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+		s.T().Logf("HeadObject: %s", objectDetail)
+		s.Require().NoError(err)
+		if objectDetail.ObjectInfo.GetObjectStatus() != storageTypes.OBJECT_STATUS_SEALED {
+			break
+		}
+		time.Sleep(5 * time.Second)
+	}
+	s.T().Logf("Success to seal object time: %s", time.Since(startTime))
+}
