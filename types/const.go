@@ -62,7 +62,7 @@ const (
 
 	// MinPartSize - minimum part size 16MiB per object after which
 	// putObject behaves internally as multipart.
-	MinPartSize = 1024 * 1024 * 32
+	MinPartSize = 1024 * 1024 * 64
 
 	TempFileSuffix = ".temp"            // Temp file suffix
 	FilePermMode   = os.FileMode(0o664) // Default file permission
