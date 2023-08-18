@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -943,7 +942,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 
 	listObjectsResult := types.ListObjectsResult{}
 	bufStr := buf.String()
-	err = json.Unmarshal([]byte(bufStr), &listObjectsResult)
+	err = xml.Unmarshal([]byte(bufStr), &listObjectsResult)
 	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil && listObjectsResult.Objects == nil {
 		log.Error().Msg("the list of objects in user's bucket:" + bucketName + " failed: " + err.Error())
@@ -1173,6 +1172,48 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 	return c.sendTxn(ctx, updateObjectMsg, opt.TxOpts)
 }
 
+//func (m GfSpListObjectsByIDsResponse) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+//	if len(m.Objects) == 0 {
+//		return nil
+//	}
+//
+//	err := e.EncodeToken(start)
+//	if err != nil {
+//		return err
+//	}
+//
+//	for k, v := range m.Objects {
+//		e.Encode(ObjectEntry{Id: k, Value: v})
+//	}
+//
+//	return e.EncodeToken(start.End())
+//}
+
+type GfSpListObjectsByIDsResponse map[uint64]*types.ObjectMeta
+
+type ObjectEntry struct {
+	Id    uint64
+	Value *types.ObjectMeta
+}
+
+func (m *GfSpListObjectsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	*m = GfSpListObjectsByIDsResponse{}
+	//result := GfSpListObjectsByIDsResponse{}
+	for {
+		var e ObjectEntry
+
+		err := d.Decode(&e)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		} else {
+			(*m)[e.Id] = e.Value
+		}
+	}
+	return nil
+}
+
 // ListObjectsByObjectID list objects by object ids
 // By inputting a collection of object IDs, we can retrieve the corresponding object data.
 // If the object is nonexistent or has been deleted, a null value will be returned
@@ -1233,7 +1274,7 @@ func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, 
 
 	objects := types.ListObjectsByObjectIDResponse{}
 	bufStr := buf.String()
-	err = json.Unmarshal([]byte(bufStr), &objects)
+	err = xml.Unmarshal([]byte(bufStr), (*GfSpListObjectsByIDsResponse)(&objects.Objects))
 	if err != nil && objects.Objects == nil {
 		log.Error().Msgf("the list of objects in object ids:%v failed: %s", objectIds, err.Error())
 		return types.ListObjectsByObjectIDResponse{}, err

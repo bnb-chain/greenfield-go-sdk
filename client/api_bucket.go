@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -369,6 +368,30 @@ func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, princip
 	return queryPolicyResp.Policy, nil
 }
 
+type GfSpListBucketsByIDsResponse map[uint64]*types.BucketMeta
+
+type BucketEntry struct {
+	Id    uint64
+	Value *types.BucketMeta
+}
+
+func (m *GfSpListBucketsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	*m = GfSpListBucketsByIDsResponse{}
+	for {
+		var e BucketEntry
+
+		err := d.Decode(&e)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		} else {
+			(*m)[e.Id] = e.Value
+		}
+	}
+	return nil
+}
+
 // ListBuckets list buckets for the owner
 func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error) {
 	params := url.Values{}
@@ -407,7 +430,7 @@ func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 	}
 
 	bufStr := buf.String()
-	err = json.Unmarshal([]byte(bufStr), &listBucketsResult)
+	err = xml.Unmarshal([]byte(bufStr), &listBucketsResult)
 
 	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil && listBucketsResult.Buckets == nil {
@@ -620,7 +643,7 @@ func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, 
 
 	buckets := types.ListBucketsByBucketIDResponse{}
 	bufStr := buf.String()
-	err = json.Unmarshal([]byte(bufStr), &buckets)
+	err = xml.Unmarshal([]byte(bufStr), (*GfSpListBucketsByIDsResponse)(&buckets.Buckets))
 	if err != nil && buckets.Buckets == nil {
 		log.Error().Msgf("the list of buckets in bucket ids:%v failed: %s", bucketIds, err.Error())
 		return types.ListBucketsByBucketIDResponse{}, err
