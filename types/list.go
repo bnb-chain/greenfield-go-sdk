@@ -72,7 +72,7 @@ type ListGroupsResult struct {
 	// groups defines the response of group list
 	Groups []*GroupMeta `json:"Groups"`
 	// count defines total groups amount
-	Count int64 `xml:"Count,string"`
+	Count int64 `xml:"Count"`
 }
 
 type GroupMembersResult struct {
@@ -91,13 +91,13 @@ type GroupMembers struct {
 	// operator defines operator address of group
 	Operator string `xml:"Operator"`
 	// create_at defines the block number when the group created
-	CreateAt int64 `xml:"CreateAt,string"`
+	CreateAt int64 `xml:"CreateAt"`
 	// create_time defines the timestamp when the group created
-	CreateTime int64 `xml:"CreateTime,string"`
+	CreateTime int64 `xml:"CreateTime"`
 	// update_at defines the block number when the group updated
-	UpdateAt int64 `xml:"UpdateAt,string"`
+	UpdateAt int64 `xml:"UpdateAt"`
 	// update_time defines the timestamp when the group updated
-	UpdateTime int64 `xml:"UpdateTime,string"`
+	UpdateTime int64 `xml:"UpdateTime"`
 	// removed defines the group is deleted or not
 	Removed bool `xml:"Removed"`
 	// the address of account
@@ -233,13 +233,13 @@ type GroupMeta struct {
 	// operator defines operator address of group
 	Operator string `xml:"Operator"`
 	// create_at defines the block number when the group created
-	CreateAt int64 `xml:"CreateAt,string"`
+	CreateAt int64 `xml:"CreateAt"`
 	// create_time defines the timestamp when the group created
-	CreateTime int64 `xml:"CreateTime,string"`
+	CreateTime int64 `xml:"CreateTime"`
 	// update_at defines the block number when the group updated
-	UpdateAt int64 `xml:"UpdateAt,string"`
+	UpdateAt int64 `xml:"UpdateAt"`
 	// update_time defines the timestamp when the group updated
-	UpdateTime int64 `xml:"UpdateTime,string"`
+	UpdateTime int64 `xml:"UpdateTime"`
 	// removed defines the group is deleted or not
 	Removed bool `xml:"Removed"`
 }
