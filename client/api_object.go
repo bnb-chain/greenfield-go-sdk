@@ -1172,23 +1172,6 @@ func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectN
 	return c.sendTxn(ctx, updateObjectMsg, opt.TxOpts)
 }
 
-//func (m GfSpListObjectsByIDsResponse) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-//	if len(m.Objects) == 0 {
-//		return nil
-//	}
-//
-//	err := e.EncodeToken(start)
-//	if err != nil {
-//		return err
-//	}
-//
-//	for k, v := range m.Objects {
-//		e.Encode(ObjectEntry{Id: k, Value: v})
-//	}
-//
-//	return e.EncodeToken(start.End())
-//}
-
 type GfSpListObjectsByIDsResponse map[uint64]*types.ObjectMeta
 
 type ObjectEntry struct {
