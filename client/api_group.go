@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -341,7 +341,7 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 
 	listGroupsResult := types.ListGroupsResult{}
 	bufStr := buf.String()
-	err = json.Unmarshal([]byte(bufStr), &listGroupsResult)
+	err = xml.Unmarshal([]byte(bufStr), &listGroupsResult)
 	if err != nil && listGroupsResult.Groups == nil {
 		log.Error().Msg("the list of groups failed: " + err.Error())
 		return types.ListGroupsResult{}, err
@@ -426,7 +426,7 @@ func (c *client) ListGroupMembers(ctx context.Context, groupID int64, opts types
 	var groups *types.GroupMembersResult
 	bufStr := buf.String()
 	// TODO change the format to XML later
-	err = json.Unmarshal([]byte(bufStr), &groups)
+	err = xml.Unmarshal([]byte(bufStr), &groups)
 	if err != nil {
 		log.Error().Msgf("get groups info by a user address in group id:%v failed: %s", groupID, err.Error())
 		return &types.GroupMembersResult{}, err
@@ -487,7 +487,7 @@ func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPagin
 	var groups *types.GroupsResult
 	bufStr := buf.String()
 	// TODO change the format to XML later
-	err = json.Unmarshal([]byte(bufStr), &groups)
+	err = xml.Unmarshal([]byte(bufStr), &groups)
 	if err != nil {
 		log.Error().Msgf("get group members by group id in account id:%v failed: %s", account, err.Error())
 		return &types.GroupsResult{}, err
@@ -548,7 +548,7 @@ func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPa
 	var groups *types.GroupsResult
 	// TODO change the format to XML later
 	bufStr := buf.String()
-	err = json.Unmarshal([]byte(bufStr), &groups)
+	err = xml.Unmarshal([]byte(bufStr), &groups)
 	if err != nil {
 		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", owner, err.Error())
 		return &types.GroupsResult{}, err
