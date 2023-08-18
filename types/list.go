@@ -171,8 +171,8 @@ type ObjectInfo struct {
 	// object_name is the name of object
 	ObjectName string `json:"object_name"`
 	// id is the unique identifier of object
-	Id                  storageType.Uint `json:"id"`
-	LocalVirtualGroupId uint32           `json:"local_virtual_group_id"`
+	Id                  uint64 `json:"id"`
+	LocalVirtualGroupId uint32 `json:"local_virtual_group_id"`
 	// payloadSize is the total size of the object payload
 	PayloadSize uint64 `json:"payload_size,string"`
 	// visibility defines the highest permissions for object. When an object is public, everyone can access it.
@@ -200,7 +200,7 @@ type BucketInfo struct {
 	// visibility defines the highest permissions for bucket. When a bucket is public, everyone can get storage objects in it.
 	Visibility storageType.VisibilityType `json:"visibility"`
 	// id is the unique identification for bucket.
-	Id storageType.Uint `json:"id"`
+	Id uint64 `json:"id"`
 	// source_type defines which chain the user should send the bucket management transactions to
 	SourceType storageType.SourceType `json:"source_type"`
 	// create_at define the block number when the bucket created, add "string" in json part for correct unmarshal
@@ -253,7 +253,7 @@ type GroupInfo struct {
 	// source_type
 	SourceType storageType.SourceType `json:"source_type"`
 	// id is the unique identifier of group
-	Id storageType.Uint `json:"id"`
+	Id uint64 `json:"id"`
 	// extra is used to store extra info for the group
 	Extra string `json:"extra"`
 }
