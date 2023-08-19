@@ -653,14 +653,22 @@ func (s *StorageTestSuite) Test_Resumable_Upload_64G_Size() {
 		s.T().Logf("Success to PutObject time: %s", time.Since(startPutObjectTime))
 	}
 
-	for {
-		objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-		s.T().Logf("HeadObject: %s", objectDetail)
-		s.Require().NoError(err)
-		if objectDetail.ObjectInfo.GetObjectStatus() != storageTypes.OBJECT_STATUS_SEALED {
-			break
+	{
+		startSealObjectTime := time.Now()
+		num := uint64(0)
+		for {
+			num++
+			objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+			if num%10 == 0 {
+				s.T().Logf("HeadObject: %s", objectDetail)
+			}
+			s.Require().NoError(err)
+			if objectDetail.ObjectInfo.GetObjectStatus() == storageTypes.OBJECT_STATUS_SEALED {
+				break
+			}
+			time.Sleep(5 * time.Second)
 		}
-		time.Sleep(5 * time.Second)
+		s.T().Logf("Success to seal object time: %s", time.Since(startSealObjectTime))
 	}
-	s.T().Logf("Success to seal object time: %s", time.Since(startTime))
+
 }
