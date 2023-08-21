@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/suite"
 	"io"
@@ -54,7 +55,7 @@ func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]
 		}
 		objectName := storageTestUtil.GenRandomObjectName()
 		s.T().Logf("---> CreateObject and HeadObject, bucketname:%s, objectname:%s <---", bucketName, objectName)
-		objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+		objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{Visibility: storageTypes.VISIBILITY_TYPE_PUBLIC_READ})
 		s.Require().NoError(err)
 		_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
 		s.Require().NoError(err)
@@ -172,7 +173,7 @@ func (s *BucketMigrateTestSuite) waitUntilBucketMigrateFinish(bucketName string,
 func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 
 	// 1) create bucket and object in srcSP
-	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PRIVATE)
+	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
 
 	// test only one object's case
 	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
@@ -201,12 +202,13 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
+	s.CheckChallenge(uint32(objectDetail.ObjectInfo.Id.Uint64()))
 }
 
 // test only conflict sp's case
 func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 	// 1) create bucket and object in srcSP
-	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PRIVATE)
+	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
 
 	// test only one object's case
 	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
@@ -268,12 +270,13 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
+	s.CheckChallenge(uint32(objectDetail.ObjectInfo.Id.Uint64()))
 }
 
 // test empty bucket case
 func (s *BucketMigrateTestSuite) Test_Empty_Bucket_Migrate_Simple_Case() {
 	// 1) create bucket and object in srcSP
-	bucketName, bucketInfo := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PRIVATE)
+	bucketName, bucketInfo := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
 
 	s.T().Logf("CreateBucket : %s", bucketInfo)
 	virtualGroupFamily, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GetGlobalVirtualGroupFamilyId())
@@ -281,7 +284,7 @@ func (s *BucketMigrateTestSuite) Test_Empty_Bucket_Migrate_Simple_Case() {
 	s.T().Logf("virtualGroupFamily : %s", virtualGroupFamily)
 
 	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
 	}
 
 	time.Sleep(5 * time.Second)
@@ -319,4 +322,26 @@ func (s *BucketMigrateTestSuite) Test_Empty_Bucket_Migrate_Simple_Case() {
 	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
 	s.Require().NoError(err)
 	s.Require().Equal(family.PrimarySpId, destSP.GetId())
+}
+
+func (s *BucketMigrateTestSuite) CheckChallenge(objectId uint32) bool {
+	i := objectId
+	infos, err := s.Client.HeadObjectByID(context.Background(), fmt.Sprintf("%d", i))
+	s.Require().NoError(err)
+	if infos.ObjectInfo.ObjectStatus == storageTypes.OBJECT_STATUS_SEALED {
+		reader, _, err := s.Client.GetObject(context.Background(), infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, types.GetObjectOptions{})
+		s.NoError(err, fmt.Sprintf("%d", i), infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName)
+		_, err = io.ReadAll(reader)
+		s.NoError(err, fmt.Sprintf("%d", i), infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName)
+		for j := -1; j < 6; j++ {
+			s.T().Logf("====challenge %v,%v,=====", i, j)
+			_, errPk := s.Client.GetChallengeInfo(context.Background(), infos.ObjectInfo.Id.String(), 0, j, types.GetChallengeInfoOptions{})
+			s.NoError(errPk, infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, i, j)
+			if errPk != nil {
+				s.T().Errorf(infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, i, j)
+			}
+		}
+	}
+
+	return true
 }
