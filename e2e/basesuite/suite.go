@@ -43,14 +43,24 @@ func ParseMnemonicFromFile(fileName string) string {
 
 type BaseSuite struct {
 	suite.Suite
-	DefaultAccount *types.Account
-	Client         client.Client
-	ClientContext  context.Context
+	DefaultAccount  *types.Account
+	Client          client.Client
+	ClientContext   context.Context
+	ChallengeClient client.Client
 }
 
 // ParseValidatorMnemonic read the validator mnemonic from file
 func ParseValidatorMnemonic(i int) string {
 	return ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/validator%d/info", i))
+}
+
+func (s *BaseSuite) NewChallengeClient() {
+	mnemonic := ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/challenger%d/challenger_info", 0))
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	s.Require().NoError(err)
+	s.ChallengeClient, err = client.New(ChainID, Endpoint, client.Option{
+		DefaultAccount: account,
+	})
 }
 
 func (s *BaseSuite) SetupSuite() {
@@ -63,4 +73,5 @@ func (s *BaseSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.ClientContext = context.Background()
 	s.DefaultAccount = account
+	s.NewChallengeClient()
 }

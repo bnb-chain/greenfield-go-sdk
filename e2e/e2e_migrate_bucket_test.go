@@ -335,7 +335,7 @@ func (s *BucketMigrateTestSuite) CheckChallenge(objectId uint32) bool {
 		s.NoError(err, fmt.Sprintf("%d", i), infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName)
 		for j := -1; j < 6; j++ {
 			s.T().Logf("====challenge %v,%v,=====", i, j)
-			_, errPk := s.Client.GetChallengeInfo(context.Background(), infos.ObjectInfo.Id.String(), 0, j, types.GetChallengeInfoOptions{})
+			_, errPk := s.ChallengeClient.GetChallengeInfo(context.Background(), infos.ObjectInfo.Id.String(), 0, j, types.GetChallengeInfoOptions{})
 			s.NoError(errPk, infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, i, j)
 			if errPk != nil {
 				s.T().Errorf(infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, i, j)
