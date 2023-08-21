@@ -61,6 +61,7 @@ func (s *BaseSuite) NewChallengeClient() {
 	s.ChallengeClient, err = client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
 	})
+	s.Require().NoError(err)
 }
 
 func (s *BaseSuite) SetupSuite() {
