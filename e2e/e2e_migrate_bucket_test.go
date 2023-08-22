@@ -325,6 +325,7 @@ func (s *BucketMigrateTestSuite) Test_Empty_Bucket_Migrate_Simple_Case() {
 }
 
 func (s *BucketMigrateTestSuite) CheckChallenge(objectId uint32) bool {
+	time.Sleep(5 * time.Second)
 	i := objectId
 	infos, err := s.Client.HeadObjectByID(context.Background(), fmt.Sprintf("%d", i))
 	s.Require().NoError(err)
