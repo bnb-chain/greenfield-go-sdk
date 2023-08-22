@@ -56,10 +56,10 @@ func ParseValidatorMnemonic(i int) string {
 
 func (s *BaseSuite) NewChallengeClient() {
 	mnemonic := ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/challenger%d/challenger_info", 0))
-	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	challengeAcc, err := types.NewAccountFromMnemonic("challenge_account", mnemonic)
 	s.Require().NoError(err)
 	s.ChallengeClient, err = client.New(ChainID, Endpoint, client.Option{
-		DefaultAccount: account,
+		DefaultAccount: challengeAcc,
 	})
 	s.Require().NoError(err)
 }
