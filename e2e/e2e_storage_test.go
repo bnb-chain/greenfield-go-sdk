@@ -34,9 +34,12 @@ func (s *StorageTestSuite) SetupSuite() {
 
 	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
 	s.Require().NoError(err)
+	s.T().Logf("--->  ListStorageProviders <--- %s", spList[0].String())
+
 	for _, sp := range spList {
 		if sp.Endpoint != "https://sp0.greenfield.io" {
 			s.PrimarySP = sp
+			s.T().Logf("--->  ListStorageProviders primary sp<--- %s", sp.String())
 			break
 		}
 	}
@@ -607,7 +610,8 @@ func (s *StorageTestSuite) Test_Resumable_Upload_64G_Size() {
 		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
 	}
 
-	filePath := "/data2/chris/greenfield-go-sdk/e2e/File2GB"
+	//filePath := "/data2/chris/greenfield-go-sdk/e2e/File2GB"
+	filePath := "/Users/lijingjun/greenfield/Env-Dev/greenfield-go-sdk/e2e/File2GB"
 
 	file, err := os.Open(filePath)
 	// File8GB
@@ -648,7 +652,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_64G_Size() {
 
 		s.T().Logf("Begin to PutObject time: %s", time.Since(startPutObjectTime))
 		err = s.Client.PutObject(s.ClientContext, bucketName, objectName, stat.Size(),
-			uploadFile, types.PutObjectOptions{PartSize: 64 * 1024 * 1024})
+			uploadFile, types.PutObjectOptions{PartSize: 128 * 1024 * 1024})
 		s.Require().NoError(err)
 		s.T().Logf("Success to PutObject time: %s", time.Since(startPutObjectTime))
 	}
@@ -664,11 +668,11 @@ func (s *StorageTestSuite) Test_Resumable_Upload_64G_Size() {
 			}
 			s.Require().NoError(err)
 			if objectDetail.ObjectInfo.GetObjectStatus() == storageTypes.OBJECT_STATUS_SEALED {
+				s.T().Logf("HeadObject: %s", objectDetail)
 				break
 			}
 			time.Sleep(5 * time.Second)
 		}
 		s.T().Logf("Success to seal object time: %s", time.Since(startSealObjectTime))
 	}
-
 }
