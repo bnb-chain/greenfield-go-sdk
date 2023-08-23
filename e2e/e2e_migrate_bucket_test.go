@@ -2,8 +2,11 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"github.com/stretchr/testify/suite"
 	"io"
+	"testing"
 	"time"
 
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
@@ -18,22 +21,22 @@ type BucketMigrateTestSuite struct {
 	PrimarySP spTypes.StorageProvider
 }
 
-//func (s *BucketMigrateTestSuite) SetupSuite() {
-//	s.BaseSuite.SetupSuite()
-//
-//	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
-//	s.Require().NoError(err)
-//	for _, sp := range spList {
-//		if sp.Endpoint != "https://sp0.greenfield.io" {
-//			s.PrimarySP = sp
-//			break
-//		}
-//	}
-//}
+func (s *BucketMigrateTestSuite) SetupSuite() {
+	s.BaseSuite.SetupSuite()
 
-//func TestBucketMigrateTestSuiteTestSuite(t *testing.T) {
-//	suite.Run(t, new(BucketMigrateTestSuite))
-//}
+	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
+	s.Require().NoError(err)
+	for _, sp := range spList {
+		if sp.Endpoint != "https://sp0.greenfield.io" {
+			s.PrimarySP = sp
+			break
+		}
+	}
+}
+
+func TestBucketMigrateTestSuiteTestSuite(t *testing.T) {
+	suite.Run(t, new(BucketMigrateTestSuite))
+}
 
 func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]*types.ObjectDetail, []bytes.Buffer, error) {
 	var (
@@ -47,12 +50,12 @@ func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]
 		var buffer bytes.Buffer
 		line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
 		// Create 1MiB content where each line contains 1024 characters.
-		for i := 0; i < 1024*3; i++ {
-			buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+		for n := 0; n < 1024*3; n++ {
+			buffer.WriteString(fmt.Sprintf("[%05d] %s\n", n, line))
 		}
 		objectName := storageTestUtil.GenRandomObjectName()
 		s.T().Logf("---> CreateObject and HeadObject, bucketname:%s, objectname:%s <---", bucketName, objectName)
-		objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+		objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{Visibility: storageTypes.VISIBILITY_TYPE_PUBLIC_READ})
 		s.Require().NoError(err)
 		_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
 		s.Require().NoError(err)
@@ -99,12 +102,9 @@ func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]
 	return objectDetails, contentBuffer, nil
 }
 
-// test only one object's case
-func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
+func (s *BucketMigrateTestSuite) MustCreateBucket(visibility storageTypes.VisibilityType) (string, *storageTypes.BucketInfo) {
 	bucketName := storageTestUtil.GenRandomBucketName()
-
-	// 1) create bucket and object in srcSP
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{Visibility: visibility})
 	s.Require().NoError(err)
 
 	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
@@ -113,17 +113,15 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
 	s.Require().NoError(err)
 	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+		s.Require().Equal(bucketInfo.Visibility, visibility)
 	}
 
-	// test only one object's case
-	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
-	s.Require().NoError(err)
+	s.T().Logf("success to create a new bucket: %s", bucketInfo)
 
-	objectDetail := objectDetails[0]
-	buffer := contentBuffer[0]
+	return bucketName, bucketInfo
+}
 
-	// selete a storage provider to miragte
+func (s *BucketMigrateTestSuite) SelectDestSP(objectDetail *types.ObjectDetail) *spTypes.StorageProvider {
 	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
 	s.Require().NoError(err)
 
@@ -144,15 +142,17 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 	}
 	s.Require().NotNil(destSP)
 
-	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
+	return destSP
+}
 
-	// normal no conflict send migrate bucket transaction
-	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
-	s.Require().NoError(err)
+func (s *BucketMigrateTestSuite) waitUntilBucketMigrateFinish(bucketName string, destSP *spTypes.StorageProvider) *storageTypes.BucketInfo {
+	var (
+		bucketInfo *storageTypes.BucketInfo
+		err        error
+	)
 
-	s.T().Logf("MigrateBucket : %s", txhash)
-
-	for {
+	// wait 5 minutes
+	for i := 0; i < 100; i++ {
 		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
 		s.T().Logf("HeadBucket: %s", bucketInfo)
 		s.Require().NoError(err)
@@ -165,6 +165,35 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
 	s.Require().NoError(err)
 	s.Require().Equal(family.PrimarySpId, destSP.GetId())
+
+	return bucketInfo
+}
+
+// test only one object's case
+func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
+
+	// 1) create bucket and object in srcSP
+	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
+
+	// test only one object's case
+	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
+	s.Require().NoError(err)
+
+	objectDetail := objectDetails[0]
+	buffer := contentBuffer[0]
+
+	// selete a storage provider to miragte
+	destSP := s.SelectDestSP(objectDetail)
+
+	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
+
+	// normal no conflict send migrate bucket transaction
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+	s.Require().NoError(err)
+
+	s.T().Logf("MigrateBucket : %s", txhash)
+	s.waitUntilBucketMigrateFinish(bucketName, destSP)
+
 	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectDetail.ObjectInfo.ObjectName, types.GetObjectOptions{})
 	s.Require().NoError(err)
 	if err == nil {
@@ -173,24 +202,13 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
+	s.CheckChallenge(uint32(objectDetail.ObjectInfo.Id.Uint64()))
 }
 
 // test only conflict sp's case
 func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
-	bucketName := storageTestUtil.GenRandomBucketName()
-
 	// 1) create bucket and object in srcSP
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
-	s.Require().NoError(err)
-
-	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
-	s.Require().NoError(err)
-
-	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
-	}
+	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
 
 	// test only one object's case
 	objectDetails, contentBuffer, err := s.CreateObjects(bucketName, 1)
@@ -229,6 +247,8 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 
 	s.T().Logf("MigrateBucket : %s", txhash)
 
+	var bucketInfo *storageTypes.BucketInfo
+
 	for {
 		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
 		s.T().Logf("HeadBucket: %s", bucketInfo)
@@ -250,4 +270,79 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 		s.Require().NoError(err)
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
+	s.CheckChallenge(uint32(objectDetail.ObjectInfo.Id.Uint64()))
+}
+
+// test empty bucket case
+func (s *BucketMigrateTestSuite) Test_Empty_Bucket_Migrate_Simple_Case() {
+	// 1) create bucket and object in srcSP
+	bucketName, bucketInfo := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
+
+	s.T().Logf("CreateBucket : %s", bucketInfo)
+	virtualGroupFamily, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GetGlobalVirtualGroupFamilyId())
+	s.Require().NoError(err)
+	s.T().Logf("virtualGroupFamily : %s", virtualGroupFamily)
+
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
+	}
+
+	time.Sleep(5 * time.Second)
+	// selete a storage provider to miragte
+	sps, err := s.Client.ListStorageProviders(s.ClientContext, true)
+	s.Require().NoError(err)
+
+	var destSP *spTypes.StorageProvider
+	for _, sp := range sps {
+		if sp.GetId() != virtualGroupFamily.GetPrimarySpId() {
+			destSP = &sp
+			break
+		}
+	}
+	s.Require().NotNil(destSP)
+
+	s.T().Logf(":Migrate Bucket DstPrimarySPID %s", destSP.String())
+
+	// normal no conflict send migrate bucket transaction
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+	s.Require().NoError(err)
+
+	s.T().Logf("MigrateBucket : %s", txhash)
+
+	for {
+		bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
+		s.T().Logf("HeadBucket: %s", bucketInfo)
+		s.Require().NoError(err)
+		if bucketInfo.BucketStatus != storageTypes.BUCKET_STATUS_MIGRATING {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
+	s.Require().NoError(err)
+	s.Require().Equal(family.PrimarySpId, destSP.GetId())
+}
+
+func (s *BucketMigrateTestSuite) CheckChallenge(objectId uint32) bool {
+	time.Sleep(5 * time.Second)
+	i := objectId
+	infos, err := s.Client.HeadObjectByID(context.Background(), fmt.Sprintf("%d", i))
+	s.Require().NoError(err)
+	if infos.ObjectInfo.ObjectStatus == storageTypes.OBJECT_STATUS_SEALED {
+		reader, _, err := s.Client.GetObject(context.Background(), infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, types.GetObjectOptions{})
+		s.NoError(err, fmt.Sprintf("%d", i), infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName)
+		_, err = io.ReadAll(reader)
+		s.NoError(err, fmt.Sprintf("%d", i), infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName)
+		for j := -1; j < 6; j++ {
+			s.T().Logf("====challenge %v,%v,=====", i, j)
+			_, errPk := s.ChallengeClient.GetChallengeInfo(context.Background(), infos.ObjectInfo.Id.String(), 0, j, types.GetChallengeInfoOptions{})
+			s.NoError(errPk, infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, i, j)
+			if errPk != nil {
+				s.T().Errorf(infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, i, j)
+			}
+		}
+	}
+
+	return true
 }

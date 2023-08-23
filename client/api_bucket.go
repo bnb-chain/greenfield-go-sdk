@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"io"
 	"math"
 	"net/http"
@@ -64,6 +65,7 @@ type Bucket interface {
 	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error)
 	GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error)
 	MigrateBucket(ctx context.Context, bucketName string, opts types.MigrateBucketOptions) (string, error)
+	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
@@ -740,4 +742,22 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 	}
 
 	return txnHash, nil
+}
+
+// CancelMigrateBucket get approval of migrating bucket and send migrateBucket txn to greenfield chain, it returns the transaction hash value and error
+func (c *client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error) {
+	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
+	if err != nil {
+		return 0, "", err
+	}
+	cancelBucketMsg := storageTypes.NewMsgCancelMigrateBucket(
+		govModuleAddress.GetAddress(), bucketName,
+	)
+
+	err = cancelBucketMsg.ValidateBasic()
+	if err != nil {
+		return 0, "", err
+	}
+
+	return c.SubmitProposal(ctx, []sdk.Msg{cancelBucketMsg}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOpts})
 }
