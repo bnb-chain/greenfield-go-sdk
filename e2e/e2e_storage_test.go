@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -176,14 +177,41 @@ func (s *StorageTestSuite) Test_Object() {
 
 	s.waitSealObject(bucketName, objectName)
 
-	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+	concurrentNumber := 5
+	downloadCount := 5
+	quota0, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(info.ObjectName, objectName)
-		objectBytes, err := io.ReadAll(ior)
-		s.Require().NoError(err)
-		s.Require().Equal(objectBytes, buffer.Bytes())
+	fmt.Println("get quota;", quota0)
+
+	var wg sync.WaitGroup
+	wg.Add(concurrentNumber)
+
+	for i := 0; i < concurrentNumber; i++ {
+		go func() {
+			defer wg.Done()
+			for i := 0; i < downloadCount; i++ {
+				objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+				if err != nil {
+					fmt.Printf("error: %v", err)
+					quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+					fmt.Printf("quota: %v", quota2)
+				}
+				objectBytes, err := io.ReadAll(objectContent)
+				s.Require().NoError(err)
+				s.Require().Equal(objectBytes, buffer.Bytes())
+			}
+		}()
 	}
+	wg.Wait()
+
+	expectQuotaUsed := int(1024*300*100) * concurrentNumber * downloadCount * 1024
+	fmt.Println("expect quota:", expectQuotaUsed)
+	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
+	fmt.Println("actual quota:", consumedQuota)
+	freeQuotaConsumed := quota1.FreeConsumedSize - quota0.FreeConsumedSize
+	fmt.Println("actual free consumed quota:", freeQuotaConsumed)
+	s.Require().Equal(expectQuotaUsed, consumedQuota)
 
 	s.T().Log("---> PutObjectPolicy <---")
 	principal, _, err := types.NewAccount("principal")
