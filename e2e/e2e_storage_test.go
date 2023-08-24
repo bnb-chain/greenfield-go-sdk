@@ -170,8 +170,9 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
 	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
-	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, int64(buffer.Len()))
-	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+	objectSize := int64(buffer.Len())
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
@@ -181,7 +182,6 @@ func (s *StorageTestSuite) Test_Object() {
 	downloadCount := 5
 	quota0, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
-	fmt.Println("get quota;", quota0)
 
 	var wg sync.WaitGroup
 	wg.Add(concurrentNumber)
@@ -204,14 +204,15 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 	wg.Wait()
 
-	expectQuotaUsed := int(1024*300*100) * concurrentNumber * downloadCount * 1024
+	expectQuotaUsed := int(objectSize) * concurrentNumber * downloadCount
 	fmt.Println("expect quota:", expectQuotaUsed)
 	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
 	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	fmt.Println("actual quota:", consumedQuota)
 	freeQuotaConsumed := quota1.FreeConsumedSize - quota0.FreeConsumedSize
-	fmt.Println("actual free consumed quota:", freeQuotaConsumed)
-	s.Require().Equal(expectQuotaUsed, consumedQuota)
+	s.Require().Equal(uint64(expectQuotaUsed), consumedQuota)
+	s.Require().Equal(uint64(expectQuotaUsed), freeQuotaConsumed)
 
 	s.T().Log("---> PutObjectPolicy <---")
 	principal, _, err := types.NewAccount("principal")
