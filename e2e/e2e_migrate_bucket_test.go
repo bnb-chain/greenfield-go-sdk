@@ -338,6 +338,7 @@ func (s *BucketMigrateTestSuite) CheckChallenge(objectId uint32) bool {
 		_, err = io.ReadAll(reader)
 		s.NoError(err, fmt.Sprintf("%d", i), infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName)
 		for j := -1; j < 6; j++ {
+			// -1 0 1 2 3 4 5
 			s.T().Logf("====challenge %v,%v,=====", i, j)
 			_, errPk := s.ChallengeClient.GetChallengeInfo(context.Background(), infos.ObjectInfo.Id.String(), 0, j, types.GetChallengeInfoOptions{})
 			s.NoError(errPk, infos.ObjectInfo.BucketName, infos.ObjectInfo.ObjectName, i, j)
@@ -348,4 +349,8 @@ func (s *BucketMigrateTestSuite) CheckChallenge(objectId uint32) bool {
 	}
 
 	return true
+}
+
+func (s *BucketMigrateTestSuite) Test_CheckChallenge_Test() {
+	s.CheckChallenge(uint32(537))
 }
