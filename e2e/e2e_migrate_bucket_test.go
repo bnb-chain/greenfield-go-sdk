@@ -349,3 +349,48 @@ func (s *BucketMigrateTestSuite) CheckChallenge(objectId uint32) bool {
 
 	return true
 }
+
+// test cancel migrate bucket
+func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Cancel_Case() {
+	// 1) create bucket and object in srcSP
+	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
+
+	// test only one object's case
+	objectDetails, _, err := s.CreateObjects(bucketName, 1)
+	s.Require().NoError(err)
+
+	objectDetail := objectDetails[0]
+	//buffer := contentBuffer[0]
+
+	// selete a storage provider to miragte
+	destSP := s.SelectDestSP(objectDetail)
+
+	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
+
+	// normal no conflict send migrate bucket transaction
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+	s.Require().NoError(err)
+	s.T().Logf("MigrateBucket txhash : %s", txhash)
+	createTx, err := s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Log(createTx.TxResult.String())
+
+	txhash, err = s.Client.CancelMigrateBucket(s.ClientContext, bucketName, types.CancelMigrateBucketOptions{})
+	s.Require().NoError(err)
+	s.T().Logf("CancelMigrateBucket txhash : %s", txhash)
+
+	createTx, err = s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Log(createTx.TxResult.String())
+
+	time.Sleep(10 * time.Second)
+
+	txhash, err = s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+	s.Require().NoError(err)
+	s.T().Logf("MigrateBucket txhash : %s", txhash)
+	createTx, err = s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Log(createTx.TxResult.String())
+
+	s.waitUntilBucketMigrateFinish(bucketName, destSP)
+}

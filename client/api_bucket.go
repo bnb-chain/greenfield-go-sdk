@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"io"
 	"math"
 	"net/http"
@@ -65,7 +64,7 @@ type Bucket interface {
 	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error)
 	GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error)
 	MigrateBucket(ctx context.Context, bucketName string, opts types.MigrateBucketOptions) (string, error)
-	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error)
+	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
@@ -745,19 +744,41 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 }
 
 // CancelMigrateBucket get approval of migrating bucket and send migrateBucket txn to greenfield chain, it returns the transaction hash value and error
-func (c *client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error) {
-	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
-	if err != nil {
-		return 0, "", err
-	}
-	cancelBucketMsg := storageTypes.NewMsgCancelMigrateBucket(
-		govModuleAddress.GetAddress(), bucketName,
-	)
+func (c *client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error) {
 
-	err = cancelBucketMsg.ValidateBasic()
+	cancelMigrateBucketMsg := storageTypes.NewMsgCancelMigrateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName)
+
+	err := cancelMigrateBucketMsg.ValidateBasic()
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
 
-	return c.SubmitProposal(ctx, []sdk.Msg{cancelBucketMsg}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOpts})
+	// set the default txn broadcast mode as block mode
+	if opts.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
+	}
+
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{cancelMigrateBucketMsg}, opts.TxOpts)
+	if err != nil {
+		return "", err
+	}
+
+	var txnResponse *ctypes.ResultTx
+	txnHash := resp.TxResponse.TxHash
+	if !opts.IsAsyncMode {
+		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
+		defer cancel()
+
+		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
+		if err != nil {
+			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
+		}
+
+		if txnResponse.TxResult.Code != 0 {
+			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+		}
+	}
+
+	return txnHash, nil
 }

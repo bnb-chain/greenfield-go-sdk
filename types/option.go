@@ -29,13 +29,8 @@ type MigrateBucketOptions struct {
 }
 
 type CancelMigrateBucketOptions struct {
-	ProposalDepositAmount math.Int // wei BNB
-
-	ProposalTitle    string
-	ProposalSummary  string
-	ProposalMetaData string
-	TxOpts           gnfdsdktypes.TxOption
-	IsAsyncMode      bool // indicate whether to create the bucket in asynchronous mode
+	TxOpts      *gnfdsdktypes.TxOption
+	IsAsyncMode bool // indicate whether to create the bucket in asynchronous mode
 }
 
 type VoteProposalOptions struct {
