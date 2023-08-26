@@ -174,7 +174,7 @@ func (s *StorageTestSuite) Test_Object() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
-	s.waitSealObject(bucketName, objectName)
+	s.WaitSealObject(bucketName, objectName)
 
 	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
 	s.Require().NoError(err)
@@ -334,27 +334,6 @@ func DownloadErrorHooker(segment int64) error {
 	return nil
 }
 
-func (s *StorageTestSuite) waitSealObject(bucketName string, objectName string) {
-	startCheckTime := time.Now()
-	var (
-		objectDetail *types.ObjectDetail
-		err          error
-	)
-
-	// wait 300s
-	for i := 0; i < 100; i++ {
-		objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-		s.Require().NoError(err)
-		if objectDetail.ObjectInfo.GetObjectStatus() == storageTypes.OBJECT_STATUS_SEALED {
-			break
-		}
-		time.Sleep(3 * time.Second)
-	}
-
-	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
-	s.T().Logf("---> Wait Seal Object cost %d ms, <---", time.Since(startCheckTime).Milliseconds())
-}
-
 func (s *StorageTestSuite) createBigObjectWithoutPutObject() (bucket string, object string, objectbody bytes.Buffer) {
 	bucketName := storageTestUtil.GenRandomBucketName()
 	objectName := storageTestUtil.GenRandomObjectName()
@@ -464,7 +443,7 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize16MB})
 	s.Require().NoError(err)
 
-	s.waitSealObject(bucketName, objectName)
+	s.WaitSealObject(bucketName, objectName)
 
 	// 3) FGetObjectResumable compare with FGetObject
 	fileName := "test-file-" + storageTestUtil.GenRandomObjectName()
