@@ -189,7 +189,7 @@ func (s *StorageTestSuite) Test_Object() {
 	for i := 0; i < concurrentNumber; i++ {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < downloadCount; i++ {
+			for j := 0; j < downloadCount; j++ {
 				objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
 				if err != nil {
 					fmt.Printf("error: %v", err)
@@ -205,12 +205,11 @@ func (s *StorageTestSuite) Test_Object() {
 	wg.Wait()
 
 	expectQuotaUsed := int(objectSize) * concurrentNumber * downloadCount
-	fmt.Println("expect quota:", expectQuotaUsed)
 	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
 	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
-	fmt.Println("actual quota:", consumedQuota)
 	freeQuotaConsumed := quota1.FreeConsumedSize - quota0.FreeConsumedSize
+	// the consumed quota and free quota should be right
 	s.Require().Equal(uint64(expectQuotaUsed), consumedQuota)
 	s.Require().Equal(uint64(expectQuotaUsed), freeQuotaConsumed)
 
