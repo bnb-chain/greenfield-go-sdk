@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -75,4 +77,25 @@ func (s *BaseSuite) SetupSuite() {
 	s.ClientContext = context.Background()
 	s.DefaultAccount = account
 	s.NewChallengeClient()
+}
+
+func (s *BaseSuite) WaitSealObject(bucketName string, objectName string) {
+	startCheckTime := time.Now()
+	var (
+		objectDetail *types.ObjectDetail
+		err          error
+	)
+
+	// wait 300s
+	for i := 0; i < 100; i++ {
+		objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+		s.Require().NoError(err)
+		if objectDetail.ObjectInfo.GetObjectStatus() == storageTypes.OBJECT_STATUS_SEALED {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_SEALED")
+	s.T().Logf("---> Wait Seal Object cost %d ms, <---", time.Since(startCheckTime).Milliseconds())
 }

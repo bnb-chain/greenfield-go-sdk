@@ -81,7 +81,10 @@ func (s *BucketMigrateTestSuite) CreateObjects(bucketName string, count int) ([]
 		s.Require().NoError(err)
 	}
 
-	time.Sleep(20 * time.Second)
+	for _, objectName := range objectNames {
+		s.WaitSealObject(bucketName, objectName)
+	}
+
 	// seal object
 	for idx, objectName := range objectNames {
 		objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
