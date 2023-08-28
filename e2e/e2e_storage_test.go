@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -169,21 +170,48 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
 	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
-	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, int64(buffer.Len()))
-	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+	objectSize := int64(buffer.Len())
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
 	s.WaitSealObject(bucketName, objectName)
 
-	ior, info, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+	concurrentNumber := 5
+	downloadCount := 5
+	quota0, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(info.ObjectName, objectName)
-		objectBytes, err := io.ReadAll(ior)
-		s.Require().NoError(err)
-		s.Require().Equal(objectBytes, buffer.Bytes())
+
+	var wg sync.WaitGroup
+	wg.Add(concurrentNumber)
+
+	for i := 0; i < concurrentNumber; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < downloadCount; j++ {
+				objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+				if err != nil {
+					fmt.Printf("error: %v", err)
+					quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+					fmt.Printf("quota: %v", quota2)
+				}
+				objectBytes, err := io.ReadAll(objectContent)
+				s.Require().NoError(err)
+				s.Require().Equal(objectBytes, buffer.Bytes())
+			}
+		}()
 	}
+	wg.Wait()
+
+	expectQuotaUsed := int(objectSize) * concurrentNumber * downloadCount
+	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
+	freeQuotaConsumed := quota1.FreeConsumedSize - quota0.FreeConsumedSize
+	// the consumed quota and free quota should be right
+	s.Require().Equal(uint64(expectQuotaUsed), consumedQuota)
+	s.Require().Equal(uint64(expectQuotaUsed), freeQuotaConsumed)
 
 	s.T().Log("---> PutObjectPolicy <---")
 	principal, _, err := types.NewAccount("principal")

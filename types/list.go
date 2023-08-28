@@ -14,7 +14,8 @@ type QuotaInfo struct {
 	BucketID            string   `xml:"BucketID"`
 	ReadQuotaSize       uint64   `xml:"ReadQuotaSize"`       // the bucket read quota value on chain
 	SPFreeReadQuotaSize uint64   `xml:"SPFreeReadQuotaSize"` // the free quota of this month
-	ReadConsumedSize    uint64   `xml:"ReadConsumedSize"`    // the consumed read quota of this month
+	ReadConsumedSize    uint64   `xml:"ReadConsumedSize"`    // the consumed total read quota of this month
+	FreeConsumedSize    uint64   `xml:"FreeConsumedSize"`    // the consumed free quota
 }
 
 type ReadRecord struct {
