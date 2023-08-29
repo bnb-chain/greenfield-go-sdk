@@ -676,3 +676,11 @@ func (s *StorageTestSuite) Test_Resumable_Upload_64G_Size() {
 		s.T().Logf("Success to seal object time: %s", time.Since(startSealObjectTime))
 	}
 }
+func (s *StorageTestSuite) Test_Resumable_Upload_Delete_Object() {
+	bucketName, objectName := "3m3byxv", "gtcsgh"
+	s.T().Log("---> DeleteObject <---")
+	deleteObject, err := s.Client.CancelCreateObject(s.ClientContext, bucketName, objectName, types.CancelCreateOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteObject)
+	s.Require().NoError(err)
+}

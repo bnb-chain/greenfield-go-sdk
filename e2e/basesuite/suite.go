@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	//Endpoint = "http://localhost:26750"
-	//ChainID  = "greenfield_9000-121"
-	Endpoint = "https://gnfd-dev.qa.bnbchain.world:443"
-	ChainID  = "greenfield_8981-1"
+	Endpoint = "http://localhost:26750"
+	ChainID  = "greenfield_9000-121"
+	//Endpoint = "https://gnfd-dev.qa.bnbchain.world:443"
+	//ChainID  = "greenfield_8981-1"
 )
 
 func ParseMnemonicFromFile(fileName string) string {
@@ -69,8 +69,8 @@ func (s *BaseSuite) NewChallengeClient() {
 }
 
 func (s *BaseSuite) SetupSuite() {
-	//mnemonic := ParseValidatorMnemonic(0)
-	account, err := types.NewAccountFromPrivateKey("test", "1b3d81d6dcc97aee28df85aac2dcd5e3ceec6f2143f5952d0e8e95992c575055")
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	s.Require().NoError(err)
 	s.Client, err = client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
