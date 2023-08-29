@@ -611,7 +611,8 @@ func (s *StorageTestSuite) Test_Resumable_Upload_64G_Size() {
 	}
 
 	//filePath := "/data2/chris/greenfield-go-sdk/e2e/File2GB"
-	filePath := "/Users/lijingjun/greenfield/Env-Dev/greenfield-go-sdk/e2e/File2GB"
+	//filePath := "/Users/lijingjun/greenfield/Env-Dev/greenfield-go-sdk/e2e/File2GB"
+	filePath := "/server/data/chris/greenfield-go-sdk/e2e/File64GB"
 
 	file, err := os.Open(filePath)
 	// File8GB
