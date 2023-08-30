@@ -86,6 +86,20 @@ func main() {
 		log.Printf("object: %s, status: %s\n", i.ObjectName, i.ObjectStatus)
 	}
 
+	// list objects policies
+	policies, err := cli.ListObjectPolicies(ctx, objectName, bucketName, 1, types.ListObjectPoliciesOptions{
+		Limit:      0,
+		StartAfter: "",
+		EndPointOptions: &types.EndPointOptions{
+			Endpoint:  httpsAddr,
+			SPAddress: "",
+		},
+	})
+	log.Println("list objects policies:")
+	for _, policy := range policies.Policies {
+		log.Printf("policy: %s", policy.ResourceId)
+	}
+
 	// list buckets
 	bucketsList, err := cli.ListBuckets(ctx, types.ListBucketsOptions{
 		ShowRemovedBucket: false, EndPointOptions: &types.EndPointOptions{
@@ -124,4 +138,15 @@ func main() {
 		}
 	}
 	log.Printf("object: %s has been deleted\n", objectName)
+
+	// list buckets
+	paymentBuckets, err := cli.ListBucketsByPaymentAccount(ctx, paymentAddr, types.ListBucketsByPaymentAccountOptions{EndPointOptions: &types.EndPointOptions{
+		Endpoint:  httpsAddr,
+		SPAddress: "",
+	}})
+	log.Println("list buckets by payment account result:")
+	for _, bucket := range paymentBuckets.Buckets {
+		i := bucket.BucketInfo
+		log.Printf("bucket: %s, status: %s\n", i.BucketName, i.BucketStatus)
+	}
 }

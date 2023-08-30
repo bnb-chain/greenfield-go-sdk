@@ -66,6 +66,8 @@ type Bucket interface {
 	GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error)
 	MigrateBucket(ctx context.Context, bucketName string, opts types.MigrateBucketOptions) (string, error)
 	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error)
+	// ListBucketsByPaymentAccount list buckets by payment account
+	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
@@ -398,10 +400,21 @@ func (m *GfSpListBucketsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.St
 func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error) {
 	params := url.Values{}
 	params.Set("include-removed", strconv.FormatBool(opts.ShowRemovedBucket))
+
+	account := opts.Account
+	if account == "" {
+		acc, err := c.GetDefaultAccount()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			return types.ListBucketsResult{}, err
+		}
+		account = acc.GetAddress().String()
+	}
+
 	reqMeta := requestMeta{
 		urlValues:     params,
 		contentSHA256: types.EmptyStringSHA256,
-		userAddress:   c.MustGetDefaultAccount().GetAddress().String(),
+		userAddress:   account,
 	}
 
 	sendOpt := sendOptions{
@@ -760,4 +773,52 @@ func (c *client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 	}
 
 	return c.SubmitProposal(ctx, []sdk.Msg{cancelBucketMsg}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOpts})
+}
+
+// ListBucketsByPaymentAccount list bucket by payment account
+func (c *client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error) {
+
+	params := url.Values{}
+	params.Set("payment-buckets", "")
+	params.Set("payment-account", paymentAccount)
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return types.ListBucketsByPaymentAccountResult{}, err
+
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.ListBucketsByPaymentAccountResult{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("the list bucket by payment account:%s failed: %s", paymentAccount, err.Error())
+		return types.ListBucketsByPaymentAccountResult{}, err
+	}
+
+	buckets := types.ListBucketsByPaymentAccountResult{}
+	bufStr := buf.String()
+	err = xml.Unmarshal([]byte(bufStr), &buckets)
+	if err != nil && buckets.Buckets == nil {
+		log.Error().Msgf("the list bucket by payment account:%s failed: %s", paymentAccount, err.Error())
+		return types.ListBucketsByPaymentAccountResult{}, err
+	}
+
+	return buckets, nil
 }

@@ -2,12 +2,21 @@ package client
 
 import (
 	"context"
+	"encoding/xml"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 
 	"cosmossdk.io/math"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	paymentTypes "github.com/bnb-chain/greenfield/x/payment/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/rs/zerolog/log"
+
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 type Payment interface {
@@ -16,6 +25,7 @@ type Payment interface {
 	Deposit(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
 	Withdraw(ctx context.Context, fromAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
 	DisableRefund(ctx context.Context, paymentAddress string, txOption gnfdSdkTypes.TxOption) (string, error)
+	ListUserPaymentAccounts(ctx context.Context, opts types.ListUserPaymentAccountsOptions) (types.ListUserPaymentAccountsResult, error)
 }
 
 // GetStreamRecord retrieves stream record information for a given stream address.
@@ -82,4 +92,63 @@ func (c *client) DisableRefund(ctx context.Context, paymentAddress string, txOpt
 		return "", err
 	}
 	return tx.TxResponse.TxHash, nil
+}
+
+// ListUserPaymentAccounts list payment info by user address
+func (c *client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUserPaymentAccountsOptions) (types.ListUserPaymentAccountsResult, error) {
+	params := url.Values{}
+	params.Set("user-payments", "")
+
+	account := opts.Account
+	if account == "" {
+		acc, err := c.GetDefaultAccount()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			return types.ListUserPaymentAccountsResult{}, err
+		}
+		account = acc.GetAddress().String()
+	}
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+		userAddress:   account,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return types.ListUserPaymentAccountsResult{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		log.Error().Msg("the list of user's payments failed: " + err.Error())
+		return types.ListUserPaymentAccountsResult{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	paymentAccounts := types.ListUserPaymentAccountsResult{}
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msg("the list of user's payments failed: " + err.Error())
+		return types.ListUserPaymentAccountsResult{}, err
+	}
+
+	bufStr := buf.String()
+	err = xml.Unmarshal([]byte(bufStr), &paymentAccounts)
+
+	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
+	if err != nil && paymentAccounts.StreamRecords == nil {
+		return types.ListUserPaymentAccountsResult{}, err
+	}
+
+	return paymentAccounts, nil
 }
