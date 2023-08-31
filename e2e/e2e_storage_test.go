@@ -36,13 +36,15 @@ func (s *StorageTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.T().Logf("--->  ListStorageProviders <--- %s", spList[0].String())
 
-	for _, sp := range spList {
-		if sp.Endpoint != "https://sp0.greenfield.io" {
-			s.PrimarySP = sp
-			s.T().Logf("--->  ListStorageProviders primary sp<--- %s", sp.String())
-			break
-		}
-	}
+	s.PrimarySP = spList[6]
+	s.T().Logf("--->  ListStorageProviders primary sp<--- %s", s.PrimarySP.String())
+	//for _, sp := range spList {
+	//	if sp.Endpoint != "https://sp0.greenfield.io" {
+	//		s.PrimarySP = sp
+	//		s.T().Logf("--->  ListStorageProviders primary sp<--- %s", sp.String())
+	//		break
+	//	}
+	//}
 }
 
 func TestStorageTestSuite(t *testing.T) {
