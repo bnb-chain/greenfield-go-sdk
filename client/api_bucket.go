@@ -405,7 +405,7 @@ func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 	if account == "" {
 		acc, err := c.GetDefaultAccount()
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			log.Error().Msg(fmt.Sprintf("failed to get default account:  %s", err.Error()))
 			return types.ListBucketsResult{}, err
 		}
 		account = acc.GetAddress().String()
@@ -422,7 +422,10 @@ func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListBucketsResult{}, err
@@ -448,7 +451,7 @@ func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 	err = xml.Unmarshal([]byte(bufStr), &listBucketsResult)
 
 	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
-	if err != nil && listBucketsResult.Buckets == nil {
+	if err != nil {
 		return types.ListBucketsResult{}, err
 	}
 
@@ -792,7 +795,10 @@ func (c *client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListBucketsByPaymentAccountResult{}, err
@@ -815,7 +821,7 @@ func (c *client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount
 	buckets := types.ListBucketsByPaymentAccountResult{}
 	bufStr := buf.String()
 	err = xml.Unmarshal([]byte(bufStr), &buckets)
-	if err != nil && buckets.Buckets == nil {
+	if err != nil {
 		log.Error().Msgf("the list bucket by payment account:%s failed: %s", paymentAccount, err.Error())
 		return types.ListBucketsByPaymentAccountResult{}, err
 	}

@@ -103,7 +103,7 @@ func (c *client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUse
 	if account == "" {
 		acc, err := c.GetDefaultAccount()
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			log.Error().Msg(fmt.Sprintf("failed to get default account: %s", err.Error()))
 			return types.ListUserPaymentAccountsResult{}, err
 		}
 		account = acc.GetAddress().String()
@@ -120,7 +120,10 @@ func (c *client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUse
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListUserPaymentAccountsResult{}, err
@@ -145,8 +148,7 @@ func (c *client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUse
 	bufStr := buf.String()
 	err = xml.Unmarshal([]byte(bufStr), &paymentAccounts)
 
-	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
-	if err != nil && paymentAccounts.StreamRecords == nil {
+	if err != nil {
 		return types.ListUserPaymentAccountsResult{}, err
 	}
 

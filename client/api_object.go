@@ -922,7 +922,10 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListObjectsResult{}, err
@@ -1272,7 +1275,10 @@ func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, 
 func (c *client) ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error) {
 	params := url.Values{}
 	params.Set("object-policies", "")
+	// StartAfter is used to input the policy id for pagination purposes
 	params.Set("start-after", opts.StartAfter)
+	// If the limit is set to 0, it will default to 50.
+	// If the limit exceeds 1000, only 1000 records will be returned.
 	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
 	params.Set("action-type", strconv.FormatUint(uint64(actionType), 10))
 
@@ -1288,7 +1294,10 @@ func (c *client) ListObjectPolicies(ctx context.Context, objectName, bucketName 
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListObjectPoliciesResponse{}, err
@@ -1311,7 +1320,7 @@ func (c *client) ListObjectPolicies(ctx context.Context, objectName, bucketName 
 	policies := types.ListObjectPoliciesResponse{}
 	bufStr := buf.String()
 	err = xml.Unmarshal([]byte(bufStr), &policies.Policies)
-	if err != nil && policies.Policies == nil {
+	if err != nil {
 		log.Error().Msgf("the list object policies in bucket name:%s, object name:%s failed: %s", bucketName, objectName, err.Error())
 		return types.ListObjectPoliciesResponse{}, err
 	}
