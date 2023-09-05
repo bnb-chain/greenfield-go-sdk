@@ -14,6 +14,7 @@ on:
 env:
   GreenfieldTag: v0.2.4
   GreenfieldStorageProviderTag: fix-v0.2.4-quota
+
   GOPRIVATE: github.com/bnb-chain
   GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
   MYSQL_USER: root
