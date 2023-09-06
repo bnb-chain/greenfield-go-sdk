@@ -409,6 +409,11 @@ func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 			return types.ListBucketsResult{}, err
 		}
 		account = acc.GetAddress().String()
+	} else {
+		_, err := sdk.AccAddressFromHexUnsafe(account)
+		if err != nil {
+			return types.ListBucketsResult{}, err
+		}
 	}
 
 	reqMeta := requestMeta{
@@ -781,6 +786,11 @@ func (c *client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 // ListBucketsByPaymentAccount list bucket by payment account
 func (c *client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error) {
 
+	_, err := sdk.AccAddressFromHexUnsafe(paymentAccount)
+	if err != nil {
+		return types.ListBucketsByPaymentAccountResult{}, err
+	}
+
 	params := url.Values{}
 	params.Set("payment-buckets", "")
 	params.Set("payment-account", paymentAccount)
@@ -814,16 +824,14 @@ func (c *client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
-		log.Error().Msgf("the list bucket by payment account:%s failed: %s", paymentAccount, err.Error())
-		return types.ListBucketsByPaymentAccountResult{}, err
+		return types.ListBucketsByPaymentAccountResult{}, errors.New("copy the response error" + err.Error())
 	}
 
 	buckets := types.ListBucketsByPaymentAccountResult{}
 	bufStr := buf.String()
 	err = xml.Unmarshal([]byte(bufStr), &buckets)
 	if err != nil {
-		log.Error().Msgf("the list bucket by payment account:%s failed: %s", paymentAccount, err.Error())
-		return types.ListBucketsByPaymentAccountResult{}, err
+		return types.ListBucketsByPaymentAccountResult{}, errors.New("unmarshal response error" + err.Error())
 	}
 
 	return buckets, nil

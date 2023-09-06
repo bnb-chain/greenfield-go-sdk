@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -131,8 +132,7 @@ func (c *client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUse
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
-		log.Error().Msg("the list of user's payments failed: " + err.Error())
-		return types.ListUserPaymentAccountsResult{}, err
+		return types.ListUserPaymentAccountsResult{}, errors.New("send request error" + err.Error())
 	}
 	defer utils.CloseResponse(resp)
 
@@ -141,8 +141,7 @@ func (c *client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUse
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
-		log.Error().Msg("the list of user's payments failed: " + err.Error())
-		return types.ListUserPaymentAccountsResult{}, err
+		return types.ListUserPaymentAccountsResult{}, errors.New("unmarshal response error" + err.Error())
 	}
 
 	bufStr := buf.String()
