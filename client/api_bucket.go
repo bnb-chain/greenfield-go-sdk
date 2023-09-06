@@ -59,8 +59,10 @@ type Bucket interface {
 	ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error)
 	ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error)
 
+	GetQuotaUpdateTime(ctx context.Context, bucketName string) (int64, error)
 	BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error)
 	GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error)
+
 	// ListBucketsByBucketID list buckets by bucket ids
 	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error)
 	GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error)
@@ -560,6 +562,16 @@ func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string) (typ
 	}
 
 	return QuotaResult, nil
+}
+
+func (c *client) GetQuotaUpdateTime(ctx context.Context, bucketName string) (int64, error) {
+	resp, err := c.chainClient.QueryQuotaUpdateTime(ctx, &storageTypes.QueryQuoteUpdateTimeRequest{
+		BucketName: bucketName,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return resp.UpdateAt, nil
 }
 
 // BuyQuotaForBucket buy the target quota of the specific bucket
