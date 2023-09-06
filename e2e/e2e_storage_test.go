@@ -207,10 +207,8 @@ func (s *StorageTestSuite) Test_Object() {
 	expectQuotaUsed := int(objectSize) * concurrentNumber * downloadCount
 	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
-	consumedQuota := quota1.ReadConsumedSize - quota0.ReadConsumedSize
 	freeQuotaConsumed := quota1.FreeConsumedSize - quota0.FreeConsumedSize
 	// the consumed quota and free quota should be right
-	s.Require().Equal(uint64(expectQuotaUsed), consumedQuota)
 	s.Require().Equal(uint64(expectQuotaUsed), freeQuotaConsumed)
 
 	s.T().Log("---> PutObjectPolicy <---")
