@@ -178,8 +178,9 @@ type ListObjectsOptions struct {
 	// MaxKeys defines the maximum number of keys returned to the response body.
 	// If not specified, the default value is 50.
 	// The maximum limit for returning objects is 1000
-	MaxKeys         uint64
-	EndPointOptions *EndPointOptions
+	MaxKeys   uint64
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
 type PutPolicyOption struct {
@@ -232,10 +233,11 @@ type GetSecondaryPieceOptions struct {
 }
 
 type ListGroupsOptions struct {
-	SourceType      string
-	Limit           int64
-	Offset          int64
-	EndPointOptions *EndPointOptions
+	SourceType string
+	Limit      int64
+	Offset     int64
+	Endpoint   string // indicates the endpoint of sp
+	SPAddress  string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
 type GroupMembersPaginationOptions struct {
@@ -244,8 +246,9 @@ type GroupMembersPaginationOptions struct {
 	// If the limit exceeds 1000, only 1000 records will be returned.
 	Limit int64
 	// StartAfter is used to input the user's account address for pagination purposes
-	StartAfter      string
-	EndPointOptions *EndPointOptions
+	StartAfter string
+	Endpoint   string // indicates the endpoint of sp
+	SPAddress  string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
 type GroupsOwnerPaginationOptions struct {
@@ -257,8 +260,9 @@ type GroupsOwnerPaginationOptions struct {
 	StartAfter string
 	// Owner defines the owner account address of groups
 	// if owner is set to "", it will default to current user address
-	Owner           string
-	EndPointOptions *EndPointOptions
+	Owner     string
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
 type GroupsPaginationOptions struct {
@@ -270,8 +274,9 @@ type GroupsPaginationOptions struct {
 	StartAfter string
 	// Account defines the user account address
 	// if account is set to "", it will default to current user address
-	Account         string
-	EndPointOptions *EndPointOptions
+	Account   string
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
 func (o *GetObjectOptions) SetRange(start, end int64) error {
@@ -301,5 +306,34 @@ type ListBucketsOptions struct {
 	// If set to false, these buckets will be skipped.
 	ShowRemovedBucket bool
 
-	EndPointOptions *EndPointOptions
+	// Account defines the user account address
+	// if account is set to "", it will default to current user address
+	Account string
+
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
+}
+
+type ListBucketsByPaymentAccountOptions struct {
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
+}
+
+type ListUserPaymentAccountsOptions struct {
+	// Account defines the user account address
+	// if account is set to "", it will default to current user address
+	Account   string
+	Endpoint  string // indicates the endpoint of sp
+	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
+}
+
+type ListObjectPoliciesOptions struct {
+	// Limit determines the number of policies data records to be returned.
+	// If the limit is set to 0, it will default to 50.
+	// If the limit exceeds 1000, only 1000 records will be returned.
+	Limit int64
+	// StartAfter is used to input the policy id for pagination purposes
+	StartAfter string
+	Endpoint   string // indicates the endpoint of sp
+	SPAddress  string // indicates the HEX-encoded string of the sp address to be challenged
 }

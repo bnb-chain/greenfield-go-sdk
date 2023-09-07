@@ -81,6 +81,8 @@ type Object interface {
 	GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error)
 	// ListObjectsByObjectID list objects by object ids
 	ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error)
+	// ListObjectPolicies list object policies by object info and action type
+	ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -920,7 +922,10 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListObjectsResult{}, err
@@ -1264,4 +1269,61 @@ func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, 
 	}
 
 	return objects, nil
+}
+
+// ListObjectPolicies list object policies by object info and action type
+func (c *client) ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error) {
+	params := url.Values{}
+	params.Set("object-policies", "")
+	// StartAfter is used to input the policy id for pagination purposes
+	params.Set("start-after", opts.StartAfter)
+	// If the limit is set to 0, it will default to 50.
+	// If the limit exceeds 1000, only 1000 records will be returned.
+	params.Set("limit", strconv.FormatInt(opts.Limit, 10))
+	params.Set("action-type", strconv.FormatUint(uint64(actionType), 10))
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		bucketName:    bucketName,
+		objectName:    objectName,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return types.ListObjectPoliciesResponse{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.ListObjectPoliciesResponse{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the json content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("the list object policies in bucket name:%s, object name:%s failed: %s", bucketName, objectName, err.Error())
+		return types.ListObjectPoliciesResponse{}, err
+	}
+
+	policies := types.ListObjectPoliciesResponse{}
+	bufStr := buf.String()
+	err = xml.Unmarshal([]byte(bufStr), &policies.Policies)
+	if err != nil {
+		log.Error().Msgf("the list object policies in bucket name:%s, object name:%s failed: %s", bucketName, objectName, err.Error())
+		return types.ListObjectPoliciesResponse{}, err
+	}
+
+	return policies, nil
 }

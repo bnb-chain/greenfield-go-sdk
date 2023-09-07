@@ -25,6 +25,7 @@ const (
 	groupName               = "test-group"
 	toAddress               = "0x.." // used for cross chain transfer
 	httpsAddr               = ""
+	paymentAddr             = ""
 )
 
 func handleErr(err error, funcName string) {

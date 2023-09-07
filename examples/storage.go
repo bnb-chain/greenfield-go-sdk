@@ -75,10 +75,7 @@ func main() {
 
 	// list objects
 	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{
-		ShowRemovedObject: false, Delimiter: "", MaxKeys: 100, EndPointOptions: &types.EndPointOptions{
-			Endpoint:  httpsAddr,
-			SPAddress: "",
-		},
+		ShowRemovedObject: false, Delimiter: "", MaxKeys: 100, Endpoint: httpsAddr, SPAddress: "",
 	})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {
@@ -86,12 +83,22 @@ func main() {
 		log.Printf("object: %s, status: %s\n", i.ObjectName, i.ObjectStatus)
 	}
 
+	// list objects policies
+	policies, err := cli.ListObjectPolicies(ctx, objectName, bucketName, 1, types.ListObjectPoliciesOptions{
+		Limit:      0,
+		StartAfter: "",
+		Endpoint:   httpsAddr,
+		SPAddress:  "",
+	})
+	log.Println("list objects policies:")
+	for _, policy := range policies.Policies {
+		log.Printf("policy: %s", policy.ResourceId)
+	}
+
 	// list buckets
 	bucketsList, err := cli.ListBuckets(ctx, types.ListBucketsOptions{
-		ShowRemovedBucket: false, EndPointOptions: &types.EndPointOptions{
-			Endpoint:  httpsAddr,
-			SPAddress: "",
-		},
+		ShowRemovedBucket: false, Endpoint: httpsAddr,
+		SPAddress: "",
 	})
 	log.Println("list buckets result:")
 	for _, bucket := range bucketsList.Buckets {
@@ -124,4 +131,13 @@ func main() {
 		}
 	}
 	log.Printf("object: %s has been deleted\n", objectName)
+
+	// list buckets
+	paymentBuckets, err := cli.ListBucketsByPaymentAccount(ctx, paymentAddr, types.ListBucketsByPaymentAccountOptions{Endpoint: httpsAddr,
+		SPAddress: ""})
+	log.Println("list buckets by payment account result:")
+	for _, bucket := range paymentBuckets.Buckets {
+		i := bucket.BucketInfo
+		log.Printf("bucket: %s, status: %s\n", i.BucketName, i.BucketStatus)
+	}
 }
