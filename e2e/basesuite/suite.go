@@ -15,13 +15,20 @@ import (
 )
 
 var (
-	// Endpoint = "http://localhost:26750"
-	// ChainID  = "greenfield_9000-121"
-	//Endpoint = "https://gnfd-dev.qa.bnbchain.world:443"
-	//ChainID  = "greenfield_8981-1"
+	// Endpoint local
+	//Endpoint = "http://localhost:26750"
+	//ChainID  = "greenfield_9000-121"
+	// dev
+	Endpoint = "https://gnfd-dev.qa.bnbchain.world:443"
+	ChainID  = "greenfield_8981-1"
 
-	Endpoint = "https://gnfd-testnet-fullnode-tendermint-ap.bnbchain.org:443"
-	ChainID  = "greenfield_5600-1"
+	//Endpoint qa
+	//Endpoint = "https://gnfd.qa.bnbchain.world:443"
+	//ChainID  = "greenfield_9000-1741"
+
+	// Endpoint testnet
+	// Endpoint = "https://gnfd-testnet-fullnode-tendermint-ap.bnbchain.org:443"
+	// ChainID  = "greenfield_5600-1"
 )
 
 func ParseMnemonicFromFile(fileName string) string {
@@ -74,7 +81,11 @@ func (s *BaseSuite) NewChallengeClient() {
 func (s *BaseSuite) SetupSuite() {
 	//mnemonic := ParseValidatorMnemonic(0)
 	//account, err := types.NewAccountFromMnemonic("test", mnemonic)
-	account, err := types.NewAccountFromPrivateKey("test", "92b4cdd49090cab5f3b6bf334021486ac3d3de865e02d1bced72f95f933c15e8")
+	// dev
+	account, err := types.NewAccountFromPrivateKey("test", "1b3d81d6dcc97aee28df85aac2dcd5e3ceec6f2143f5952d0e8e95992c575055")
+	// qa
+	//account, err := types.NewAccountFromPrivateKey("test", "338f8e479b9c89db5d1f679f77d17aefb61d53ca893ff531e387c52f0636ef78")
+
 	s.Require().NoError(err)
 	s.Client, err = client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,

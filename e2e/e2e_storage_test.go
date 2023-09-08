@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -454,6 +455,29 @@ func (s *StorageTestSuite) TruncateDownloadTempFileToLessPartsize() {
 	err = file.Truncate(targetSize)
 	s.T().Logf("---> Truncate file:%s to %d <---", tempFilePath, targetSize)
 	s.Require().NoError(err)
+}
+
+func (s *StorageTestSuite) Test_Resumable_Upload() {
+	// 1) create big object without putobject
+	bucketName, objectName, buffer := s.createBigObjectWithoutPutObject()
+
+	s.T().Log("---> Resumable PutObject <---")
+	partSize16MB := uint64(1024 * 1024 * 32)
+	// 2) put a big object, the secondary segment will error, then resumable upload
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	err := s.Client.PutObject(ctx, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize16MB})
+	_, err = s.Client.GetObjectResumableUploadOffset(s.ClientContext, bucketName, objectName)
+	// 64mb ?
+	s.Require().NoError(err)
+	//s.Require().Equal(offset, partSize16MB)
+
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize16MB})
+	s.Require().NoError(err)
+
+	s.WaitSealObject(bucketName, objectName)
 }
 
 func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
