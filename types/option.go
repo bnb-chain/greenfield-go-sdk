@@ -123,6 +123,7 @@ type CreateGroupOptions struct {
 }
 
 // UpdateGroupMemberOption indicates the info to update group member
+// If the ExpirationTime expires, the group member will not be removed, but his related permissions in the group will become invalid,
 type UpdateGroupMemberOption struct {
 	TxOpts         *gnfdsdktypes.TxOption
 	ExpirationTime []*time.Time

@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"io"
 	"math"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 
@@ -596,7 +597,7 @@ func (c *client) GetQuotaUpdateTime(ctx context.Context, bucketName string) (int
 }
 
 // BuyQuotaForBucket buy the target quota of the specific bucket
-// targetQuota indicates the target quota to set for the bucket
+// targetQuota is the target value after setting, and can only be set to a higher value than the current value.
 func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {

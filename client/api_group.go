@@ -29,10 +29,6 @@ type Group interface {
 	// DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
 	DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error)
 	// UpdateGroupMember support adding or removing members from the group and return the txn hash
-	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
-	// addAddresses indicates the HEX-encoded string list of the member addresses to be added
-	// removeAddresses indicates the HEX-encoded string list of the member addresses to be removed
-	// expirationTime  indicates the expiration time of the group member, user need set the expiration time for the addAddresses
 	UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
 		addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption) (string, error)
 	// LeaveGroup make the member leave the specific group
@@ -89,6 +85,10 @@ func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.De
 }
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
+// groupOwnerAddr is the HEX-encoded string of the group owner address
+// addAddresses indicates the HEX-encoded string list of the member addresses to be added
+// removeAddresses indicates the HEX-encoded string list of the member addresses to be removed
+// At least one of add Addresses or remove Addresses must be set, or both can be set.
 func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
 	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption,
 ) (string, error) {
