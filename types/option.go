@@ -12,13 +12,15 @@ import (
 )
 
 // CreateBucketOptions indicates the meta to construct createBucket msg of storage module
-// PaymentAddress  indicates the HEX-encoded string of the payment address
+// PaymentAddress indicates the HEX-encoded string of the payment address
+// ChargedQuota is the target charged quota value of the bucket
+// IsAsyncMode indicates whether to create the bucket in asynchronous mode
 type CreateBucketOptions struct {
 	Visibility     storageTypes.VisibilityType
 	TxOpts         *gnfdsdktypes.TxOption
 	PaymentAddress string
 	ChargedQuota   uint64
-	IsAsyncMode    bool // indicate whether to create the bucket in asynchronous mode
+	IsAsyncMode    bool
 }
 
 type MigrateBucketOptions struct {
@@ -146,10 +148,11 @@ type ComputeHashOptions struct {
 	ParityShards uint32
 }
 
-// ListReadRecordOptions indicates the start timestamp of the return read quota record
 type ListReadRecordOptions struct {
+	// indicates the start timestamp of the return read quota record
 	StartTimeStamp int64
-	MaxRecords     int
+	// the max number of the return records
+	MaxRecords int
 }
 
 type ListObjectsOptions struct {
@@ -185,7 +188,8 @@ type ListObjectsOptions struct {
 }
 
 type PutPolicyOption struct {
-	TxOpts           *gnfdsdktypes.TxOption
+	TxOpts *gnfdsdktypes.TxOption
+	// the policy will become invalid after it exceeds the expiry time set by PolicyExpireTime
 	PolicyExpireTime *time.Time
 }
 

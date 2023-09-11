@@ -29,23 +29,16 @@ type Group interface {
 	// DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
 	DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error)
 	// UpdateGroupMember support adding or removing members from the group and return the txn hash
-	UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
-		addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption) (string, error)
+	UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string, addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption) (string, error)
 	// LeaveGroup make the member leave the specific group
-	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error)
 	// HeadGroup query the groupInfo on chain, return the group info if exists return err info if group not exist
-	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	HeadGroup(ctx context.Context, groupName string, groupOwnerAddr string) (*storageTypes.GroupInfo, error)
 	// HeadGroupMember query the group member info on chain, return true if the member exists in group
-	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
-	// headMember indicates the HEX-encoded string of the group member address
 	HeadGroupMember(ctx context.Context, groupName string, groupOwner, headMember string) bool
 	// PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
-	// principalAddr indicates the HEX-encoded string of the principal address
 	PutGroupPolicy(ctx context.Context, groupName string, principalAddr string, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
 	// DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
-	// principalAddr indicates the HEX-encoded string of the principal address
 	DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr string, opt types.DeletePolicyOption) (string, error)
 	// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
 	// it queries a bucket policy that grants permission to a group
@@ -56,9 +49,6 @@ type Group interface {
 	// GetGroupPolicy get the group policy info of the user specified by principalAddr
 	GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error)
 	// ListGroup get the group list by name and prefix.
-	// prefix is the start of the search pattern. The system will only return groups that start with this prefix.
-	// name is the ending of the search pattern.
-	// it providers fuzzy searches by inputting a specific name and prefix
 	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
 	// RenewGroupMember renew a list of group members and their expiration time
 	RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string, memberAddresses []string, opts types.RenewGroupMemberOption) (string, error)
@@ -139,6 +129,7 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 }
 
 // LeaveGroup make the member leave the specific group
+// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 func (c *client) LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
@@ -165,6 +156,8 @@ func (c *client) HeadGroup(ctx context.Context, groupName string, groupOwnerAddr
 }
 
 // HeadGroupMember query the group member info on chain, return true if the member exists in group
+// groupOwnerAddr indicates the HEX-encoded string of the group owner address
+// headMemberAddr indicates the HEX-encoded string of the member address to query for
 func (c *client) HeadGroupMember(ctx context.Context, groupName string, groupOwnerAddr, headMemberAddr string) bool {
 	headGroupRequest := storageTypes.QueryHeadGroupMemberRequest{
 		GroupName:  groupName,
@@ -177,6 +170,8 @@ func (c *client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 }
 
 // PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
+// principalAddr indicates the HEX-encoded string of the principal address
+// Statement defines the permission info of a resource, users can use NewStatement function to init it
 func (c *client) PutGroupPolicy(ctx context.Context, groupName string, principalAddr string,
 	statements []*permTypes.Statement, opt types.PutPolicyOption,
 ) (string, error) {
@@ -231,6 +226,7 @@ func (c *client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectN
 }
 
 // DeleteGroupPolicy delete group policy of the principal, the sender need to be the owner of the group
+// principalAddr indicates the HEX-encoded string of the principal address
 func (c *client) DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr string, opt types.DeletePolicyOption) (string, error) {
 	sender := c.MustGetDefaultAccount().GetAddress()
 	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
@@ -246,6 +242,7 @@ func (c *client) DeleteGroupPolicy(ctx context.Context, groupName string, princi
 }
 
 // GetGroupPolicy get the group policy info of the user specified by principalAddr
+// principalAddr indicates the HEX-encoded string of the principal address
 func (c *client) GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
 	if err != nil {
@@ -267,7 +264,9 @@ func (c *client) GetGroupPolicy(ctx context.Context, groupName string, principal
 	return queryPolicyResp.Policy, nil
 }
 
-// ListGroup get the group list by name and prefix
+// ListGroup get the group list by name and prefix.
+// prefix is the start of the search pattern. The system will only return groups that start with this prefix.
+// name is the ending of the search pattern. it providers fuzzy searches by inputting a specific name and prefix
 func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error) {
 	const (
 		MaximumGetGroupListLimit  = 1000
@@ -353,6 +352,7 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 	return listGroupsResult, nil
 }
 
+// RenewGroupMember renew a list of group members and their expiration time
 func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string,
 	memberAddresses []string, opts types.RenewGroupMemberOption,
 ) (string, error) {
