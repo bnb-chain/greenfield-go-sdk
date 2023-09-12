@@ -153,7 +153,7 @@ func (s *StorageTestSuite) Test_Object() {
 	var buffer bytes.Buffer
 	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
 	// Create 1MiB content where each line contains 1024 characters.
-	for i := 0; i < 1024*300; i++ {
+	for i := 0; i < 1024*300*30; i++ {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
