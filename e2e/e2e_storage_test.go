@@ -2,12 +2,11 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
-	"sync"
 	"testing"
 	"time"
 
@@ -178,38 +177,72 @@ func (s *StorageTestSuite) Test_Object() {
 
 	s.WaitSealObject(bucketName, objectName)
 
-	concurrentNumber := 5
-	downloadCount := 5
-	quota0, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
-	s.Require().NoError(err)
+	/*
+		concurrentNumber := 5
+		downloadCount := 5
+		quota0, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+		s.Require().NoError(err)
 
-	var wg sync.WaitGroup
-	wg.Add(concurrentNumber)
+		var wg sync.WaitGroup
+		wg.Add(concurrentNumber)
 
-	for i := 0; i < concurrentNumber; i++ {
-		go func() {
-			defer wg.Done()
-			for j := 0; j < downloadCount; j++ {
-				objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
-				if err != nil {
-					fmt.Printf("error: %v", err)
-					quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
-					fmt.Printf("quota: %v", quota2)
+		for i := 0; i < concurrentNumber; i++ {
+			go func() {
+				defer wg.Done()
+				for j := 0; j < downloadCount; j++ {
+					objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+					if err != nil {
+						fmt.Printf("error: %v", err)
+						quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+						fmt.Printf("quota: %v", quota2)
+					}
+					objectBytes, err := io.ReadAll(objectContent)
+					s.Require().NoError(err)
+					s.Require().Equal(objectBytes, buffer.Bytes())
 				}
-				objectBytes, err := io.ReadAll(objectContent)
-				s.Require().NoError(err)
-				s.Require().Equal(objectBytes, buffer.Bytes())
-			}
-		}()
-	}
-	wg.Wait()
+			}()
+		}
+		wg.Wait()
+	*/
+	// buy quota
+	quota, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.NoError(err)
+	fmt.Printf("quota: %v\n", quota.ReadQuotaSize)
+	quotaTx, err := s.Client.BuyQuotaForBucket(s.ClientContext, bucketName, 1024*1024*1024+quota.ReadQuotaSize, types.BuyQuotaOption{})
+	s.NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, quotaTx)
+	s.NoError(err)
 
-	expectQuotaUsed := int(objectSize) * concurrentNumber * downloadCount
-	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
-	s.Require().NoError(err)
-	freeQuotaConsumed := quota1.FreeConsumedSize - quota0.FreeConsumedSize
-	// the consumed quota and free quota should be right
-	s.Require().Equal(uint64(expectQuotaUsed), freeQuotaConsumed)
+	// check before quota
+	time.Sleep(time.Second * 10)
+	beforeQuota, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.NoError(err)
+	fmt.Printf("before quota: %v", beforeQuota)
+
+	// wait 20s, download object
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	downloadName := "temptestFile"
+	err = s.Client.FGetObject(ctx, bucketName, objectName, downloadName, types.GetObjectOptions{})
+	s.Error(err)
+
+	// check after
+	time.Sleep(time.Second * 10)
+
+	// 获取文件信息
+	fileInfo, err := os.Stat(downloadName)
+	s.NoError(err)
+
+	// 获取文件大小（以字节为单位）
+	fileSize := fileInfo.Size()
+	afterQuota, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.NoError(err)
+
+	fmt.Printf("after quota: %v", afterQuota)
+	fmt.Printf("use read quota: %v", afterQuota.ReadConsumedSize-beforeQuota.ReadConsumedSize)
+	fmt.Printf("use free quota: %v", afterQuota.FreeConsumedSize-beforeQuota.FreeConsumedSize)
+
+	s.Require().Equal(int64(afterQuota.FreeConsumedSize-beforeQuota.FreeConsumedSize), fileSize)
 
 	s.T().Log("---> PutObjectPolicy <---")
 	principal, _, err := types.NewAccount("principal")
