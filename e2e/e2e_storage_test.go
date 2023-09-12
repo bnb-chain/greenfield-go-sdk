@@ -238,9 +238,10 @@ func (s *StorageTestSuite) Test_Object() {
 	afterQuota, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.NoError(err)
 
-	fmt.Printf("after quota: %v", afterQuota)
-	fmt.Printf("use read quota: %v", afterQuota.ReadConsumedSize-beforeQuota.ReadConsumedSize)
-	fmt.Printf("use free quota: %v", afterQuota.FreeConsumedSize-beforeQuota.FreeConsumedSize)
+	fmt.Printf("filesize :%d, actual download size: %d \n", objectSize, fileSize)
+	fmt.Printf("after quota : %v \n", afterQuota)
+	fmt.Printf("use read quota: %v \n", afterQuota.ReadConsumedSize-beforeQuota.ReadConsumedSize)
+	fmt.Printf("use free quota: %v \n", afterQuota.FreeConsumedSize-beforeQuota.FreeConsumedSize)
 
 	s.Require().Equal(int64(afterQuota.FreeConsumedSize-beforeQuota.FreeConsumedSize), fileSize)
 
