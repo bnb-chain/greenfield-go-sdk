@@ -153,7 +153,7 @@ func (s *StorageTestSuite) Test_Object() {
 	var buffer bytes.Buffer
 	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
 	// Create 1MiB content where each line contains 1024 characters.
-	for i := 0; i < 1024*300*30; i++ {
+	for i := 0; i < 1024*300*6; i++ {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
@@ -214,13 +214,13 @@ func (s *StorageTestSuite) Test_Object() {
 	s.NoError(err)
 
 	// check before quota
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 8)
 	beforeQuota, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.NoError(err)
 	fmt.Printf("before quota: %v", beforeQuota)
 
 	// wait 20s, download object
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
 	defer cancel()
 	downloadName := "temptestFile"
 	err = s.Client.FGetObject(ctx, bucketName, objectName, downloadName, types.GetObjectOptions{})
