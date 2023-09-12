@@ -41,7 +41,7 @@ type SP interface {
 	UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, TxOption gnfdSdkTypes.TxOption) (string, error)
 }
 
-func (c *client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.SpStoragePrice, error) {
+func (c *Client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.SpStoragePrice, error) {
 	spAcc, err := sdk.AccAddressFromHexUnsafe(spAddr)
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (c *client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.S
 	return &resp.SpStoragePrice, nil
 }
 
-func (c *client) GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpStorePrice, error) {
+func (c *Client) GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpStorePrice, error) {
 	resp, err := c.chainClient.QueryGlobalSpStorePriceByTime(ctx, &spTypes.QueryGlobalSpStorePriceByTimeRequest{
 		Timestamp: 0,
 	})
@@ -67,7 +67,7 @@ func (c *client) GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpSt
 
 // ListStorageProviders return the storage provider info on chain
 // isInService indicates if only display the sp with STATUS_IN_SERVICE status
-func (c *client) ListStorageProviders(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error) {
+func (c *Client) ListStorageProviders(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error) {
 	request := &spTypes.QueryStorageProvidersRequest{}
 	gnfdRep, err := c.chainClient.StorageProviders(ctx, request)
 	if err != nil {
@@ -87,7 +87,7 @@ func (c *client) ListStorageProviders(ctx context.Context, isInService bool) ([]
 }
 
 // GetStorageProviderInfo return the sp info with the sp chain address
-func (c *client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
+func (c *Client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
 	request := &spTypes.QueryStorageProviderByOperatorAddressRequest{
 		OperatorAddress: SPAddr.String(),
 	}
@@ -100,7 +100,7 @@ func (c *client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddre
 	return gnfdRep.StorageProvider, nil
 }
 
-func (c *client) refreshStorageProviders(ctx context.Context) error {
+func (c *Client) refreshStorageProviders(ctx context.Context) error {
 	gnfdRep, err := c.chainClient.StorageProviders(ctx, &spTypes.QueryStorageProvidersRequest{Pagination: &query.PageRequest{Limit: math2.MaxUint64}})
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func (c *client) refreshStorageProviders(ctx context.Context) error {
 }
 
 // CreateStorageProvider will submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
-func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, maintenanceAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error) {
+func (c *Client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, maintenanceAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error) {
 	defaultAccount := c.MustGetDefaultAccount()
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
@@ -201,7 +201,7 @@ func (c *client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOption})
 }
 
-func (c *client) GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error) {
+func (c *Client) GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error) {
 	granter := c.MustGetDefaultAccount()
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
@@ -229,7 +229,7 @@ func (c *client) GrantDepositForStorageProvider(ctx context.Context, spAddr stri
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error) {
 	spAcc, err := sdk.AccAddressFromHexUnsafe(spAddr)
 	if err != nil {
 		return "", err
@@ -247,7 +247,7 @@ func (c *client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPr
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, TxOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, TxOption gnfdSdkTypes.TxOption) (string, error) {
 	spAcc, err := sdk.AccAddressFromHexUnsafe(spAddr)
 	if err != nil {
 		return "", err

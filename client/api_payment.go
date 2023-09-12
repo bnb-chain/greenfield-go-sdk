@@ -30,7 +30,7 @@ type Payment interface {
 }
 
 // GetStreamRecord retrieves stream record information for a given stream address.
-func (c *client) GetStreamRecord(ctx context.Context, streamAddress string) (*paymentTypes.StreamRecord, error) {
+func (c *Client) GetStreamRecord(ctx context.Context, streamAddress string) (*paymentTypes.StreamRecord, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(streamAddress)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (c *client) GetStreamRecord(ctx context.Context, streamAddress string) (*pa
 }
 
 // Deposit deposits BNB to a stream account.
-func (c *client) Deposit(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) Deposit(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
 		return "", err
@@ -61,7 +61,7 @@ func (c *client) Deposit(ctx context.Context, toAddress string, amount math.Int,
 }
 
 // Withdraw withdraws BNB from a stream account.
-func (c *client) Withdraw(ctx context.Context, fromAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) Withdraw(ctx context.Context, fromAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(fromAddress)
 	if err != nil {
 		return "", err
@@ -79,7 +79,7 @@ func (c *client) Withdraw(ctx context.Context, fromAddress string, amount math.I
 }
 
 // DisableRefund disables refund for a stream account.
-func (c *client) DisableRefund(ctx context.Context, paymentAddress string, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) DisableRefund(ctx context.Context, paymentAddress string, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(paymentAddress)
 	if err != nil {
 		return "", err
@@ -96,7 +96,7 @@ func (c *client) DisableRefund(ctx context.Context, paymentAddress string, txOpt
 }
 
 // ListUserPaymentAccounts list payment info by user address
-func (c *client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUserPaymentAccountsOptions) (types.ListUserPaymentAccountsResult, error) {
+func (c *Client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUserPaymentAccountsOptions) (types.ListUserPaymentAccountsResult, error) {
 	params := url.Values{}
 	params.Set("user-payments", "")
 

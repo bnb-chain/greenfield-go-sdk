@@ -73,7 +73,7 @@ type Bucket interface {
 }
 
 // GetCreateBucketApproval returns the signature info for the approval of preCreating resources
-func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error) {
+func (c *Client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error) {
 	unsignedBytes := createBucketMsg.GetSignBytes()
 
 	// set the action type
@@ -122,7 +122,7 @@ func (c *client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 }
 
 // CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain, it returns the transaction hash value and error
-func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error) {
+func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error) {
 	address, err := sdk.AccAddressFromHexUnsafe(primaryAddr)
 	if err != nil {
 		return "", err
@@ -185,7 +185,7 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 }
 
 // DeleteBucket send DeleteBucket txn to greenfield chain and return txn hash
-func (c *client) DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error) {
+func (c *Client) DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -194,7 +194,7 @@ func (c *client) DeleteBucket(ctx context.Context, bucketName string, opt types.
 }
 
 // UpdateBucketVisibility update the visibilityType of bucket
-func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
+func (c *Client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 	visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption,
 ) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
@@ -212,7 +212,7 @@ func (c *client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 }
 
 // UpdateBucketPaymentAddr  update the payment addr of bucket
-func (c *client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
+func (c *Client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 	paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption,
 ) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
@@ -225,7 +225,7 @@ func (c *client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 }
 
 // UpdateBucketInfo update the bucket meta on chain, including read quota, payment address or visibility
-func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error) {
+func (c *Client) UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
@@ -277,7 +277,7 @@ func (c *client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 
 // HeadBucket query the bucketInfo on chain, return the bucket info if exists
 // return err info if bucket not exist
-func (c *client) HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error) {
+func (c *Client) HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error) {
 	queryHeadBucketRequest := storageTypes.QueryHeadBucketRequest{
 		BucketName: bucketName,
 	}
@@ -291,7 +291,7 @@ func (c *client) HeadBucket(ctx context.Context, bucketName string) (*storageTyp
 
 // HeadBucketByID query the bucketInfo on chain by bucketId, return the bucket info if exists
 // return err info if bucket not exist
-func (c *client) HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error) {
+func (c *Client) HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error) {
 	headBucketRequest := &storageTypes.QueryHeadBucketByIdRequest{
 		BucketId: bucketID,
 	}
@@ -305,7 +305,7 @@ func (c *client) HeadBucketByID(ctx context.Context, bucketID string) (*storageT
 }
 
 // PutBucketPolicy apply bucket policy to the principal, return the txn hash
-func (c *client) PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal,
+func (c *Client) PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal,
 	statements []*permTypes.Statement, opt types.PutPolicyOption,
 ) (string, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName)
@@ -321,7 +321,7 @@ func (c *client) PutBucketPolicy(ctx context.Context, bucketName string, princip
 }
 
 // DeleteBucketPolicy delete the bucket policy of the principal
-func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error) {
+func (c *Client) DeleteBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 	principal := &permTypes.Principal{}
 	if err := principal.Unmarshal([]byte(principalStr)); err != nil {
@@ -332,7 +332,7 @@ func (c *client) DeleteBucketPolicy(ctx context.Context, bucketName string, prin
 }
 
 // IsBucketPermissionAllowed check if the permission of bucket is allowed to the user.
-func (c *client) IsBucketPermissionAllowed(ctx context.Context, userAddr string,
+func (c *Client) IsBucketPermissionAllowed(ctx context.Context, userAddr string,
 	bucketName string, action permTypes.ActionType,
 ) (permTypes.Effect, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(userAddr)
@@ -354,7 +354,7 @@ func (c *client) IsBucketPermissionAllowed(ctx context.Context, userAddr string,
 }
 
 // GetBucketPolicy get the bucket policy info of the user specified by principalAddr.
-func (c *client) GetBucketPolicy(ctx context.Context, bucketName string, principalAddr string) (*permTypes.Policy, error) {
+func (c *Client) GetBucketPolicy(ctx context.Context, bucketName string, principalAddr string) (*permTypes.Policy, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
 	if err != nil {
 		return nil, err
@@ -399,7 +399,7 @@ func (m *GfSpListBucketsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.St
 }
 
 // ListBuckets list buckets for the owner
-func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error) {
+func (c *Client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error) {
 	params := url.Values{}
 	params.Set("include-removed", strconv.FormatBool(opts.ShowRemovedBucket))
 
@@ -467,7 +467,7 @@ func (c *client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 
 // ListBucketReadRecord returns the read record of this month, the return items should be no more than maxRecords
 // ListReadRecordOption indicates the start timestamp of return read records
-func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error) {
+func (c *Client) ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.QuotaRecordInfo{}, err
 	}
@@ -535,7 +535,7 @@ func (c *client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 }
 
 // GetBucketReadQuota return quota info of bucket of current month, include chain quota, free quota and consumed quota
-func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error) {
+func (c *Client) GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.QuotaInfo{}, err
 	}
@@ -585,7 +585,7 @@ func (c *client) GetBucketReadQuota(ctx context.Context, bucketName string) (typ
 	return QuotaResult, nil
 }
 
-func (c *client) GetQuotaUpdateTime(ctx context.Context, bucketName string) (int64, error) {
+func (c *Client) GetQuotaUpdateTime(ctx context.Context, bucketName string) (int64, error) {
 	resp, err := c.chainClient.QueryQuotaUpdateTime(ctx, &storageTypes.QueryQuoteUpdateTimeRequest{
 		BucketName: bucketName,
 	})
@@ -597,7 +597,7 @@ func (c *client) GetQuotaUpdateTime(ctx context.Context, bucketName string) (int
 
 // BuyQuotaForBucket buy the target quota of the specific bucket
 // targetQuota indicates the target quota to set for the bucket
-func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error) {
+func (c *Client) BuyQuotaForBucket(ctx context.Context, bucketName string, targetQuota uint64, opt types.BuyQuotaOption) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
@@ -620,7 +620,7 @@ func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 // ListBucketsByBucketID list buckets by bucket ids
 // By inputting a collection of bucket IDs, we can retrieve the corresponding bucket data.
 // If the bucket is nonexistent or has been deleted, a null value will be returned
-func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error) {
+func (c *Client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error) {
 	const MaximumListBucketsSize = 1000
 	if len(bucketIds) == 0 || len(bucketIds) > MaximumListBucketsSize {
 		return types.ListBucketsByBucketIDResponse{}, nil
@@ -687,7 +687,7 @@ func (c *client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, 
 	return buckets, nil
 }
 
-func (c *client) GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error) {
+func (c *Client) GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error) {
 	unsignedBytes := migrateBucketMsg.GetSignBytes()
 
 	// set the action type
@@ -735,7 +735,7 @@ func (c *client) GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg 
 }
 
 // MigrateBucket get approval of migrating bucket and send migrateBucket txn to greenfield chain, it returns the transaction hash value and error
-func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts types.MigrateBucketOptions) (string, error) {
+func (c *Client) MigrateBucket(ctx context.Context, bucketName string, opts types.MigrateBucketOptions) (string, error) {
 	migrateBucketMsg := storageTypes.NewMsgMigrateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName, opts.DstPrimarySPID)
 
 	err := migrateBucketMsg.ValidateBasic()
@@ -778,7 +778,7 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 }
 
 // CancelMigrateBucket get approval of migrating bucket and send migrateBucket txn to greenfield chain, it returns the transaction hash value and error
-func (c *client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error) {
+func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error) {
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
 		return 0, "", err
@@ -796,7 +796,7 @@ func (c *client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 }
 
 // ListBucketsByPaymentAccount list bucket by payment account
-func (c *client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error) {
+func (c *Client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error) {
 
 	_, err := sdk.AccAddressFromHexUnsafe(paymentAccount)
 	if err != nil {

@@ -27,12 +27,12 @@ type Account interface {
 
 // GetAccount retrieves account information for a given address.
 // It takes a context and an address as input and returns an AccountI interface and an error (if any).
-func (c *client) GetAccount(ctx context.Context, address string) (authTypes.AccountI, error) {
+func (c *Client) GetAccount(ctx context.Context, address string) (authTypes.AccountI, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
 		return nil, err
 	}
-	// Call the DefaultAccount method of the chain client with a QueryAccountRequest containing the address.
+	// Call the DefaultAccount method of the chain Client with a QueryAccountRequest containing the address.
 	response, err := c.chainClient.Account(ctx, &authTypes.QueryAccountRequest{Address: accAddress.String()})
 	if err != nil {
 		// Return an error if there was an issue retrieving the account.
@@ -53,7 +53,7 @@ func (c *client) GetAccount(ctx context.Context, address string) (authTypes.Acco
 
 // CreatePaymentAccount creates a new payment account on the blockchain using the provided address.
 // It returns a TxResponse containing information about the transaction, or an error if the transaction failed.
-func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) CreatePaymentAccount(ctx context.Context, address string, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
 		return "", err
@@ -66,7 +66,7 @@ func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOpt
 	return tx.TxResponse.TxHash, nil
 }
 
-func (c *client) GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error) {
+func (c *Client) GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error) {
 	response, err := c.chainClient.ModuleAccountByName(ctx, &authTypes.QueryModuleAccountByNameRequest{Name: name})
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (c *client) GetModuleAccountByName(ctx context.Context, name string) (authT
 	return &moduleAccount, err
 }
 
-func (c *client) GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccountI, error) {
+func (c *Client) GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccountI, error) {
 	response, err := c.chainClient.ModuleAccounts(ctx, &authTypes.QueryModuleAccountsRequest{})
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (c *client) GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccou
 
 // GetAccountBalance retrieves balance information of an account for a given address.
 // It takes a context and an address as input and returns an sdk.Coin interface and an error (if any).
-func (c *client) GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error) {
+func (c *Client) GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
 		return nil, err
@@ -117,9 +117,9 @@ func (c *client) GetAccountBalance(ctx context.Context, address string) (*sdk.Co
 }
 
 // GetPaymentAccount function takes a context and an address string as parameters and returns a pointer to a paymentTypes.PaymentAccount struct and an error.
-// This function uses the PaymentAccount method of the chainClient field of the client struct to query the payment account associated with the given address.
+// This function uses the PaymentAccount method of the chainClient field of the Client struct to query the payment account associated with the given address.
 // If there is an error, the function returns nil and the error. If there is no error, the function returns a pointer to the PaymentAccount struct and nil.
-func (c *client) GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error) {
+func (c *Client) GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
 		return nil, err
@@ -133,12 +133,12 @@ func (c *client) GetPaymentAccount(ctx context.Context, address string) (*paymen
 
 // GetPaymentAccountsByOwner retrieves all payment accounts owned by the given address
 // and returns a slice of PaymentAccount pointers and an error (if any).
-func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error) {
+func (c *Client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error) {
 	ownerAcc, err := sdk.AccAddressFromHexUnsafe(owner)
 	if err != nil {
 		return nil, err
 	}
-	// Call the GetPaymentAccountsByOwner method of the chain client with a QueryGetPaymentAccountsByOwnerRequest containing the owner address.
+	// Call the GetPaymentAccountsByOwner method of the chain Client with a QueryGetPaymentAccountsByOwnerRequest containing the owner address.
 	accountsByOwnerResponse, err := c.chainClient.PaymentAccountsByOwner(ctx, &paymentTypes.QueryPaymentAccountsByOwnerRequest{Owner: ownerAcc.String()})
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 
 	// Iterate over each account address returned in the response.
 	for _, accAddress := range accountsByOwnerResponse.PaymentAccounts {
-		// Call the GetPaymentAccount method of the client to retrieve the PaymentAccount object for the given address.
+		// Call the GetPaymentAccount method of the Client to retrieve the PaymentAccount object for the given address.
 		pa, err := c.GetPaymentAccount(ctx, accAddress)
 		if err != nil {
 			return nil, err
@@ -167,10 +167,10 @@ func (c *client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 // This function first parses the toAddress parameter into an sdk.AccAddress object, and if there is an error,
 // it returns nil and the error.
 // Then it generates a MsgSend message using the NewMsgSend method of the types3 package and broadcasts the
-// transaction to the chain by calling the BroadcastTx method of the chainClient field of the client struct.
+// transaction to the chain by calling the BroadcastTx method of the chainClient field of the Client struct.
 // If there is an error during the broadcasting, the function returns nil and the error. If there is no error,
 // the function returns a pointer to the TxResponse struct and nil
-func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
 	toAddr, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
 		return "", err
@@ -184,7 +184,7 @@ func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int
 }
 
 // MultiTransfer makes transfers from an account to multiple accounts with respect amounts
-func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error) {
 	outputs := make([]bankTypes.Output, 0)
 	denom := gnfdSdkTypes.Denom
 	sum := math.NewInt(0)

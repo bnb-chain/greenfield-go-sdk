@@ -1,4 +1,4 @@
 /*
-Package client provides a client for interact with greenfield storage network.
+Package Client provides a Client for interact with greenfield storage network.
 */
 package client

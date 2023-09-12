@@ -87,7 +87,7 @@ type Object interface {
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
 // configuration on chain
-func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
+func (c *Client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 	query := storageTypes.QueryParamsRequest{}
 	queryResp, err := c.chainClient.StorageQueryClient.Params(context.Background(), &query)
 	if err != nil {
@@ -100,7 +100,7 @@ func (c *client) GetRedundancyParams() (uint32, uint32, uint64, error) {
 
 // GetParams query and return the data shards, parity shards and segment size of redundancy
 // configuration on chain
-func (c *client) GetParams() (storageTypes.Params, error) {
+func (c *Client) GetParams() (storageTypes.Params, error) {
 	query := storageTypes.QueryParamsRequest{}
 	queryResp, err := c.chainClient.StorageQueryClient.Params(context.Background(), &query)
 	if err != nil {
@@ -111,7 +111,7 @@ func (c *client) GetParams() (storageTypes.Params, error) {
 }
 
 // ComputeHashRoots return the integrity hash, content size and the redundancy type of the file
-func (c *client) ComputeHashRoots(reader io.Reader, isSerial bool) ([][]byte, int64, storageTypes.RedundancyType, error) {
+func (c *Client) ComputeHashRoots(reader io.Reader, isSerial bool) ([][]byte, int64, storageTypes.RedundancyType, error) {
 	dataBlocks, parityBlocks, segSize, err := c.GetRedundancyParams()
 	if reader == nil {
 		return nil, 0, storageTypes.REDUNDANCY_EC_TYPE, errors.New("fail to compute hash, reader is nil")
@@ -125,7 +125,7 @@ func (c *client) ComputeHashRoots(reader io.Reader, isSerial bool) ([][]byte, in
 
 // CreateObject get approval of creating object and send createObject txn to greenfield chain,
 // it returns the transaction hash value and error
-func (c *client) CreateObject(ctx context.Context, bucketName, objectName string,
+func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string,
 	reader io.Reader, opts types.CreateObjectOptions,
 ) (string, error) {
 	if reader == nil {
@@ -200,7 +200,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 }
 
 // DeleteObject send DeleteBucket txn to greenfield chain and return txn hash
-func (c *client) DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error) {
+func (c *Client) DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -214,7 +214,7 @@ func (c *client) DeleteObject(ctx context.Context, bucketName, objectName string
 }
 
 // CancelCreateObject send CancelCreateObject txn to greenfield chain
-func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error) {
+func (c *Client) CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
 	}
@@ -229,7 +229,7 @@ func (c *client) CancelCreateObject(ctx context.Context, bucketName, objectName 
 
 // PutObject supports the second stage of uploading the object to bucket.
 // txnHash should be the str which hex.encoding from txn hash bytes
-func (c *client) PutObject(ctx context.Context, bucketName, objectName string, objectSize int64,
+func (c *Client) PutObject(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
 	if objectSize <= 0 {
@@ -257,7 +257,7 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	return c.putObjectResumable(ctx, bucketName, objectName, objectSize, reader, opts)
 }
 
-func (c *client) putObject(ctx context.Context, bucketName, objectName string, objectSize int64,
+func (c *Client) putObject(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
 	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
@@ -317,7 +317,7 @@ func DefaultUploadSegment(id int) error {
 	return nil
 }
 
-func (c *client) putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
+func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
 	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
@@ -444,7 +444,7 @@ func (c *client) putObjectResumable(ctx context.Context, bucketName, objectName 
 	return nil
 }
 
-func (c *client) headSPObjectInfo(ctx context.Context, bucketName, objectName string) error {
+func (c *Client) headSPObjectInfo(ctx context.Context, bucketName, objectName string) error {
 	backoffDelay := types.HeadBackOffDelay
 	for retry := 0; retry < types.MaxHeadTryTime; retry++ {
 		_, err := c.getObjectStatusFromSP(ctx, bucketName, objectName)
@@ -468,7 +468,7 @@ func (c *client) headSPObjectInfo(ctx context.Context, bucketName, objectName st
 }
 
 // FPutObject supports uploading object from local file
-func (c *client) FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error) {
+func (c *Client) FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error) {
 	fReader, err := os.Open(filePath)
 	// If any error fail quickly here.
 	if err != nil {
@@ -486,7 +486,7 @@ func (c *client) FPutObject(ctx context.Context, bucketName, objectName, filePat
 }
 
 // GetObject download s3 object payload and return the related object info
-func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
+func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 	opts types.GetObjectOptions,
 ) (io.ReadCloser, types.ObjectStat, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
@@ -533,7 +533,7 @@ func (c *client) GetObject(ctx context.Context, bucketName, objectName string,
 }
 
 // FGetObject download s3 object payload adn write the object content into local file specified by filePath
-func (c *client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
+func (c *Client) FGetObject(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
 	// Verify if destination already exists.
 	st, err := os.Stat(filePath)
 	if err == nil {
@@ -573,7 +573,7 @@ func GetSegmentEnd(begin int64, total int64, per int64) int64 {
 }
 
 // FGetObjectResumable download s3 object payload with resumable download
-func (c *client) FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
+func (c *Client) FGetObjectResumable(ctx context.Context, bucketName, objectName, filePath string, opts types.GetObjectOptions) error {
 	// Get the object detailed meta for object whole size
 	meta, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
@@ -764,7 +764,7 @@ func getObjInfo(objectName string, h http.Header) (types.ObjectStat, error) {
 
 // HeadObject query the objectInfo on chain to check th object id, return the object info if exists
 // return err info if object not exist
-func (c *client) HeadObject(ctx context.Context, bucketName, objectName string) (*types.ObjectDetail, error) {
+func (c *Client) HeadObject(ctx context.Context, bucketName, objectName string) (*types.ObjectDetail, error) {
 	queryHeadObjectRequest := storageTypes.QueryHeadObjectRequest{
 		BucketName: bucketName,
 		ObjectName: objectName,
@@ -782,7 +782,7 @@ func (c *client) HeadObject(ctx context.Context, bucketName, objectName string) 
 
 // HeadObjectByID query the objectInfo on chain by object id, return the object info if exists
 // return err info if object not exist
-func (c *client) HeadObjectByID(ctx context.Context, objID string) (*types.ObjectDetail, error) {
+func (c *Client) HeadObjectByID(ctx context.Context, objID string) (*types.ObjectDetail, error) {
 	headObjectRequest := storageTypes.QueryHeadObjectByIdRequest{
 		ObjectId: objID,
 	}
@@ -798,7 +798,7 @@ func (c *client) HeadObjectByID(ctx context.Context, objID string) (*types.Objec
 }
 
 // PutObjectPolicy apply object policy to the principal, return the txn hash
-func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
+func (c *Client) PutObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal,
 	statements []*permTypes.Statement, opt types.PutPolicyOption,
 ) (string, error) {
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
@@ -815,7 +815,7 @@ func (c *client) PutObjectPolicy(ctx context.Context, bucketName, objectName str
 }
 
 // DeleteObjectPolicy delete the object policy of the principal
-func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error) {
+func (c *Client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error) {
 	principal := &permTypes.Principal{}
 	if err := principal.Unmarshal([]byte(principalStr)); err != nil {
 		return "", err
@@ -826,7 +826,7 @@ func (c *client) DeleteObjectPolicy(ctx context.Context, bucketName, objectName 
 }
 
 // IsObjectPermissionAllowed check if the permission of the object is allowed to the user
-func (c *client) IsObjectPermissionAllowed(ctx context.Context, userAddr string,
+func (c *Client) IsObjectPermissionAllowed(ctx context.Context, userAddr string,
 	bucketName, objectName string, action permTypes.ActionType,
 ) (permTypes.Effect, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(userAddr)
@@ -849,7 +849,7 @@ func (c *client) IsObjectPermissionAllowed(ctx context.Context, userAddr string,
 }
 
 // GetObjectPolicy get the object policy info of the user specified by principalAddr
-func (c *client) GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string) (*permTypes.Policy, error) {
+func (c *Client) GetObjectPolicy(ctx context.Context, bucketName, objectName string, principalAddr string) (*permTypes.Policy, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
 	if err != nil {
 		return nil, err
@@ -870,7 +870,7 @@ func (c *client) GetObjectPolicy(ctx context.Context, bucketName, objectName str
 }
 
 // ListObjects return object list of the specific bucket
-func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error) {
+func (c *Client) ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.ListObjectsResult{}, err
 	}
@@ -974,7 +974,7 @@ func (c *client) ListObjects(ctx context.Context, bucketName string, opts types.
 }
 
 // GetCreateObjectApproval returns the signature info for the approval of preCreating resources
-func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error) {
+func (c *Client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error) {
 	unsignedBytes := createObjectMsg.GetSignBytes()
 
 	// set the action type
@@ -1024,7 +1024,7 @@ func (c *client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 }
 
 // CreateFolder send create empty object txn to greenfield chain
-func (c *client) CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error) {
+func (c *Client) CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error) {
 	if !strings.HasSuffix(objectName, "/") {
 		return "", errors.New("failed to create folder. Folder names must end with a forward slash (/) character")
 	}
@@ -1035,7 +1035,7 @@ func (c *client) CreateFolder(ctx context.Context, bucketName, objectName string
 }
 
 // GetObjectUploadProgress return the status of object including the uploading progress
-func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error) {
+func (c *Client) GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error) {
 	status, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
 		return "", err
@@ -1054,7 +1054,7 @@ func (c *client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 }
 
 // GetObjectResumableUploadOffset return the status of object including the uploading progress
-func (c *client) GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error) {
+func (c *Client) GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error) {
 	status, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
 		return 0, err
@@ -1074,7 +1074,7 @@ func (c *client) GetObjectResumableUploadOffset(ctx context.Context, bucketName,
 	return 0, nil
 }
 
-func (c *client) getObjectOffsetFromSP(ctx context.Context, bucketName, objectName string) (types.UploadOffset, error) {
+func (c *Client) getObjectOffsetFromSP(ctx context.Context, bucketName, objectName string) (types.UploadOffset, error) {
 	params := url.Values{}
 	params.Set("upload-context", "")
 
@@ -1116,7 +1116,7 @@ func (c *client) getObjectOffsetFromSP(ctx context.Context, bucketName, objectNa
 	return objectOffset, nil
 }
 
-func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectName string) (types.UploadProgress, error) {
+func (c *Client) getObjectStatusFromSP(ctx context.Context, bucketName, objectName string) (types.UploadProgress, error) {
 	params := url.Values{}
 	params.Set("upload-progress", "")
 
@@ -1154,7 +1154,7 @@ func (c *client) getObjectStatusFromSP(ctx context.Context, bucketName, objectNa
 	return objectStatus, nil
 }
 
-func (c *client) UpdateObjectVisibility(ctx context.Context, bucketName, objectName string,
+func (c *Client) UpdateObjectVisibility(ctx context.Context, bucketName, objectName string,
 	visibility storageTypes.VisibilityType, opt types.UpdateObjectOption,
 ) (string, error) {
 	object, err := c.HeadObject(ctx, bucketName, objectName)
@@ -1205,7 +1205,7 @@ func (m *GfSpListObjectsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.St
 // ListObjectsByObjectID list objects by object ids
 // By inputting a collection of object IDs, we can retrieve the corresponding object data.
 // If the object is nonexistent or has been deleted, a null value will be returned
-func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error) {
+func (c *Client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error) {
 	const MaximumListObjectsSize = 100
 	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
 		return types.ListObjectsByObjectIDResponse{}, nil
@@ -1272,7 +1272,7 @@ func (c *client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, 
 }
 
 // ListObjectPolicies list object policies by object info and action type
-func (c *client) ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error) {
+func (c *Client) ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error) {
 	params := url.Values{}
 	params.Set("object-policies", "")
 	// StartAfter is used to input the policy id for pagination purposes

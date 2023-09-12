@@ -77,19 +77,19 @@ type Group interface {
 }
 
 // CreateGroup create a new group on greenfield chain, the group members can be initialized or not
-func (c *client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
+func (c *Client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
 	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.Extra)
 	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
 }
 
 // DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
-func (c *client) DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error) {
+func (c *Client) DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error) {
 	deleteGroupMsg := storageTypes.NewMsgDeleteGroup(c.MustGetDefaultAccount().GetAddress(), groupName)
 	return c.sendTxn(ctx, deleteGroupMsg, opt.TxOpts)
 }
 
 // UpdateGroupMember support adding or removing members from the group and return the txn hash
-func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
+func (c *Client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
 	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption,
 ) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
@@ -139,7 +139,7 @@ func (c *client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 }
 
 // LeaveGroup make the member leave the specific group
-func (c *client) LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error) {
+func (c *Client) LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
 		return "", err
@@ -150,7 +150,7 @@ func (c *client) LeaveGroup(ctx context.Context, groupName string, groupOwnerAdd
 
 // HeadGroup query the groupInfo on chain, return the group info if exists
 // return err info if group not exist
-func (c *client) HeadGroup(ctx context.Context, groupName string, groupOwnerAddr string) (*storageTypes.GroupInfo, error) {
+func (c *Client) HeadGroup(ctx context.Context, groupName string, groupOwnerAddr string) (*storageTypes.GroupInfo, error) {
 	headGroupRequest := storageTypes.QueryHeadGroupRequest{
 		GroupOwner: groupOwnerAddr,
 		GroupName:  groupName,
@@ -165,7 +165,7 @@ func (c *client) HeadGroup(ctx context.Context, groupName string, groupOwnerAddr
 }
 
 // HeadGroupMember query the group member info on chain, return true if the member exists in group
-func (c *client) HeadGroupMember(ctx context.Context, groupName string, groupOwnerAddr, headMemberAddr string) bool {
+func (c *Client) HeadGroupMember(ctx context.Context, groupName string, groupOwnerAddr, headMemberAddr string) bool {
 	headGroupRequest := storageTypes.QueryHeadGroupMemberRequest{
 		GroupName:  groupName,
 		GroupOwner: groupOwnerAddr,
@@ -177,7 +177,7 @@ func (c *client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 }
 
 // PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
-func (c *client) PutGroupPolicy(ctx context.Context, groupName string, principalAddr string,
+func (c *Client) PutGroupPolicy(ctx context.Context, groupName string, principalAddr string,
 	statements []*permTypes.Statement, opt types.PutPolicyOption,
 ) (string, error) {
 	sender := c.MustGetDefaultAccount().GetAddress()
@@ -197,7 +197,7 @@ func (c *client) PutGroupPolicy(ctx context.Context, groupName string, principal
 
 // GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
 // it queries a bucket policy that grants permission to a group
-func (c *client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error) {
+func (c *Client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 
 	queryPolicy := storageTypes.QueryPolicyForGroupRequest{
@@ -215,7 +215,7 @@ func (c *client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, 
 
 // GetObjectPolicyOfGroup get the object policy info of the group specified by group id
 // it queries an object policy that grants permission to a group
-func (c *client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error) {
+func (c *Client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
 	queryPolicy := storageTypes.QueryPolicyForGroupRequest{
 		Resource:         resource.String(),
@@ -231,7 +231,7 @@ func (c *client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectN
 }
 
 // DeleteGroupPolicy delete group policy of the principal, the sender need to be the owner of the group
-func (c *client) DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr string, opt types.DeletePolicyOption) (string, error) {
+func (c *Client) DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr string, opt types.DeletePolicyOption) (string, error) {
 	sender := c.MustGetDefaultAccount().GetAddress()
 	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
 
@@ -246,7 +246,7 @@ func (c *client) DeleteGroupPolicy(ctx context.Context, groupName string, princi
 }
 
 // GetGroupPolicy get the group policy info of the user specified by principalAddr
-func (c *client) GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error) {
+func (c *Client) GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
 	if err != nil {
 		return nil, err
@@ -268,7 +268,7 @@ func (c *client) GetGroupPolicy(ctx context.Context, groupName string, principal
 }
 
 // ListGroup get the group list by name and prefix
-func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error) {
+func (c *Client) ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error) {
 	const (
 		MaximumGetGroupListLimit  = 1000
 		MaximumGetGroupListOffset = 100000
@@ -353,7 +353,7 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 	return listGroupsResult, nil
 }
 
-func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string,
+func (c *Client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string,
 	memberAddresses []string, opts types.RenewGroupMemberOption,
 ) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
@@ -389,7 +389,7 @@ func (c *client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName
 }
 
 // ListGroupMembers returns a list of members contained within the group specified by the group id, including those for which the user's expiration time has already elapsed
-func (c *client) ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupMembersPaginationOptions) (*types.GroupMembersResult, error) {
+func (c *Client) ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupMembersPaginationOptions) (*types.GroupMembersResult, error) {
 	params := url.Values{}
 	params.Set("group-members", "")
 	params.Set("group-id", strconv.FormatInt(groupID, 10))
@@ -443,7 +443,7 @@ func (c *client) ListGroupMembers(ctx context.Context, groupID int64, opts types
 
 // ListGroupsByAccount returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
 // By default, the user is the sender. Other users can be set using the option
-func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error) {
+func (c *Client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error) {
 	params := url.Values{}
 	params.Set("user-groups", "")
 	params.Set("start-after", opts.StartAfter)
@@ -507,7 +507,7 @@ func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPagin
 
 // ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
 // By default, the user is the sender. Other users can be set using the option
-func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error) {
+func (c *Client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error) {
 	params := url.Values{}
 	params.Set("owned-groups", "")
 	params.Set("start-after", opts.StartAfter)

@@ -29,7 +29,7 @@ type OffChainAuth interface {
 	OffChainAuthSign(unsignBytes []byte) string
 }
 
-func (c *client) OffChainAuthSign(unsignBytes []byte) string {
+func (c *Client) OffChainAuthSign(unsignBytes []byte) string {
 	sk, _ := GenerateEddsaPrivateKey(c.offChainAuthOption.Seed)
 	hFunc := mimc.NewMiMC()
 	sig, _ := sk.Sign(unsignBytes, hFunc)
@@ -46,7 +46,7 @@ type RequestNonceResp struct {
 }
 
 // GetNextNonce get the nonce value by giving user account and domain
-func (c *client) GetNextNonce(spEndpoint string) (string, error) {
+func (c *Client) GetNextNonce(spEndpoint string) (string, error) {
 	header := make(map[string]string)
 	header["X-Gnfd-User-Address"] = c.defaultAccount.GetAddress().String()
 	header["X-Gnfd-App-Domain"] = c.offChainAuthOption.Domain
@@ -79,7 +79,7 @@ Resources:
 - SP %s (name: SP_001) with nonce: %s`
 )
 
-func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error) {
+func (c *Client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error) {
 	appDomain := c.offChainAuthOption.Domain
 	eddsaSeed := c.offChainAuthOption.Seed
 	nextNonce, err := c.GetNextNonce(spEndpoint)
