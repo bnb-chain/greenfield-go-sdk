@@ -700,7 +700,7 @@ func (c *client) sendPutPolicyTxn(ctx context.Context, msg *storageTypes.MsgPutP
 		return "", err
 	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, txOpts)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, txOpts)
 	if err != nil {
 		return "", err
 	}
@@ -716,7 +716,7 @@ func (c *client) sendDelPolicyTxn(ctx context.Context, operator sdk.AccAddress, 
 		return "", err
 	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{delPolicyMsg}, txOpts)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{delPolicyMsg}, txOpts)
 	if err != nil {
 		return "", err
 	}
@@ -729,7 +729,7 @@ func (c *client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxO
 		return "", err
 	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, opt)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, opt)
 	if err != nil {
 		return "", err
 	}

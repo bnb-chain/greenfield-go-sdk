@@ -158,13 +158,9 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
-
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedMsg}, opts.TxOpts)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{signedMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
-	}
-	if resp.TxResponse.Code != 0 {
-		return "", fmt.Errorf("the createBucket txn has failed with response code: %d", resp.TxResponse.Code)
 	}
 	txnHash := resp.TxResponse.TxHash
 	if !opts.IsAsyncMode {
@@ -175,7 +171,7 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
 		if txnResponse.TxResult.Code != 0 {
-			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d, codespace:%s", txnResponse.TxResult.Code, txnResponse.TxResult.Codespace)
 		}
 	}
 	return txnHash, nil
@@ -606,7 +602,7 @@ func (c *client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 	}
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.MustGetDefaultAccount().GetAddress(), bucketName, &targetQuota, paymentAddr, bucketInfo.Visibility)
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{updateBucketMsg}, opt.TxOpts)
 	if err != nil {
 		return "", err
 	}
@@ -750,12 +746,9 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedMsg}, opts.TxOpts)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{signedMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
-	}
-	if resp.TxResponse.Code != 0 {
-		return "", fmt.Errorf("the migrateBucket txn has failed with response code: %d", resp.TxResponse.Code)
 	}
 	txnHash := resp.TxResponse.TxHash
 	if !opts.IsAsyncMode {
@@ -766,7 +759,7 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
 		if txnResponse.TxResult.Code != 0 {
-			return txnHash, fmt.Errorf("the migrateBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+			return txnHash, fmt.Errorf("the migrateBucket txn has failed with response code: %d, codespace:%s", txnResponse.TxResult.Code, txnResponse.TxResult.Codespace)
 		}
 	}
 	return txnHash, nil

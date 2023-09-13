@@ -37,7 +37,7 @@ func (c *client) GrantBasicAllowance(ctx context.Context, granteeAddr string, fe
 	if err != nil {
 		return "", err
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +54,7 @@ func (c *client) GrantAllowance(ctx context.Context, granteeAddr string, allowan
 	if err != nil {
 		return "", err
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -71,7 +71,7 @@ func (c *client) RevokeAllowance(ctx context.Context, granteeAddr string, txOpti
 	if err != nil {
 		return "", err
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{&msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{&msg}, &txOption)
 	if err != nil {
 		return "", err
 	}

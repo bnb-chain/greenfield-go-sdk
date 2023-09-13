@@ -152,7 +152,7 @@ func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOpera
 		return nil, err
 	}
 	msg := challengetypes.NewMsgSubmit(challenger, spOperator, bucketName, objectName, randomIndex, segmentIndex)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (c *client) AttestChallenge(ctx context.Context, submitterAddress, challeng
 	}
 
 	msg := challengetypes.NewMsgAttest(submitter, challengeId, objectId, spOperatorAddress, voteResult, challengerAddress, voteValidatorSet, VoteAggSignature)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return nil, err
 	}

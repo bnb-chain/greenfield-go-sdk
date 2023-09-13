@@ -176,16 +176,12 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
 	}
 
 	txnHash := resp.TxResponse.TxHash
-
-	if resp.TxResponse.Code != 0 {
-		return "", fmt.Errorf("the createObject txn has failed with response code: %d", resp.TxResponse.Code)
-	}
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
@@ -194,7 +190,7 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
 		if txnResponse.TxResult.Code != 0 {
-			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.TxResult.Code)
+			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d, codespace:%s", txnResponse.TxResult.Code, txnResponse.TxResult.Codespace)
 		}
 	}
 	return txnHash, nil

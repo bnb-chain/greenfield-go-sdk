@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -29,12 +28,9 @@ func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmou
 	if err != nil {
 		return 0, "", err
 	}
-	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSubmitProposal}, &opts.TxOption)
+	txResp, err := c.BroadcastTx(ctx, []sdk.Msg{msgSubmitProposal}, &opts.TxOption)
 	if err != nil {
 		return 0, "", err
-	}
-	if txResp.TxResponse.Code != 0 {
-		return 0, "", fmt.Errorf("the submit proposal txn has failed with response code: %d", txResp.TxResponse.Code)
 	}
 	waitCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -59,7 +55,7 @@ func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmou
 
 func (c *client) VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts types.VoteProposalOptions) (string, error) {
 	msgVote := govTypesV1.NewMsgVote(c.MustGetDefaultAccount().GetAddress(), proposalID, voteOption, opts.Metadata)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgVote}, &opts.TxOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msgVote}, &opts.TxOption)
 	if err != nil {
 		return "", err
 	}
