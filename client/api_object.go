@@ -17,8 +17,6 @@ import (
 	"strings"
 	"time"
 
-	ctypes "github.com/cometbft/cometbft/rpc/core/types"
-
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -184,14 +182,14 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 	}
 
 	txnHash := resp.TxResponse.TxHash
-	var txnResponse *ctypes.ResultTx
-	if txnResponse.TxResult.Code != 0 {
-		return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.TxResult.Code)
+
+	if resp.TxResponse.Code != 0 {
+		return "", fmt.Errorf("the createObject txn has failed with response code: %d", resp.TxResponse.Code)
 	}
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
-		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
+		txnResponse, err := c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}

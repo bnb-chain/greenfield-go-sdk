@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	ctypes "github.com/cometbft/cometbft/rpc/core/types"
-
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
@@ -165,15 +163,14 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	if err != nil {
 		return "", err
 	}
-	var txnResponse *ctypes.ResultTx
-	txnHash := resp.TxResponse.TxHash
-	if txnResponse.TxResult.Code != 0 {
-		return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+	if resp.TxResponse.Code != 0 {
+		return "", fmt.Errorf("the createBucket txn has failed with response code: %d", resp.TxResponse.Code)
 	}
+	txnHash := resp.TxResponse.TxHash
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
-		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
+		txnResponse, err := c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
@@ -757,15 +754,14 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 	if err != nil {
 		return "", err
 	}
-	var txnResponse *ctypes.ResultTx
-	txnHash := resp.TxResponse.TxHash
-	if txnResponse.TxResult.Code != 0 {
-		return txnHash, fmt.Errorf("the migrateBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+	if resp.TxResponse.Code != 0 {
+		return "", fmt.Errorf("the migrateBucket txn has failed with response code: %d", resp.TxResponse.Code)
 	}
+	txnHash := resp.TxResponse.TxHash
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
-		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
+		txnResponse, err := c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
