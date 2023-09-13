@@ -165,13 +165,14 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	if err != nil {
 		return "", err
 	}
-
 	var txnResponse *ctypes.ResultTx
 	txnHash := resp.TxResponse.TxHash
+	if txnResponse.TxResult.Code != 0 {
+		return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+	}
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
-
 		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
@@ -180,7 +181,6 @@ func (c *client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
 		}
 	}
-
 	return txnHash, nil
 }
 
@@ -757,23 +757,22 @@ func (c *client) MigrateBucket(ctx context.Context, bucketName string, opts type
 	if err != nil {
 		return "", err
 	}
-
 	var txnResponse *ctypes.ResultTx
 	txnHash := resp.TxResponse.TxHash
+	if txnResponse.TxResult.Code != 0 {
+		return txnHash, fmt.Errorf("the migrateBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+	}
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
-
 		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
-
 		if txnResponse.TxResult.Code != 0 {
-			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+			return txnHash, fmt.Errorf("the migrateBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
 		}
 	}
-
 	return txnHash, nil
 }
 

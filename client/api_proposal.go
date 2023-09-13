@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -31,6 +32,9 @@ func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmou
 	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSubmitProposal}, &opts.TxOption)
 	if err != nil {
 		return 0, "", err
+	}
+	if txResp.TxResponse.Code != 0 {
+		return 0, "", fmt.Errorf("the submit proposal txn has failed with response code: %d", txResp.TxResponse.Code)
 	}
 	waitCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()

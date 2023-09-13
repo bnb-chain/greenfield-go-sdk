@@ -185,6 +185,9 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 
 	txnHash := resp.TxResponse.TxHash
 	var txnResponse *ctypes.ResultTx
+	if txnResponse.TxResult.Code != 0 {
+		return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.TxResult.Code)
+	}
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
