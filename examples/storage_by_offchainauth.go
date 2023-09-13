@@ -82,10 +82,7 @@ func main() {
 
 	// list object
 	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{
-		true, "", "", "/", "", 10, &types.EndPointOptions{
-			Endpoint:  httpsAddr,
-			SPAddress: "",
-		},
+		true, "", "", "/", "", 10, httpsAddr, "",
 	})
 	log.Println("list objects result:")
 	for _, obj := range objects.Objects {

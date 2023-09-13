@@ -66,7 +66,17 @@ type ListObjectsResult struct {
 
 type ListBucketsResult struct {
 	// buckets defines the list of bucket
+	Buckets []*BucketMetaWithVGF `xml:"Buckets"`
+}
+
+type ListBucketsByPaymentAccountResult struct {
+	// buckets defines the list of bucket
 	Buckets []*BucketMeta `xml:"Buckets"`
+}
+
+type ListUserPaymentAccountsResult struct {
+	// StreamRecords defines the list of stream records
+	StreamRecords []*StreamRecordsMeta `xml:"StreamRecords"`
 }
 
 type ListGroupsResult struct {
@@ -140,6 +150,43 @@ type ListObjectsByObjectIDResponse struct {
 // ObjectAndBucketIDs is the structure for ListBucketsByBucketID & ListObjectsByObjectID request body
 type ObjectAndBucketIDs struct {
 	IDs []uint64 `xml:"IDs"`
+}
+
+// GlobalVirtualGroupFamily serve as a means of grouping global virtual groups.
+// Each bucket must be associated with a unique global virtual group family and cannot cross families.
+type GlobalVirtualGroupFamily struct {
+	// id is the identifier of the global virtual group family.
+	Id uint32 `xml:"Id"`
+	// primary_sp_id is the id of primary sp
+	PrimarySpId uint32 `xml:"PrimarySpId"`
+	// global_virtual_group_ids is a list of identifiers of the global virtual groups associated with the family.
+	GlobalVirtualGroupIds []uint32 `xml:"GlobalVirtualGroupIds"`
+	// virtual_payment_address is the payment address associated with the global virtual group family.
+	VirtualPaymentAddress string `xml:"VirtualPaymentAddress"`
+}
+
+// BucketMetaWithVGF BucketMeta is the structure for metadata service user bucket
+type BucketMetaWithVGF struct {
+	// bucket_info defines the information of the bucket.
+	BucketInfo *BucketInfo `xml:"BucketInfo"`
+	// removed defines the bucket is deleted or not
+	Removed bool `xml:"Removed"`
+	// delete_at defines the block number when the bucket deleted.
+	DeleteAt int64 `xml:"DeleteAt"`
+	// delete_reason defines the deleted reason of bucket
+	DeleteReason string `xml:"DeleteReason"`
+	// operator defines the operator address of bucket
+	Operator string `xml:"Operator"`
+	// create_tx_hash defines the creation transaction hash of bucket
+	CreateTxHash string `xml:"CreateTxHash"`
+	// update_tx_hash defines the update transaction hash of bucket
+	UpdateTxHash string `xml:"UpdateTxHash"`
+	// update_at defines the block number when the bucket updated
+	UpdateAt int64 `xml:"UpdateAt"`
+	// update_time defines the block number when the bucket updated
+	UpdateTime int64 `xml:"UpdateTime"`
+	// GlobalVirtualGroupFamily serve as a means of grouping global virtual groups.
+	Vgf *GlobalVirtualGroupFamily `xml:"Vgf"`
 }
 
 // BucketMeta is the structure for metadata service user bucket
@@ -231,6 +278,8 @@ type ListBucketsByBucketIDResponse struct {
 type GroupMeta struct {
 	// group defines the basic group info
 	Group *GroupInfo `xml:"Group"`
+	// NumberOfMembers defines how many members in this group
+	NumberOfMembers int64 `xml:"NumberOfMembers"`
 	// operator defines operator address of group
 	Operator string `xml:"Operator"`
 	// create_at defines the block number when the group created
@@ -257,4 +306,58 @@ type GroupInfo struct {
 	Id uint64 `xml:"Id"`
 	// extra is used to store extra info for the group
 	Extra string `xml:"Extra"`
+}
+
+type StreamRecordsMeta struct {
+	// stream_records defines stream payment records of a stream account
+	StreamRecord *StreamRecord `xml:"StreamRecord"`
+	// refundable defines the payment account is refundable or not
+	Refundable bool `xml:"Refundable"`
+}
+
+// StreamRecord defines Record of a stream account
+type StreamRecord struct {
+	// account address
+	Account string `xml:"Account"`
+	// latest update timestamp of the stream record
+	CrudTimestamp int64 `xml:"CrudTimestamp"`
+	// The per-second rate that an account's balance is changing.
+	// It is the sum of the account's inbound and outbound flow rates.
+	NetflowRate int64 `xml:"NetflowRate"`
+	// The balance of the stream account at the latest CRUD timestamp.
+	StaticBalance int64 `xml:"StaticBalance"`
+	// reserved balance of the stream account
+	// If the netflow rate is negative, the reserved balance is `netflow_rate * reserve_time`
+	BufferBalance int64 `xml:"BufferBalance"`
+	// the locked balance of the stream account after it puts a new object and before the object is sealed
+	LockBalance int64 `xml:"LockBalance"`
+	// the status of the stream account
+	Status int32 `xml:"Status"`
+	// the unix timestamp when the stream account will be settled
+	SettleTimestamp int64 `xml:"SettleTimestamp"`
+	// the count of its out flows
+	OutFlowCount uint64 `xml:"OutFlowCount"`
+	// the frozen netflow rate, which is used when resuming stream account
+	FrozenNetflowRate int64 `xml:"FrozenNetflowRate"`
+}
+
+type ListObjectPoliciesResponse struct {
+	Policies []*PolicyMeta `xml:"Policies"`
+}
+
+type PolicyMeta struct {
+	// principal_type defines the type of principal
+	PrincipalType int32 `xml:"PrincipalType"`
+	// principal_value defines the value of principal
+	PrincipalValue string `xml:"PrincipalValue"`
+	// resource_type defines the type of resource that grants permission for
+	ResourceType int32 `xml:"ResourceType"`
+	// resource_id defines the bucket/object/group id of the resource that grants permission for
+	ResourceId string `xml:"ResourceId"`
+	// create_timestamp defines the create time of permission
+	CreateTimestamp int64 `xml:"CreateTimestamp"`
+	// update_timestamp defines the update time of permission
+	UpdateTimestamp int64 `xml:"UpdateTimestamp"`
+	// expiration_time defines the expiration time of permission
+	ExpirationTime int64 `xml:"ExpirationTime"`
 }

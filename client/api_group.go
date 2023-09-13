@@ -318,7 +318,10 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return types.ListGroupsResult{}, err
@@ -342,7 +345,7 @@ func (c *client) ListGroup(ctx context.Context, name, prefix string, opts types.
 	listGroupsResult := types.ListGroupsResult{}
 	bufStr := buf.String()
 	err = xml.Unmarshal([]byte(bufStr), &listGroupsResult)
-	if err != nil && listGroupsResult.Groups == nil {
+	if err != nil {
 		log.Error().Msg("the list of groups failed: " + err.Error())
 		return types.ListGroupsResult{}, err
 	}
@@ -403,7 +406,10 @@ func (c *client) ListGroupMembers(ctx context.Context, groupID int64, opts types
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return &types.GroupMembersResult{}, err
@@ -447,7 +453,7 @@ func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPagin
 	if account == "" {
 		acc, err := c.GetDefaultAccount()
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("get default account failed %s", err.Error()))
+			log.Error().Msg(fmt.Sprintf("failed to get default account:  %s", err.Error()))
 			return &types.GroupsResult{}, err
 		}
 		account = acc.GetAddress().String()
@@ -464,7 +470,10 @@ func (c *client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPagin
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return &types.GroupsResult{}, err
@@ -525,7 +534,10 @@ func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPa
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getEndpointByOpt(opts.EndPointOptions)
+	endpoint, err := c.getEndpointByOpt(&types.EndPointOptions{
+		Endpoint:  opts.Endpoint,
+		SPAddress: opts.SPAddress,
+	})
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
 		return &types.GroupsResult{}, err

@@ -5,9 +5,10 @@ import (
 	"log"
 
 	"cosmossdk.io/math"
+	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
+
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
-	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
 )
 
 // it is the example of payment SDKs usage
@@ -55,4 +56,12 @@ func main() {
 	streamRecordAfterWithdraw, err := cli.GetStreamRecord(ctx, paymentAddr)
 	handleErr(err, "GetStreamRecord")
 	log.Printf("stream record has balance %s", streamRecordAfterWithdraw.StaticBalance)
+	streamRecords, err := cli.ListUserPaymentAccounts(ctx, types.ListUserPaymentAccountsOptions{
+		Account:   "0x4FEAA841B3436624C54B652695320830FCB1B309",
+		Endpoint:  httpsAddr,
+		SPAddress: "",
+	})
+	for _, record := range streamRecords.StreamRecords {
+		log.Printf("stream record %s", record.StreamRecord.OutFlowCount)
+	}
 }
