@@ -18,7 +18,7 @@ import (
 	types "github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
-type Challenge interface {
+type IChallengeClient interface {
 	// GetChallengeInfo return the challenge hash and data results based on the objectID and index info
 	// If the sp endpoint or sp address info is not set in the GetChallengeInfoOptions, the SP endpoint will be routed by the redundancyIndex
 	GetChallengeInfo(ctx context.Context, objectID string, pieceIndex, redundancyIndex int, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error)
@@ -31,7 +31,7 @@ type Challenge interface {
 
 // GetChallengeInfo  sends request to challenge and get challenge result info
 // The challenge info includes the piece data, piece hash roots and integrity hash corresponding to the accessed SP
-func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceIndex, redundancyIndex int, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error) {
+func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceIndex, redundancyIndex int, opts types.GetChallengeInfoOptions) (types.ChallengeResult, error) {
 	if objectID == "" {
 		return types.ChallengeResult{}, errors.New("fail to get objectId")
 	}
@@ -142,7 +142,7 @@ func (c *client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 }
 
 // SubmitChallenge challenges the service provider data integrity, used by off-chain service greenfield-challenger.
-func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
+func (c *Client) SubmitChallenge(ctx context.Context, challengerAddress, spOperatorAddress, bucketName, objectName string, randomIndex bool, segmentIndex uint32, txOption gnfdsdktypes.TxOption) (*sdk.TxResponse, error) {
 	challenger, err := sdk.AccAddressFromHexUnsafe(challengerAddress)
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (c *client) SubmitChallenge(ctx context.Context, challengerAddress, spOpera
 // The attestation can include a valid challenge or is only for heartbeat purpose.
 // If the challenge is valid, the related storage provider will be slashed.
 // For heartbeat attestation, the challenge is invalid and the storage provider will not be slashed.
-func (c *client) AttestChallenge(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint,
+func (c *Client) AttestChallenge(ctx context.Context, submitterAddress, challengerAddress, spOperatorAddress string, challengeId uint64, objectId math.Uint,
 	voteResult challengetypes.VoteResult, voteValidatorSet []uint64, VoteAggSignature []byte, txOption gnfdsdktypes.TxOption,
 ) (*sdk.TxResponse, error) {
 	submitter, err := sdk.AccAddressFromHexUnsafe(submitterAddress)
@@ -189,15 +189,15 @@ func (c *client) AttestChallenge(ctx context.Context, submitterAddress, challeng
 	return resp.TxResponse, nil
 }
 
-func (c *client) LatestAttestedChallenges(ctx context.Context, req *challengetypes.QueryLatestAttestedChallengesRequest) (*challengetypes.QueryLatestAttestedChallengesResponse, error) {
+func (c *Client) LatestAttestedChallenges(ctx context.Context, req *challengetypes.QueryLatestAttestedChallengesRequest) (*challengetypes.QueryLatestAttestedChallengesResponse, error) {
 	return c.chainClient.LatestAttestedChallenges(ctx, req)
 }
 
-func (c *client) InturnAttestationSubmitter(ctx context.Context, req *challengetypes.QueryInturnAttestationSubmitterRequest) (*challengetypes.QueryInturnAttestationSubmitterResponse, error) {
+func (c *Client) InturnAttestationSubmitter(ctx context.Context, req *challengetypes.QueryInturnAttestationSubmitterRequest) (*challengetypes.QueryInturnAttestationSubmitterResponse, error) {
 	return c.chainClient.InturnAttestationSubmitter(ctx, req)
 }
 
 // ChallengeParams returns the on chain parameters for challenge module.
-func (c *client) ChallengeParams(ctx context.Context, req *challengetypes.QueryParamsRequest) (*challengetypes.QueryParamsResponse, error) {
+func (c *Client) ChallengeParams(ctx context.Context, req *challengetypes.QueryParamsRequest) (*challengetypes.QueryParamsResponse, error) {
 	return c.chainClient.ChallengeQueryClient.Params(ctx, req)
 }
