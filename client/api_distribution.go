@@ -9,7 +9,7 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
-type Distribution interface {
+type IDistributionClient interface {
 	SetWithdrawAddress(ctx context.Context, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error)
 	WithdrawValidatorCommission(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error)
 	WithdrawDelegatorReward(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
@@ -17,7 +17,7 @@ type Distribution interface {
 }
 
 // SetWithdrawAddress sets the withdrawal address for a delegator (or validator self-delegation).
-func (c *client) SetWithdrawAddress(ctx context.Context, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *Client) SetWithdrawAddress(ctx context.Context, withdrawAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
 	withdraw, err := sdk.AccAddressFromHexUnsafe(withdrawAddr)
 	if err != nil {
 		return "", err
@@ -31,7 +31,7 @@ func (c *client) SetWithdrawAddress(ctx context.Context, withdrawAddr string, tx
 }
 
 // WithdrawValidatorCommission withdraw accumulated commission by validator
-func (c *client) WithdrawValidatorCommission(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *Client) WithdrawValidatorCommission(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error) {
 	msg := distrtypes.NewMsgWithdrawValidatorCommission(c.MustGetDefaultAccount().GetAddress())
 	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
@@ -41,7 +41,7 @@ func (c *client) WithdrawValidatorCommission(ctx context.Context, txOption gnfds
 }
 
 // WithdrawDelegatorReward  withdraw rewards by a delegator
-func (c *client) WithdrawDelegatorReward(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *Client) WithdrawDelegatorReward(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
 	validator, err := sdk.AccAddressFromHexUnsafe(validatorAddr)
 	if err != nil {
 		return "", err
@@ -55,7 +55,7 @@ func (c *client) WithdrawDelegatorReward(ctx context.Context, validatorAddr stri
 }
 
 // FundCommunityPool sends coins directly from the sender to the community pool.
-func (c *client) FundCommunityPool(ctx context.Context, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *Client) FundCommunityPool(ctx context.Context, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
 	msg := distrtypes.NewMsgFundCommunityPool(sdk.Coins{sdk.Coin{Denom: gnfdsdktypes.Denom, Amount: amount}}, c.MustGetDefaultAccount().GetAddress())
 	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {

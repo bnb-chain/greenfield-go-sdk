@@ -34,7 +34,7 @@ func handleErr(err error, funcName string) {
 	}
 }
 
-func waitObjectSeal(cli client.Client, bucketName, objectName string) {
+func waitObjectSeal(cli client.IClient, bucketName, objectName string) {
 	ctx := context.Background()
 	// wait for the object to be sealed
 	timeout := time.After(15 * time.Second)

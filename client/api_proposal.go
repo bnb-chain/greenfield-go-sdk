@@ -13,13 +13,13 @@ import (
 	govTypesV1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 )
 
-type Proposal interface {
+type IProposalClient interface {
 	SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, title, summary string, opts types.SubmitProposalOptions) (uint64, string, error)
 	VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts types.VoteProposalOptions) (string, error)
 	GetProposal(ctx context.Context, proposalID uint64) (*govTypesV1.Proposal, error)
 }
 
-func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, title, summary string, opts types.SubmitProposalOptions) (uint64, string, error) {
+func (c *Client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmount math.Int, title, summary string, opts types.SubmitProposalOptions) (uint64, string, error) {
 	msgSubmitProposal, err := govTypesV1.NewMsgSubmitProposal(msgs, sdk.NewCoins(sdk.NewCoin(gnfdSdkTypes.Denom, depositAmount)), c.defaultAccount.GetAddress().String(), opts.Metadata, title, summary)
 	if err != nil {
 		return 0, "", err
@@ -53,7 +53,7 @@ func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmou
 	return 0, txResp.TxResponse.TxHash, types.ErrorProposalIDNotFound
 }
 
-func (c *client) VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts types.VoteProposalOptions) (string, error) {
+func (c *Client) VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts types.VoteProposalOptions) (string, error) {
 	msgVote := govTypesV1.NewMsgVote(c.MustGetDefaultAccount().GetAddress(), proposalID, voteOption, opts.Metadata)
 	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msgVote}, &opts.TxOption)
 	if err != nil {
@@ -62,7 +62,7 @@ func (c *client) VoteProposal(ctx context.Context, proposalID uint64, voteOption
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *client) GetProposal(ctx context.Context, proposalID uint64) (*govTypesV1.Proposal, error) {
+func (c *Client) GetProposal(ctx context.Context, proposalID uint64) (*govTypesV1.Proposal, error) {
 	resp, err := c.chainClient.GovQueryClientV1.Proposal(ctx, &govTypesV1.QueryProposalRequest{ProposalId: proposalID})
 	if err != nil {
 		return nil, nil

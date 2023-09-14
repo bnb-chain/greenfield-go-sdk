@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -32,34 +31,30 @@ import (
 	"google.golang.org/grpc"
 )
 
-type Client interface {
-	Basic
-	Bucket
-	Object
-	Group
-	Challenge
-	Account
-	Payment
-	SP
-	Proposal
-	Validator
-	Distribution
-	CrossChain
-	FeeGrant
-	VirtualGroup
-	OffChainAuth
-
-	GetDefaultAccount() (*types.Account, error)
-	SetDefaultAccount(account *types.Account)
-	EnableTrace(outputStream io.Writer, onlyTraceErr bool)
+// IClient - Declare all Greenfield SDK Client APIs, including APIs for interacting with Greenfield Blockchain and SPs.
+type IClient interface {
+	IBasicClient
+	IBucketClient
+	IObjectClient
+	IGroupClient
+	IChallengeClient
+	IAccountClient
+	IPaymentClient
+	ISPClient
+	IProposalClient
+	IValidatorClient
+	IDistributionClient
+	ICrossChainClient
+	IFeeGrantClient
+	IVirtualGroupClient
+	IAuthClient
 }
 
-// client represents a Greenfield SDK client that can interact with the blockchain
-// using the REST API, gRPC, or WebSocket endpoints.
-type client struct {
-	// The chain client is used to interact with the blockchain
+// Client - The implementation for IClient, implement all Client APIs for Greenfield SDK.
+type Client struct {
+	// The chain Client is used to interact with the blockchain
 	chainClient *sdkclient.GreenfieldClient
-	// The HTTP client is used to send HTTP requests to the greenfield blockchain and sp
+	// The HTTP Client is used to send HTTP requests to the greenfield blockchain and sp
 	httpClient *http.Client
 	// Service provider endpoints
 	storageProviders map[uint32]*types.StorageProvider
@@ -80,29 +75,33 @@ type client struct {
 	expireSeconds      uint64
 }
 
-// Option is a configuration struct used to provide optional parameters to the client constructor.
+// Option - Configurations for providing optional parameters for the Greenfield SDK Client.
 type Option struct {
 	// GrpcDialOption is the list of gRPC dial options used to configure the connection to the blockchain node.
 	GrpcDialOption grpc.DialOption
-	// account used to set the default account of client
+	// DefaultAccount is the default account of Client.
 	DefaultAccount *types.Account
-	// Secure is a flag that specifies whether the client should use HTTPS or not.
+	// Secure is a flag that specifies whether the Client should use HTTPS or not.
 	Secure bool
 	// Transport is the HTTP transport used to send requests to the storage provider endpoint.
 	Transport http.RoundTripper
-	// Host is the target sp server hostname
+	// Host is the target sp server hostname.
 	Host string
 	// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+	//
 	// This property should not be set in most cases unless you want to use go-sdk to test if the SP support off-chain-auth feature.
-	// Once this property is set, the request will be signed in "off-chain-auth" way rather than v1
+	// Once this property is set, the request will be signed in "off-chain-auth" way rather than v1.
 	OffChainAuthOption *OffChainAuthOption
-	// UseWebSocketConn specifies that connection to Chain is via websocket
+	// UseWebSocketConn specifies that connection to Chain is via websocket.
 	UseWebSocketConn bool
-	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000
+	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000.
 	ExpireSeconds uint64
 }
 
-// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+// OffChainAuthOption - The optional configurations for off-chain-auth.
+//
+// The OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+//
 // This auth mechanism is usually used in browser-based application.
 // That we support OffChainAuth configuration in go-sdk is to make the tests on off-chain-auth be convenient.
 type OffChainAuthOption struct {
@@ -114,11 +113,20 @@ type OffChainAuthOption struct {
 	ShouldRegisterPubKey bool
 }
 
-// New - instantiate greenfield chain with chain info, account info and options.
-// endpoint indicates the rpc address of greenfield
-func New(chainID string, endpoint string, option Option) (Client, error) {
+// New - New Greenfield Go SDK Client.
+//
+// - chainID: The Greenfield Blockchain's chainID that the Client would interact with.
+//
+// - endpoint: The Greenfield Blockchain's RPC URL that the Client would interact with.
+//
+// - option: The optional configurations for the Client.
+//
+// - ret1: The new client that created, in IClient format.
+//
+// - ret2: Return error when new Client failed, otherwise return nil.
+func New(chainID string, endpoint string, option Option) (IClient, error) {
 	if endpoint == "" || chainID == "" {
-		return nil, errors.New("fail to get grpcAddress and chainID to construct client")
+		return nil, errors.New("fail to get grpcAddress and chainID to construct Client")
 	}
 	var (
 		cc  *sdkclient.GreenfieldClient
@@ -140,7 +148,7 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 		return nil, errors.New("the configured expire time exceeds max expire time")
 	}
 
-	c := client{
+	c := Client{
 		chainClient:      cc,
 		httpClient:       &http.Client{Transport: option.Transport},
 		userAgent:        types.UserAgent,
@@ -178,19 +186,7 @@ func New(chainID string, endpoint string, option Option) (Client, error) {
 	return &c, nil
 }
 
-// EnableTrace support trace error info the request and the response
-func (c *client) EnableTrace(output io.Writer, onlyTraceErr bool) {
-	if output == nil {
-		output = os.Stdout
-	}
-
-	c.onlyTraceError = onlyTraceErr
-
-	c.traceOutput = output
-	c.isTraceEnabled = true
-}
-
-func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
+func (c *Client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	sp, err := c.pickStorageProviderByBucket(bucketName)
 	if err != nil {
 		return nil, err
@@ -198,7 +194,7 @@ func (c *client) getSPUrlByBucket(bucketName string) (*url.URL, error) {
 	return sp.EndPoint, nil
 }
 
-func (c *client) pickStorageProviderByBucket(bucketName string) (*types.StorageProvider, error) {
+func (c *Client) pickStorageProviderByBucket(bucketName string) (*types.StorageProvider, error) {
 	ctx := context.Background()
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
@@ -228,7 +224,7 @@ func (c *client) pickStorageProviderByBucket(bucketName string) (*types.StorageP
 }
 
 // getSPUrlByID route url of the sp from sp id
-func (c *client) getSPUrlByID(id uint32) (*url.URL, error) {
+func (c *Client) getSPUrlByID(id uint32) (*url.URL, error) {
 	sp, ok := c.storageProviders[id]
 	if ok {
 		return sp.EndPoint, nil
@@ -238,7 +234,7 @@ func (c *client) getSPUrlByID(id uint32) (*url.URL, error) {
 }
 
 // getSPUrlByAddr route url of the sp from sp address
-func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
+func (c *Client) getSPUrlByAddr(address string) (*url.URL, error) {
 	acc, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
 		return nil, err
@@ -253,7 +249,7 @@ func (c *client) getSPUrlByAddr(address string) (*url.URL, error) {
 }
 
 // getInServiceSP return the first SP endpoint which is in service in SP list
-func (c *client) getInServiceSP() (*url.URL, error) {
+func (c *Client) getInServiceSP() (*url.URL, error) {
 	ctx := context.Background()
 	spList, err := c.ListStorageProviders(ctx, true)
 	if err != nil {
@@ -315,7 +311,7 @@ func DefaultDownloadSegmentHook(seg int64) error {
 }
 
 // newRequest constructs the http request, set url, body and headers
-func (c *client) newRequest(ctx context.Context, method string, meta requestMeta,
+func (c *Client) newRequest(ctx context.Context, method string, meta requestMeta,
 	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL,
 ) (req *http.Request, err error) {
 	isVirtualHost := c.isVirtualHostStyleUrl(*endpoint, meta.bucketName)
@@ -445,8 +441,8 @@ func (c *client) newRequest(ctx context.Context, method string, meta requestMeta
 	return
 }
 
-// doAPI call client.Do() to send request and read response from servers
-func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta, closeBody bool) (*http.Response, error) {
+// doAPI call Client.Do() to send request and read response from servers
+func (c *Client) doAPI(ctx context.Context, req *http.Request, meta requestMeta, closeBody bool) (*http.Response, error) {
 	var cancel context.CancelFunc
 	if closeBody {
 		ctx, cancel = context.WithCancel(ctx)
@@ -502,7 +498,7 @@ func (c *client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 }
 
 // sendReq sends the message via REST and handles the response
-func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, endpoint *url.URL) (res *http.Response, err error) {
+func (c *Client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, endpoint *url.URL) (res *http.Response, err error) {
 	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, endpoint)
 	if err != nil {
 		return nil, err
@@ -516,7 +512,7 @@ func (c *client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOpt
 	return resp, nil
 }
 
-func (c *client) SplitPartInfo(objectSize int64, configuredPartSize uint64) (totalPartsCount int, partSize int64, lastPartSize int64, err error) {
+func (c *Client) SplitPartInfo(objectSize int64, configuredPartSize uint64) (totalPartsCount int, partSize int64, lastPartSize int64, err error) {
 	partSizeFlt := float64(configuredPartSize)
 	// Total parts count.
 	totalPartsCount = int(math.Ceil(float64(objectSize) / partSizeFlt))
@@ -528,7 +524,7 @@ func (c *client) SplitPartInfo(objectSize int64, configuredPartSize uint64) (tot
 }
 
 // generateURL constructs the target request url based on the parameters
-func (c *client) generateURL(bucketName string, objectName string, relativePath string,
+func (c *Client) generateURL(bucketName string, objectName string, relativePath string,
 	queryValues url.Values, isAdminApi bool, endpoint *url.URL, isVirtualHost bool,
 ) (*url.URL, error) {
 	host := endpoint.Host
@@ -581,7 +577,7 @@ func (c *client) generateURL(bucketName string, objectName string, relativePath 
 }
 
 // signRequest signs the request and set authorization before send to server
-func (c *client) signRequest(req *http.Request) error {
+func (c *Client) signRequest(req *http.Request) error {
 	// use offChainAuth if OffChainAuthOption is set
 	if c.offChainAuthOption != nil {
 		req.Header.Set("X-Gnfd-User-Address", c.defaultAccount.GetAddress().String())
@@ -613,7 +609,7 @@ func (c *client) signRequest(req *http.Request) error {
 }
 
 // returns true if virtual hosted style requests are to be used.
-func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
+func (c *Client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
 	if bucketName == "" {
 		return false
 	}
@@ -629,7 +625,7 @@ func (c *client) isVirtualHostStyleUrl(url url.URL, bucketName string) bool {
 	return true
 }
 
-func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) {
+func (c *Client) dumpSPMsg(req *http.Request, resp *http.Response) {
 	var err error
 	defer func() {
 		if err != nil {
@@ -683,7 +679,7 @@ func (c *client) dumpSPMsg(req *http.Request, resp *http.Response) {
 
 // GetPieceHashRoots returns primary pieces, secondary piece Hash roots list and the object size
 // It is used for generate meta of object on the chain
-func (c *client) GetPieceHashRoots(reader io.Reader, segSize int64,
+func (c *Client) GetPieceHashRoots(reader io.Reader, segSize int64,
 	dataShards, parityShards int,
 ) ([]byte, [][]byte, int64, storageTypes.RedundancyType, error) {
 	pieceHashRoots, size, redundancyType, err := hashlib.ComputeIntegrityHash(reader, segSize, dataShards, parityShards, false)
@@ -695,7 +691,7 @@ func (c *client) GetPieceHashRoots(reader io.Reader, segSize int64,
 }
 
 // sendPutPolicyTxn broadcast the putPolicy msg and return the txn hash
-func (c *client) sendPutPolicyTxn(ctx context.Context, msg *storageTypes.MsgPutPolicy, txOpts *gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) sendPutPolicyTxn(ctx context.Context, msg *storageTypes.MsgPutPolicy, txOpts *gnfdSdkTypes.TxOption) (string, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return "", err
 	}
@@ -709,7 +705,7 @@ func (c *client) sendPutPolicyTxn(ctx context.Context, msg *storageTypes.MsgPutP
 }
 
 // sendDelPolicyTxn broadcast the deletePolicy msg and return the txn hash
-func (c *client) sendDelPolicyTxn(ctx context.Context, operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts *gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) sendDelPolicyTxn(ctx context.Context, operator sdk.AccAddress, resource string, principal *permTypes.Principal, txOpts *gnfdSdkTypes.TxOption) (string, error) {
 	delPolicyMsg := storageTypes.NewMsgDeletePolicy(operator, resource, principal)
 
 	if err := delPolicyMsg.ValidateBasic(); err != nil {
@@ -724,7 +720,7 @@ func (c *client) sendDelPolicyTxn(ctx context.Context, operator sdk.AccAddress, 
 	return resp.TxResponse.TxHash, err
 }
 
-func (c *client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxOption) (string, error) {
+func (c *Client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxOption) (string, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return "", err
 	}
@@ -736,29 +732,8 @@ func (c *client) sendTxn(ctx context.Context, msg sdk.Msg, opt *gnfdSdkTypes.TxO
 	return resp.TxResponse.TxHash, err
 }
 
-// GetDefaultAccount returns the account address of default account in client
-func (c *client) GetDefaultAccount() (*types.Account, error) {
-	if c.MustGetDefaultAccount() == nil {
-		return nil, types.ErrorDefaultAccountNotExist
-	}
-	return c.MustGetDefaultAccount(), nil
-}
-
-// SetDefaultAccount will set the default account
-func (c *client) SetDefaultAccount(account *types.Account) {
-	c.defaultAccount = account
-	c.chainClient.SetKeyManager(account.GetKeyManager())
-}
-
-func (c *client) MustGetDefaultAccount() *types.Account {
-	if c.defaultAccount == nil {
-		panic("Default account not exist, Use SetDefaultAccount to set ")
-	}
-	return c.defaultAccount
-}
-
 // getEndpointByOpt return the SP endpoint by listOptions
-func (c *client) getEndpointByOpt(opts *types.EndPointOptions) (*url.URL, error) {
+func (c *Client) getEndpointByOpt(opts *types.EndPointOptions) (*url.URL, error) {
 	var (
 		endpoint *url.URL
 		useHttps bool

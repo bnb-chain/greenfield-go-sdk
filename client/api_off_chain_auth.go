@@ -24,21 +24,21 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-type OffChainAuth interface {
+type IAuthClient interface {
 	RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error)
 	OffChainAuthSign(unsignBytes []byte) string
 }
 
-func (c *client) OffChainAuthSign(unsignBytes []byte) string {
-	sk, _ := GenerateEddsaPrivateKey(c.offChainAuthOption.Seed)
+func (c *Client) OffChainAuthSign(unsignBytes []byte) string {
+	sk, _ := generateEddsaPrivateKey(c.offChainAuthOption.Seed)
 	hFunc := mimc.NewMiMC()
 	sig, _ := sk.Sign(unsignBytes, hFunc)
 	authString := fmt.Sprintf("%s,Signature=%v", httplib.Gnfd1Eddsa, hex.EncodeToString(sig))
 	return authString
 }
 
-// RequestNonceResp is the structure for off chain auth nonce response
-type RequestNonceResp struct {
+// requestNonceResp is the structure for off chain auth nonce response
+type requestNonceResp struct {
 	CurrentNonce     int32  `xml:"CurrentNonce"`
 	NextNonce        int32  `xml:"NextNonce"`
 	CurrentPublicKey string `xml:"CurrentPublicKey"`
@@ -46,16 +46,16 @@ type RequestNonceResp struct {
 }
 
 // GetNextNonce get the nonce value by giving user account and domain
-func (c *client) GetNextNonce(spEndpoint string) (string, error) {
+func (c *Client) GetNextNonce(spEndpoint string) (string, error) {
 	header := make(map[string]string)
 	header["X-Gnfd-User-Address"] = c.defaultAccount.GetAddress().String()
 	header["X-Gnfd-App-Domain"] = c.offChainAuthOption.Domain
 
-	response, err := HttpGetWithHeader(spEndpoint+"/auth/request_nonce", header)
+	response, err := httpGetWithHeader(spEndpoint+"/auth/request_nonce", header)
 	if err != nil {
 		return "0", err
 	}
-	authNonce := RequestNonceResp{}
+	authNonce := requestNonceResp{}
 	// decode the xml content from response body
 	err = xml.NewDecoder(bytes.NewBufferString(response)).Decode(&authNonce)
 	if err != nil {
@@ -65,7 +65,7 @@ func (c *client) GetNextNonce(spEndpoint string) (string, error) {
 }
 
 const (
-	UnsignedContentTemplate string = `%s wants you to sign in with your BNB Greenfield account:
+	unsignedContentTemplate string = `%s wants you to sign in with your BNB Greenfield account:
 %s
 
 Register your identity public key %s
@@ -79,7 +79,7 @@ Resources:
 - SP %s (name: SP_001) with nonce: %s`
 )
 
-func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error) {
+func (c *Client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error) {
 	appDomain := c.offChainAuthOption.Domain
 	eddsaSeed := c.offChainAuthOption.Seed
 	nextNonce, err := c.GetNextNonce(spEndpoint)
@@ -87,14 +87,14 @@ func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 		return "", err
 	}
 	// get the EDDSA private and public key
-	userEddsaPublicKeyStr := GetEddsaCompressedPublicKey(eddsaSeed)
+	userEddsaPublicKeyStr := getEddsaCompressedPublicKey(eddsaSeed)
 	log.Info().Msg("userEddsaPublicKeyStr is " + userEddsaPublicKeyStr)
 
 	IssueDate := time.Now().Format(time.RFC3339)
 	// ExpiryDate formate := "2023-06-27T06:35:24Z"
 	ExpiryDate := time.Now().Add(time.Hour * 24).Format(time.RFC3339)
 
-	unSignedContent := fmt.Sprintf(UnsignedContentTemplate, appDomain, c.defaultAccount.GetAddress().String(), userEddsaPublicKeyStr, appDomain, IssueDate, ExpiryDate, spAddress, nextNonce)
+	unSignedContent := fmt.Sprintf(unsignedContentTemplate, appDomain, c.defaultAccount.GetAddress().String(), userEddsaPublicKeyStr, appDomain, IssueDate, ExpiryDate, spAddress, nextNonce)
 
 	unSignedContentHash := accounts.TextHash([]byte(unSignedContent))
 	sig, _ := c.defaultAccount.GetKeyManager().Sign(unSignedContentHash)
@@ -108,12 +108,12 @@ func (c *client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 	headers["authorization"] = authString
 	headers["origin"] = appDomain
 	headers["x-gnfd-user-address"] = c.defaultAccount.GetAddress().String()
-	jsonResult, error1 := HttpPostWithHeader(spEndpoint+"/auth/update_key", "{}", headers)
+	jsonResult, error1 := httpPostWithHeader(spEndpoint+"/auth/update_key", "{}", headers)
 
 	return jsonResult, error1
 }
 
-func HttpGetWithHeader(url string, header map[string]string) (string, error) {
+func httpGetWithHeader(url string, header map[string]string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
@@ -136,7 +136,7 @@ func HttpGetWithHeader(url string, header map[string]string) (string, error) {
 	return string(body), err
 }
 
-func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (string, error) {
+func httpPostWithHeader(url string, jsonStr string, header map[string]string) (string, error) {
 	json := []byte(jsonStr)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
 	if err != nil {
@@ -161,8 +161,8 @@ func HttpPostWithHeader(url string, jsonStr string, header map[string]string) (s
 	return string(body), err
 }
 
-func GetEddsaCompressedPublicKey(seed string) string {
-	sk, err := GenerateEddsaPrivateKey(seed)
+func getEddsaCompressedPublicKey(seed string) string {
+	sk, err := generateEddsaPrivateKey(seed)
 	if err != nil {
 		return err.Error()
 	}
@@ -171,16 +171,12 @@ func GetEddsaCompressedPublicKey(seed string) string {
 	return hex.EncodeToString(buf.Bytes())
 }
 
-type (
-	PrivateKey = eddsa.PrivateKey
-)
-
-// GenerateEddsaPrivateKey: generate eddsa private key
-func GenerateEddsaPrivateKey(seed string) (sk *PrivateKey, err error) {
+// generateEddsaPrivateKey: generate eddsa private key
+func generateEddsaPrivateKey(seed string) (sk *eddsa.PrivateKey, err error) {
 	buf := make([]byte, 32)
 	copy(buf, seed)
 	reader := bytes.NewReader(buf)
-	sk, err = GenerateKey(reader)
+	sk, err = generateKey(reader)
 	return sk, err
 }
 
@@ -188,15 +184,13 @@ const (
 	sizeFr = fr.Bytes
 )
 
-type PublicKey = eddsa.PublicKey
-
-func GenerateKey(r io.Reader) (*PrivateKey, error) {
+func generateKey(r io.Reader) (*eddsa.PrivateKey, error) {
 	c := twistededwards.GetEdwardsCurve()
 
 	var (
 		randSrc = make([]byte, 32)
 		scalar  = make([]byte, 32)
-		pub     PublicKey
+		pub     eddsa.PublicKey
 	)
 
 	// hash(h) = private_key || random_source, on 32 bytes each
@@ -245,7 +239,7 @@ func GenerateKey(r io.Reader) (*PrivateKey, error) {
 	subtle.ConstantTimeCopy(1, res[sizeFr:2*sizeFr], scalar[:])
 	subtle.ConstantTimeCopy(1, res[2*sizeFr:], randSrc[:])
 
-	sk := &PrivateKey{}
+	sk := &eddsa.PrivateKey{}
 	// make sure sk is not nil
 
 	_, err = sk.SetBytes(res[:])
