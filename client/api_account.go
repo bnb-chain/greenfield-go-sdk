@@ -59,7 +59,7 @@ func (c *client) CreatePaymentAccount(ctx context.Context, address string, txOpt
 		return "", err
 	}
 	msgCreatePaymentAccount := paymentTypes.NewMsgCreatePaymentAccount(accAddress.String())
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgCreatePaymentAccount}, &txOption)
+	tx, err := c.BroadcastTx(ctx, []sdk.Msg{msgCreatePaymentAccount}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -176,7 +176,7 @@ func (c *client) Transfer(ctx context.Context, toAddress string, amount math.Int
 		return "", err
 	}
 	msgSend := bankTypes.NewMsgSend(c.MustGetDefaultAccount().GetAddress(), toAddr, sdk.Coins{sdk.Coin{Denom: gnfdSdkTypes.Denom, Amount: amount}})
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSend}, &txOption)
+	tx, err := c.BroadcastTx(ctx, []sdk.Msg{msgSend}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -203,7 +203,7 @@ func (c *client) MultiTransfer(ctx context.Context, details []types.TransferDeta
 		Inputs:  []bankTypes.Input{in},
 		Outputs: outputs,
 	}
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	tx, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}

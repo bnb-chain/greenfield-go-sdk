@@ -53,7 +53,7 @@ func (c *client) Deposit(ctx context.Context, toAddress string, amount math.Int,
 		To:      accAddress.String(),
 		Amount:  amount,
 	}
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgDeposit}, &txOption)
+	tx, err := c.BroadcastTx(ctx, []sdk.Msg{msgDeposit}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -71,7 +71,7 @@ func (c *client) Withdraw(ctx context.Context, fromAddress string, amount math.I
 		From:    accAddress.String(),
 		Amount:  amount,
 	}
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgWithdraw}, &txOption)
+	tx, err := c.BroadcastTx(ctx, []sdk.Msg{msgWithdraw}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -88,7 +88,7 @@ func (c *client) DisableRefund(ctx context.Context, paymentAddress string, txOpt
 		Owner: c.MustGetDefaultAccount().GetAddress().String(),
 		Addr:  accAddress.String(),
 	}
-	tx, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgDisableRefund}, &txOption)
+	tx, err := c.BroadcastTx(ctx, []sdk.Msg{msgDisableRefund}, &txOption)
 	if err != nil {
 		return "", err
 	}

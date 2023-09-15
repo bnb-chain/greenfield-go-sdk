@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -41,7 +42,7 @@ type Basic interface {
 
 	SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
 	SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error)
-	BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
+	BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error)
 	BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error)
 
 	BroadcastVote(ctx context.Context, vote votepool.Vote) error
@@ -207,8 +208,15 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 
 // BroadcastTx broadcasts a transaction containing the provided messages to the chain.
 // The function returns a pointer to a BroadcastTxResponse and any error that occurred during the operation.
-func (c *client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
-	return c.chainClient.BroadcastTx(ctx, msgs, &txOpt, opts...)
+func (c *client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
+	resp, err := c.chainClient.BroadcastTx(ctx, msgs, txOpt, opts...)
+	if err != nil {
+		return nil, err
+	}
+	if resp.TxResponse.Code != 0 {
+		return resp, fmt.Errorf("the tx has failed with response code: %d, codespace:%s", resp.TxResponse.Code, resp.TxResponse.Codespace)
+	}
+	return resp, nil
 }
 
 // SimulateTx simulates a transaction containing the provided messages on the chain.

@@ -23,7 +23,7 @@ func (c *client) SetWithdrawAddress(ctx context.Context, withdrawAddr string, tx
 		return "", err
 	}
 	msg := distrtypes.NewMsgSetWithdrawAddress(c.MustGetDefaultAccount().GetAddress(), withdraw)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -33,7 +33,7 @@ func (c *client) SetWithdrawAddress(ctx context.Context, withdrawAddr string, tx
 // WithdrawValidatorCommission withdraw accumulated commission by validator
 func (c *client) WithdrawValidatorCommission(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error) {
 	msg := distrtypes.NewMsgWithdrawValidatorCommission(c.MustGetDefaultAccount().GetAddress())
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +47,7 @@ func (c *client) WithdrawDelegatorReward(ctx context.Context, validatorAddr stri
 		return "", err
 	}
 	msg := distrtypes.NewMsgWithdrawDelegatorReward(c.MustGetDefaultAccount().GetAddress(), validator)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -57,7 +57,7 @@ func (c *client) WithdrawDelegatorReward(ctx context.Context, validatorAddr stri
 // FundCommunityPool sends coins directly from the sender to the community pool.
 func (c *client) FundCommunityPool(ctx context.Context, amount math.Int, txOption gnfdsdktypes.TxOption) (string, error) {
 	msg := distrtypes.NewMsgFundCommunityPool(sdk.Coins{sdk.Coin{Denom: gnfdsdktypes.Denom, Amount: amount}}, c.MustGetDefaultAccount().GetAddress())
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}

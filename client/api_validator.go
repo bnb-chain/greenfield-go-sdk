@@ -98,7 +98,7 @@ func (c *client) EditValidator(ctx context.Context, description stakingtypes.Des
 		return "", err
 	}
 	msg := stakingtypes.NewMsgEditValidator(c.MustGetDefaultAccount().GetAddress(), description, newRate, newMinSelfDelegation, relayer, challenger, newBlsKey, blsProof)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +112,7 @@ func (c *client) DelegateValidator(ctx context.Context, validatorAddr string, am
 		return "", err
 	}
 	msg := stakingtypes.NewMsgDelegate(c.MustGetDefaultAccount().GetAddress(), validator, sdktypes.NewCoin(gnfdsdktypes.Denom, amount))
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -130,7 +130,7 @@ func (c *client) BeginRedelegate(ctx context.Context, validatorSrcAddr, validato
 		return "", err
 	}
 	msg := stakingtypes.NewMsgBeginRedelegate(c.MustGetDefaultAccount().GetAddress(), validatorSrc, validatorDest, sdktypes.NewCoin(gnfdsdktypes.Denom, amount))
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -144,7 +144,7 @@ func (c *client) Undelegate(ctx context.Context, validatorAddr string, amount ma
 		return "", err
 	}
 	msg := stakingtypes.NewMsgUndelegate(c.MustGetDefaultAccount().GetAddress(), validator, sdktypes.NewCoin(gnfdsdktypes.Denom, amount))
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -158,7 +158,7 @@ func (c *client) CancelUnbondingDelegation(ctx context.Context, validatorAddr st
 		return "", err
 	}
 	msg := stakingtypes.NewMsgCancelUnbondingDelegation(c.MustGetDefaultAccount().GetAddress(), validator, creationHeight, sdktypes.NewCoin(gnfdsdktypes.Denom, amount))
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -186,7 +186,7 @@ func (c *client) GrantDelegationForValidator(ctx context.Context, delegationAmou
 		return "", err
 	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msgGrant}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msgGrant}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -196,7 +196,7 @@ func (c *client) GrantDelegationForValidator(ctx context.Context, delegationAmou
 // UnJailValidator unjails the validator
 func (c *client) UnJailValidator(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error) {
 	msg := slashingtypes.NewMsgUnjail(c.MustGetDefaultAccount().GetAddress())
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}
@@ -210,7 +210,7 @@ func (c *client) ImpeachValidator(ctx context.Context, validatorAddr string, txO
 		return "", err
 	}
 	msg := slashingtypes.NewMsgImpeach(validator, c.MustGetDefaultAccount().GetAddress())
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
+	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
 	if err != nil {
 		return "", err
 	}

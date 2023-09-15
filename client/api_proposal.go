@@ -28,7 +28,7 @@ func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmou
 	if err != nil {
 		return 0, "", err
 	}
-	txResp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgSubmitProposal}, &opts.TxOption)
+	txResp, err := c.BroadcastTx(ctx, []sdk.Msg{msgSubmitProposal}, &opts.TxOption)
 	if err != nil {
 		return 0, "", err
 	}
@@ -55,7 +55,7 @@ func (c *client) SubmitProposal(ctx context.Context, msgs []sdk.Msg, depositAmou
 
 func (c *client) VoteProposal(ctx context.Context, proposalID uint64, voteOption govTypesV1.VoteOption, opts types.VoteProposalOptions) (string, error) {
 	msgVote := govTypesV1.NewMsgVote(c.MustGetDefaultAccount().GetAddress(), proposalID, voteOption, opts.Metadata)
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgVote}, &opts.TxOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msgVote}, &opts.TxOption)
 	if err != nil {
 		return "", err
 	}

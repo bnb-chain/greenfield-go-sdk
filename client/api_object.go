@@ -17,8 +17,6 @@ import (
 	"strings"
 	"time"
 
-	ctypes "github.com/cometbft/cometbft/rpc/core/types"
-
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -178,22 +176,21 @@ func (c *client) CreateObject(ctx context.Context, bucketName, objectName string
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
 	}
 
 	txnHash := resp.TxResponse.TxHash
-	var txnResponse *ctypes.ResultTx
 	if !opts.IsAsyncMode {
 		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
 		defer cancel()
-		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
+		txnResponse, err := c.WaitForTx(ctxTimeout, txnHash)
 		if err != nil {
 			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
 		}
 		if txnResponse.TxResult.Code != 0 {
-			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d", txnResponse.TxResult.Code)
+			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d, codespace:%s", txnResponse.TxResult.Code, txnResponse.TxResult.Codespace)
 		}
 	}
 	return txnHash, nil

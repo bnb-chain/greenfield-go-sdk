@@ -222,7 +222,7 @@ func (c *client) GrantDepositForStorageProvider(ctx context.Context, spAddr stri
 	if err != nil {
 		return "", err
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, &opts.TxOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msgGrant}, &opts.TxOption)
 	if err != nil {
 		return "", err
 	}
@@ -240,7 +240,7 @@ func (c *client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPr
 		StorePrice:    storePrice,
 		FreeReadQuota: freeReadQuota,
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateStoragePrice}, &TxOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msgUpdateStoragePrice}, &TxOption)
 	if err != nil {
 		return "", err
 	}
@@ -257,7 +257,7 @@ func (c *client) UpdateSpStatus(ctx context.Context, spAddr string, status spTyp
 		Status:    status,
 		Duration:  duration,
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateSpStatus}, &TxOption)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msgUpdateSpStatus}, &TxOption)
 	if err != nil {
 		return "", err
 	}
