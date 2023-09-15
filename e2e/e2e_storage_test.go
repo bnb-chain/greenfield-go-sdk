@@ -564,3 +564,64 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 	s.Require().True(isSame)
 	s.Require().NoError(err)
 }
+
+func (s *StorageTestSuite) Test_Upload_Object_With_Tampering_Content() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*300; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	var tamperingBuffer bytes.Buffer
+	tamperingLine := `0987654321,0987654321,0987654321,0987654321,0987654321,0987654321,0987654321,0987654321,098765432112`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*300; i++ {
+		tamperingBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, tamperingLine))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	objectSize := int64(buffer.Len())
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
+		bytes.NewReader(tamperingBuffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	s.Require().Error(err)
+
+	time.Sleep(10 * time.Second)
+
+	// Object should not be sealed
+	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+}
