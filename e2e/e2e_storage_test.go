@@ -582,18 +582,14 @@ func (s *StorageTestSuite) Test_Upload_Object_With_Tampering_Content() {
 	if err == nil {
 		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
 	}
-
 	var buffer bytes.Buffer
 	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
-	// Create 1MiB content where each line contains 1024 characters.
-	for i := 0; i < 1024*1; i++ {
+	for i := 0; i < 1024; i++ {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
-
 	var tamperingBuffer bytes.Buffer
 	tamperingLine := `0987654321,0987654321,0987654321,0987654321,0987654321,0987654321,0987654321,0987654321,098765432112`
-	// Create 1MiB content where each line contains 1024 characters.
-	for i := 0; i < 1024*1; i++ {
+	for i := 0; i < 1024; i++ {
 		tamperingBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, tamperingLine))
 	}
 
@@ -615,7 +611,7 @@ func (s *StorageTestSuite) Test_Upload_Object_With_Tampering_Content() {
 		bytes.NewReader(tamperingBuffer.Bytes()), types.PutObjectOptions{})
 	s.Require().Error(err)
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 
 	// Object should not be sealed
 	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
