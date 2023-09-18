@@ -232,7 +232,6 @@ func (c *client) PutObject(ctx context.Context, bucketName, objectName string, o
 	if objectSize <= 0 {
 		return errors.New("object size should be more than 0")
 	}
-
 	params, err := c.GetParams()
 	if err != nil {
 		return err
