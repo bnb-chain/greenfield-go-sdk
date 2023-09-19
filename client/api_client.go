@@ -31,6 +31,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// IClient - Declare all Greenfield SDK Client APIs, including APIs for interacting with Greenfield Blockchain and SPs.
 type IClient interface {
 	IBasicClient
 	IBucketClient
@@ -49,8 +50,7 @@ type IClient interface {
 	IAuthClient
 }
 
-// Client represents a Greenfield SDK Client that can interact with the blockchain
-// using the REST API, gRPC, or WebSocket endpoints.
+// Client - The implementation for IClient, implement all Client APIs for Greenfield SDK.
 type Client struct {
 	// The chain Client is used to interact with the blockchain
 	chainClient *sdkclient.GreenfieldClient
@@ -75,29 +75,33 @@ type Client struct {
 	expireSeconds      uint64
 }
 
-// Option is a configuration struct used to provide optional parameters to the Client constructor.
+// Option - Configurations for providing optional parameters for the Greenfield SDK Client.
 type Option struct {
 	// GrpcDialOption is the list of gRPC dial options used to configure the connection to the blockchain node.
 	GrpcDialOption grpc.DialOption
-	// account used to set the default account of Client
+	// DefaultAccount is the default account of Client.
 	DefaultAccount *types.Account
 	// Secure is a flag that specifies whether the Client should use HTTPS or not.
 	Secure bool
 	// Transport is the HTTP transport used to send requests to the storage provider endpoint.
 	Transport http.RoundTripper
-	// Host is the target sp server hostname
+	// Host is the target sp server hostname.
 	Host string
 	// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+	//
 	// This property should not be set in most cases unless you want to use go-sdk to test if the SP support off-chain-auth feature.
-	// Once this property is set, the request will be signed in "off-chain-auth" way rather than v1
+	// Once this property is set, the request will be signed in "off-chain-auth" way rather than v1.
 	OffChainAuthOption *OffChainAuthOption
-	// UseWebSocketConn specifies that connection to Chain is via websocket
+	// UseWebSocketConn specifies that connection to Chain is via websocket.
 	UseWebSocketConn bool
-	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000
+	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000.
 	ExpireSeconds uint64
 }
 
-// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+// OffChainAuthOption - The optional configurations for off-chain-auth.
+//
+// The OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+//
 // This auth mechanism is usually used in browser-based application.
 // That we support OffChainAuth configuration in go-sdk is to make the tests on off-chain-auth be convenient.
 type OffChainAuthOption struct {
@@ -109,8 +113,17 @@ type OffChainAuthOption struct {
 	ShouldRegisterPubKey bool
 }
 
-// New - instantiate greenfield chain with chain info, account info and options.
-// endpoint indicates the rpc address of greenfield
+// New - New Greenfield Go SDK Client.
+//
+// - chainID: The Greenfield Blockchain's chainID that the Client would interact with.
+//
+// - endpoint: The Greenfield Blockchain's RPC URL that the Client would interact with.
+//
+// - option: The optional configurations for the Client.
+//
+// - ret1: The new client that created, in IClient format.
+//
+// - ret2: Return error when new Client failed, otherwise return nil.
 func New(chainID string, endpoint string, option Option) (IClient, error) {
 	if endpoint == "" || chainID == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct Client")

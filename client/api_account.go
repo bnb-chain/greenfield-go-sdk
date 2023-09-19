@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	gnfdSdkTypes "github.com/bnb-chain/greenfield/sdk/types"
@@ -11,6 +12,7 @@ import (
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
+// IAccountClient - Client APIs for operating Greenfield accounts.
 type IAccountClient interface {
 	SetDefaultAccount(account *types.Account)
 	GetDefaultAccount() (*types.Account, error)
@@ -61,8 +63,15 @@ func (c *Client) MustGetDefaultAccount() *types.Account {
 	return c.defaultAccount
 }
 
-// GetAccount retrieves account information for a given address.
-// It takes a context and an address as input and returns an AccountI interface and an error (if any).
+// GetAccount - Retrieve on-chain account information for a given address.
+//
+// - ctx: Context variables for the current API call.
+//
+// - address: The given address for retrieving.
+//
+// - ret1: The account interface for the given address.
+//
+// - ret2: Return error when getting account failed, otherwise return nil.
 func (c *Client) GetAccount(ctx context.Context, address string) (authTypes.AccountI, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
@@ -87,8 +96,22 @@ func (c *Client) GetAccount(ctx context.Context, address string) (authTypes.Acco
 	return &baseAccount, err
 }
 
-// CreatePaymentAccount creates a new payment account on the blockchain using the provided address.
-// It returns a TxResponse containing information about the transaction, or an error if the transaction failed.
+// CreatePaymentAccount - Create a new payment account for the given address.
+//
+// The payment account is used to pay for the storage and read quota fee of objects. When you need to pay for different
+// buckets separately, you can create different payment accounts to do so. Note that the payment account does not have a
+// private key, and only the owner of the payment account can withdraw funds from it. Once the owner revokes permission
+// for withdrawal, the funds in the payment account can only be utilized to cover storage and read quota fees.
+//
+// - ctx: Context variables for the current API call.
+//
+// - address: The owner address of the new payment account.
+//
+// - txOption: The txOption for sending transactions.
+//
+// - ret1: Return the transaction hash if created successfully, otherwise return empty string.
+//
+// - ret2: Return error when created failed, otherwise return nil.
 func (c *Client) CreatePaymentAccount(ctx context.Context, address string, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
@@ -102,6 +125,15 @@ func (c *Client) CreatePaymentAccount(ctx context.Context, address string, txOpt
 	return tx.TxResponse.TxHash, nil
 }
 
+// GetModuleAccountByName - Get module account by module name.
+//
+// - ctx: Context variables for the current API call.
+//
+// - name: Module name.
+//
+// - ret1: The account interface for the given module name.
+//
+// - ret2: Return error when getting failed, otherwise return nil.
 func (c *Client) GetModuleAccountByName(ctx context.Context, name string) (authTypes.ModuleAccountI, error) {
 	response, err := c.chainClient.ModuleAccountByName(ctx, &authTypes.QueryModuleAccountByNameRequest{Name: name})
 	if err != nil {
@@ -119,6 +151,13 @@ func (c *Client) GetModuleAccountByName(ctx context.Context, name string) (authT
 	return &moduleAccount, err
 }
 
+// GetModuleAccounts - Get all module accounts.
+//
+// - ctx: Context variables for the current API call.
+//
+// - ret1: The account interface lists for all the module accounts.
+//
+// - ret2: Return error when getting failed, otherwise return nil.
 func (c *Client) GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccountI, error) {
 	response, err := c.chainClient.ModuleAccounts(ctx, &authTypes.QueryModuleAccountsRequest{})
 	if err != nil {
@@ -137,8 +176,15 @@ func (c *Client) GetModuleAccounts(ctx context.Context) ([]authTypes.ModuleAccou
 	return accounts, err
 }
 
-// GetAccountBalance retrieves balance information of an account for a given address.
-// It takes a context and an address as input and returns an sdk.Coin interface and an error (if any).
+// GetAccountBalance - Get the bank balance for the given address.
+//
+// - ctx: Context variables for the current API call.
+//
+// - address: The given address for retrieving.
+//
+// - ret1: The balance info for the given address, in sdk.Coin format.
+//
+// - ret2: Return error when getting failed, otherwise return nil.
 func (c *Client) GetAccountBalance(ctx context.Context, address string) (*sdk.Coin, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
@@ -152,9 +198,15 @@ func (c *Client) GetAccountBalance(ctx context.Context, address string) (*sdk.Co
 	return response.Balance, nil
 }
 
-// GetPaymentAccount function takes a context and an address string as parameters and returns a pointer to a paymentTypes.PaymentAccount struct and an error.
-// This function uses the PaymentAccount method of the chainClient field of the Client struct to query the payment account associated with the given address.
-// If there is an error, the function returns nil and the error. If there is no error, the function returns a pointer to the PaymentAccount struct and nil.
+// GetPaymentAccount - Get payment account by the payment account's address.
+//
+// - ctx: Context variables for the current API call.
+//
+// - address: The given payment account address for retrieving.
+//
+// - ret1: The payment account info for the given address.
+//
+// - ret2: Return error when getting failed, otherwise return nil.
 func (c *Client) GetPaymentAccount(ctx context.Context, address string) (*paymentTypes.PaymentAccount, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(address)
 	if err != nil {
@@ -167,8 +219,15 @@ func (c *Client) GetPaymentAccount(ctx context.Context, address string) (*paymen
 	return &pa.PaymentAccount, nil
 }
 
-// GetPaymentAccountsByOwner retrieves all payment accounts owned by the given address
-// and returns a slice of PaymentAccount pointers and an error (if any).
+// GetPaymentAccountsByOwner - Get all payment accounts owned by the given owner address.
+//
+// - ctx: Context variables for the current API call.
+//
+// - address: The given owner account address for retrieving.
+//
+// - ret1: The payment accounts list for the given owner address.
+//
+// - ret2: Return error when getting failed, otherwise return nil.
 func (c *Client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([]*paymentTypes.PaymentAccount, error) {
 	ownerAcc, err := sdk.AccAddressFromHexUnsafe(owner)
 	if err != nil {
@@ -198,14 +257,19 @@ func (c *Client) GetPaymentAccountsByOwner(ctx context.Context, owner string) ([
 	return paymentAccounts, nil
 }
 
-// Transfer function takes a context, a toAddress string, an amount of type math.Int, and a txOption of
-// type gnfdSdkTypes.TxOption as parameters and returns a pointer to an sdk.TxResponse struct and an error.
-// This function first parses the toAddress parameter into an sdk.AccAddress object, and if there is an error,
-// it returns nil and the error.
-// Then it generates a MsgSend message using the NewMsgSend method of the types3 package and broadcasts the
-// transaction to the chain by calling the BroadcastTx method of the chainClient field of the Client struct.
-// If there is an error during the broadcasting, the function returns nil and the error. If there is no error,
-// the function returns a pointer to the TxResponse struct and nil
+// Transfer - Transfer BNB from sender to receiver.
+//
+// - ctx: Context variables for the current API call.
+//
+// - toAddress: The address who will receive the BNB.
+//
+// - amount: The BNB amount to transfer, 1e18 denotes 1BNB.
+//
+// - txOption: The txOption for sending transactions.
+//
+// - ret1: Return the transaction hash if transferred successfully, otherwise return empty string.
+//
+// - ret2: Return error if transferred failed, otherwise return nil.
 func (c *Client) Transfer(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
 	toAddr, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
@@ -219,7 +283,17 @@ func (c *Client) Transfer(ctx context.Context, toAddress string, amount math.Int
 	return tx.TxResponse.TxHash, nil
 }
 
-// MultiTransfer makes transfers from an account to multiple accounts with respect amounts
+// MultiTransfer - Transfer BNB from sender to multiple receivers.
+//
+// - ctx: Context variables for the current API call.
+//
+// - details: The receiver address and transfer amount list.
+//
+// - txOption: The txOption for sending transactions.
+//
+// - ret1: Return the transaction hash if transferred successfully, otherwise return empty string.
+//
+// - ret2: Return error if transferred failed, otherwise return nil.
 func (c *Client) MultiTransfer(ctx context.Context, details []types.TransferDetail, txOption gnfdSdkTypes.TxOption) (string, error) {
 	outputs := make([]bankTypes.Output, 0)
 	denom := gnfdSdkTypes.Denom
