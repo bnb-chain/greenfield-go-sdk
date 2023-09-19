@@ -120,11 +120,11 @@ type DeleteGroupOption struct {
 type CreateObjectOptions struct {
 	Visibility          storageTypes.VisibilityType // Visibility defines the bucket public status.
 	TxOpts              *gnfdsdktypes.TxOption      // TxOpts defines the options to customize a transaction.
-	SecondarySPAccs     []sdk.AccAddress            // indicates a list of secondary Storage Provider's addresses.
-	ContentType         string                      // defines the content type of object.
-	IsReplicaType       bool                        // indicates whether the object uses REDUNDANCY_REPLICA_TYPE.
-	IsAsyncMode         bool                        // indicate whether to create the object in asynchronous mode.
-	IsSerialComputeMode bool                        // indicate whether to compute integrity hash in serial way or parallel way when creating an object.
+	SecondarySPAccs     []sdk.AccAddress            // SecondarySPAccs indicates a list of secondary Storage Provider's addresses.
+	ContentType         string                      // ContentType defines the content type of object.
+	IsReplicaType       bool                        // IsReplicaType indicates whether the object uses REDUNDANCY_REPLICA_TYPE.
+	IsAsyncMode         bool                        // IsAsyncMode indicate whether to create the object in asynchronous mode.
+	IsSerialComputeMode bool                        // IsSerialComputeMode indicate whether to compute integrity hash in serial way or parallel way when creating an object.
 }
 
 // CreateGroupOptions indicates the metadata to construct `CreateGroup` msg.
@@ -215,7 +215,7 @@ type NewStatementOptions struct {
 // PutObjectOptions indicates the options for uploading an object to Storage Provider.
 type PutObjectOptions struct {
 	ContentType      string // ContentType indicates the content type of object.
-	TxnHash          string // TxnHash indicates the transaction hash creating the object meta onchain.
+	TxnHash          string // TxnHash indicates the transaction hash creating the object meta on chain.
 	DisableResumable bool   // DisableResumable indicates whether upload the object to Storage Provider via resumable upload.
 	PartSize         uint64
 }

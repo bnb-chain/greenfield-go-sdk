@@ -68,7 +68,7 @@ func (c *Client) EnableTrace(output io.Writer, onlyTraceErr bool) {
 //
 // ctx: Context variables for the current API call.
 //
-// ret1: The node info.
+// ret1: The Node info.
 //
 // ret2: The Version info.
 //
@@ -81,7 +81,7 @@ func (c *Client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmserv
 	return nodeInfoResponse.DefaultNodeInfo, nodeInfoResponse.ApplicationVersion, nil
 }
 
-// GetStatus - Get the status of Node.
+// GetStatus - Get the status of connected Node.
 //
 // ctx: Context variables for the current API call.
 //
@@ -105,15 +105,15 @@ func (c *Client) GetCommit(ctx context.Context, height int64) (*ctypes.ResultCom
 	return c.chainClient.GetCommit(ctx, height)
 }
 
-// BroadcastRawTx - Broadcasts raw transaction bytes to a Tendermint node.
+// BroadcastRawTx - Broadcast raw transaction bytes to a Tendermint node.
 //
 // ctx: Context variables for the current API call.
 //
-// txBytes: transaction bytes.
+// txBytes: The transaction bytes.
 //
-// sync: a flag to specify the transaction mode. If sync is true, the transaction is broadcast synchronously. If sync is false, the transaction is broadcast asynchronously.
+// sync: A flag to specify the transaction mode. If it is true, the transaction is broadcast synchronously. If it is false, the transaction is broadcast asynchronously.
 //
-// ret1: transaction response, it can indicate both success and failed transaction.
+// ret1: Transaction response, it can indicate both success and failed transaction.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error) {
@@ -130,7 +130,7 @@ func (c *Client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) 
 	return broadcastTxResponse.TxResponse, nil
 }
 
-// SimulateRawTx - Simulates the execution of a raw transaction on the blockchain without broadcasting it to the network.
+// SimulateRawTx - Simulate the execution of a raw transaction on the blockchain without broadcasting it to the network.
 //
 // ctx: Context variables for the current API call.
 //
@@ -138,7 +138,7 @@ func (c *Client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) 
 //
 // opt: The grpc option(s) if Client is using grpc connection.
 //
-// ret1: The simulate result.
+// ret1: The simulation result.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
@@ -210,7 +210,7 @@ func (c *Client) WaitForBlockHeight(ctx context.Context, h int64) error {
 	}
 }
 
-// WaitForNextBlock - Waits until the next block is committed. It reads the current block height and then waits for another block to be committed.
+// WaitForNextBlock - Wait until the next block is committed since current block.
 //
 // ctx: Context variables for the current API call.
 //
@@ -234,7 +234,7 @@ func (c *Client) WaitForNBlocks(ctx context.Context, n int64) error {
 	return c.WaitForBlockHeight(ctx, start.Header.Height+n)
 }
 
-// WaitForTx - Wait for a transaction to be confirmed onchian, if transaction not found in current block, wait for the next block. Ends when a transaction is found or context is canceled.
+// WaitForTx - Wait for a transaction to be confirmed onchian, if transaction not found in current block, wait for the next block. API ends when a transaction is found or context is canceled.
 //
 // ctx: Context variables for the current API call.
 //
@@ -286,13 +286,13 @@ func (c *Client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 	}
 }
 
-// BroadcastTx - Broadcast a transaction containing the provided messages to the chain.
+// BroadcastTx - Broadcast a transaction containing the provided message(s) to the chain.
 //
 // ctx: Context variables for the current API call.
 //
 // msgs: Message(s) to be broadcast to blockchain.
 //
-// txOpt: TxOption contains options for customizing the transaction.
+// txOpt: txOpt contains options for customizing the transaction.
 //
 // opt: The grpc option(s) if Client is using grpc connection.
 //
@@ -303,17 +303,17 @@ func (c *Client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.Tx
 	return c.chainClient.BroadcastTx(ctx, msgs, &txOpt, opts...)
 }
 
-// SimulateTx - Simulate a transaction containing the provided messages on the chain.
+// SimulateTx - Simulate a transaction containing the provided message(s) on the chain.
 //
 // ctx: Context variables for the current API call.
 //
 // msgs: Message(s) to be broadcast to blockchain.
 //
-// txOpt: TxOption contains options for customizing the transaction.
+// txOpt: TxOpt contains options for customizing the transaction.
 //
 // opt: The grpc option(s) if Client is using grpc connection.
 //
-// ret1: The simulate result.
+// ret1: The simulation result.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
@@ -365,7 +365,7 @@ func (c *Client) GetBlockResultByHeight(ctx context.Context, height int64) (*cty
 	return c.chainClient.GetBlockResults(ctx, &height)
 }
 
-// GetValidatorSet Retrieve the latest validator set from the chain.
+// GetValidatorSet - Retrieve the latest validator set from the chain.
 //
 // ctx: Context variables for the current API call.
 //
@@ -382,7 +382,7 @@ func (c *Client) GetValidatorSet(ctx context.Context) (int64, []*bfttypes.Valida
 	return validatorSetResponse.BlockHeight, validatorSetResponse.Validators, nil
 }
 
-// GetValidatorsByHeight Retrieve the validator set at a given block height from the chain.
+// GetValidatorsByHeight - Retrieve the validator set at a given block height from the chain.
 //
 // ctx: Context variables for the current API call.
 //
@@ -399,18 +399,18 @@ func (c *Client) GetValidatorsByHeight(ctx context.Context, height int64) ([]*bf
 	return validatorSetResponse.Validators, nil
 }
 
-// BroadcastVote Broacast a vote to the tendermint votepool, it is used by Greenfield relayer and challengers by now.
+// BroadcastVote - Broadcast a vote to the Node's VotePool, it is used by Greenfield relayer and challengers by now.
 //
 // ctx: Context variables for the current API call.
 //
-// vote: Contain vote details.
+// vote: Contains vote details.
 //
 // ret: Return error when the request failed, otherwise return nil.
 func (c *Client) BroadcastVote(ctx context.Context, vote votepool.Vote) error {
 	return c.chainClient.BroadcastVote(ctx, vote)
 }
 
-// QueryVote Query a vote from the tendermint votepool, it is used by Greenfield relayer and challengers by now.
+// QueryVote - Query a vote from the Node's VotePool, it is used by Greenfield relayer and challengers by now.
 //
 // ctx: Context variables for the current API call.
 //

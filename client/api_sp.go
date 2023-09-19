@@ -32,13 +32,13 @@ type ISPClient interface {
 	UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, txOption gnfdSdkTypes.TxOption) (string, error)
 }
 
-// GetStoragePrice -Get the storage price for a particular storage provider, including update time, read price, store price and .etc.
+// GetStoragePrice - Get the storage price details for a particular storage provider, including update time, read price, store price and .etc.
 //
 // ctx: Context variables for the current API call.
 //
-// spAddr: The HEX-encoded string of the storage provider address
+// spAddr: The HEX-encoded string of the storage provider address.
 //
-// ret1: The specified storage provider price detail
+// ret1: The specified storage provider price detail.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.SpStoragePrice, error) {
@@ -55,11 +55,11 @@ func (c *Client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.S
 	return &resp.SpStoragePrice, nil
 }
 
-// GetGlobalSpStorePrice -Get the global storage price, including update time and store price
+// GetGlobalSpStorePrice - Get the global storage price details, including update time and store price.
 //
 // ctx: Context variables for the current API call.
 //
-// ret1: The global storage provider price detail
+// ret1: The global storage provider price detail.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpStorePrice, error) {
@@ -72,13 +72,13 @@ func (c *Client) GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpSt
 	return &resp.GlobalSpStorePrice, nil
 }
 
-// ListStorageProviders -List the storage providers info on chain
+// ListStorageProviders - List the storage providers info on chain.
 //
 // ctx: Context variables for the current API call.
 //
-// isInService: The boolean value indicates if only display the sp with STATUS_IN_SERVICE status
+// isInService: The boolean value indicates if only display the sp with STATUS_IN_SERVICE status.
 //
-// ret1: The global storage provider price detail
+// ret1: The global storage provider price detail.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListStorageProviders(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error) {
@@ -100,13 +100,13 @@ func (c *Client) ListStorageProviders(ctx context.Context, isInService bool) ([]
 	return spInfoList, nil
 }
 
-// GetStorageProviderInfo -Get the specified storage providers info on chain
+// GetStorageProviderInfo - Get the specified storage providers info on chain.
 //
 // ctx: Context variables for the current API call.
 //
-// spAddr: The HEX-encoded string of the storage provider address
+// spAddr: The HEX-encoded string of the storage provider address.
 //
-// ret1: The Storage provider detail
+// ret1: The Storage provider detail.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetStorageProviderInfo(ctx context.Context, spAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
@@ -154,7 +154,7 @@ func (c *Client) refreshStorageProviders(ctx context.Context) error {
 	return nil
 }
 
-// CreateStorageProvider -Submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
+// CreateStorageProvider - Submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
 //
 // ctx: Context variables for the current API call.
 //
@@ -172,15 +172,15 @@ func (c *Client) refreshStorageProviders(ctx context.Context) error {
 //
 // blsProof: The HEX-encoded string of the storage provider bls signature.
 //
-// endpoint: Storage Provider endpoint
+// endpoint: Storage Provider endpoint.
 //
 // depositAmount: The requested amount for a proposal.
 //
-// description: Description for the SP
+// description: Description for the SP.
 //
-// opts: options to specify the SP prices, and proposal details
+// opts: options to specify the SP prices, and proposal details.
 //
-// ret1: Proposal ID
+// ret1: Proposal ID.
 //
 // ret2: Transaction hash return from blockchain.
 //
@@ -253,11 +253,11 @@ func (c *Client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOpts: opts.TxOpts})
 }
 
-// GrantDepositForStorageProvider -Grant transaction to allow gov module account to deduct the specified number of tokens
+// GrantDepositForStorageProvider - Grant transaction to allow Gov module account to deduct the specified number of tokens.
 //
 // ctx: Context variables for the current API call.
 //
-// spAddr: The HEX-encoded string of the storage provider address
+// spAddr: The HEX-encoded string of the storage provider address.
 //
 // depositAmount: The allowance of fee that allows grantee to spend up from the account of Granter.
 //
@@ -294,7 +294,7 @@ func (c *Client) GrantDepositForStorageProvider(ctx context.Context, spAddr stri
 	return resp.TxResponse.TxHash, nil
 }
 
-// UpdateSpStoragePrice -updates the read price, storage price and free read quota for a particular storage provider
+// UpdateSpStoragePrice - Update the read price, storage price and free read quota for a particular storage provider.
 //
 // ctx: Context variables for the current API call.
 //

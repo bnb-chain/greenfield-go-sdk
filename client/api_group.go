@@ -50,7 +50,7 @@ type IGroupClient interface {
 //
 // groupName: The group name identifies the group.
 //
-// opt: The options for customizing a group.
+// opt: The options for customizing a group and transaction.
 //
 // ret1: Transaction hash return from blockchain.
 //
@@ -82,13 +82,13 @@ func (c *Client) DeleteGroup(ctx context.Context, groupName string, opt types.De
 //
 // groupName: The group name identifies the group.
 //
-// groupOwnerAddr: The HEX-encoded string of the group owner address
+// groupOwnerAddr: The HEX-encoded string of the group owner address.
 //
-// addAddresses: The HEX-encoded string list of the member addresses to be added
+// addAddresses: The HEX-encoded string list of the member addresses to be added.
 //
-// removeAddresses: The HEX-encoded string list of the member addresses to be removed
+// removeAddresses: The HEX-encoded string list of the member addresses to be removed.
 //
-// opt: The options for customizing the transaction
+// opt: The options for customizing the group members expiration time and transaction.
 //
 // ret1: Transaction hash return from blockchain.
 //
@@ -172,7 +172,7 @@ func (c *Client) LeaveGroup(ctx context.Context, groupName string, groupOwnerAdd
 //
 // groupOwnerAddr: The HEX-encoded string of the group owner address.
 //
-// ret1: The group info detao
+// ret1: The group info details
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) HeadGroup(ctx context.Context, groupName string, groupOwnerAddr string) (*storageTypes.GroupInfo, error) {
@@ -211,7 +211,7 @@ func (c *Client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 	return err == nil
 }
 
-// PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
+// PutGroupPolicy apply group policy to user specified by principalAddr, the sender needs to be the owner of the group
 //
 // ctx: Context variables for the current API call.
 //
@@ -221,7 +221,7 @@ func (c *Client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 //
 // statements: Policies outline the specific details of permissions, including the Effect, ActionList, and Resources.
 //
-// opt: The options for customizing the transaction.
+// opt: The options for customizing the policy expiration time and transaction.
 //
 // ret1: Transaction hash return from blockchain.
 //
@@ -252,7 +252,7 @@ func (c *Client) PutGroupPolicy(ctx context.Context, groupName string, principal
 //
 // groupId: The group id identity the group.
 //
-// ret1: The bucket policy
+// ret1: The bucket policy.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error) {
@@ -326,15 +326,15 @@ func (c *Client) DeleteGroupPolicy(ctx context.Context, groupName string, princi
 	return c.sendDelPolicyTxn(ctx, sender, resource, principal, opt.TxOpts)
 }
 
-// GetGroupPolicy - Get the group policy info of the user
+// GetGroupPolicy - Get the group policy info of the user.
 //
 // ctx: Context variables for the current API call.
 //
 // groupName: The group name identifies the group.
 //
-// principalAddr: The HEX-encoded string of the principal address
+// principalAddr: The HEX-encoded string of the principal address.
 //
-// ret1: The group policy
+// ret1: The group policy.
 //
 // ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error) {
@@ -448,17 +448,17 @@ func (c *Client) ListGroup(ctx context.Context, name, prefix string, opts types.
 	return listGroupsResult, nil
 }
 
-// RenewGroupMember - Renew a list group members and their expiration time
+// RenewGroupMember - Renew a list group members and their expiration time.
 //
 // ctx: Context variables for the current API call.
 //
 // groupName: The group name identifies the group.
 //
-// groupOwnerAddr: The HEX-encoded string of the group owner address
+// groupOwnerAddr: The HEX-encoded string of the group owner address.
 //
-// memberAddresses: The HEX-encoded string list of the member addresses to be renewed
+// memberAddresses: The HEX-encoded string list of the member addresses to be renewed.
 //
-// opts: The options for customizing the transaction and each group member's expiration time
+// opts: The options for customizing the transaction and each group member's expiration time.
 //
 // ret1: Transaction hash return from blockchain.
 //
@@ -557,7 +557,7 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupID int64, opts types
 	return groups, nil
 }
 
-// ListGroupsByAccount -List groups that a user has joined, including those which the user's expiration time has already elapsed
+// ListGroupsByAccount - List groups that a user has joined, including those which the user's expiration time has already elapsed
 //
 // ctx: Context variables for the current API call.
 //
