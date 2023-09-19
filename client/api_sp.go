@@ -20,27 +20,27 @@ import (
 	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 )
 
+// ISPClient interface defines basic functions related to Storage Provider.
 type ISPClient interface {
-	// ListStorageProviders return the storage provider info on chain
-	// isInService indicates if only display the sp with STATUS_IN_SERVICE status
 	ListStorageProviders(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error)
-	// GetStorageProviderInfo return the sp info with the sp chain address
 	GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error)
-	// GetStoragePrice returns the storage price for a particular storage provider, including update time, read price, store price and .etc.
 	GetStoragePrice(ctx context.Context, SPAddr string) (*spTypes.SpStoragePrice, error)
-	// GetGlobalSpStorePrice returns the global storage price, including update time and store price
 	GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpStorePrice, error)
-	// GrantDepositForStorageProvider submit a grant transaction to allow gov module account to deduct the specified number of tokens
 	GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error)
-	// CreateStorageProvider submits a proposal to create a storage provider to the greenfield blockchain, and it returns a proposal ID
 	CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, maintenanceAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error)
-	// UpdateSpStoragePrice updates the read price, storage price and free read quota for a particular storage provider
-	UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error)
-	// UpdateSpStatus set an SP status between STATUS_IN_SERVICE and STATUS_IN_MAINTENANCE, duration is requested time an SP wish to stay in maintenance mode
-	// for setting to STATUS_IN_SERVICE, duration is set to 0
-	UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, TxOption gnfdSdkTypes.TxOption) (string, error)
+	UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, txOption gnfdSdkTypes.TxOption) (string, error)
+	UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, txOption gnfdSdkTypes.TxOption) (string, error)
 }
 
+// GetStoragePrice -Get the storage price for a particular storage provider, including update time, read price, store price and .etc.
+//
+// ctx: Context variables for the current API call.
+//
+// spAddr: The HEX-encoded string of the storage provider address
+//
+// ret1: The specified storage provider price detail
+//
+// ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.SpStoragePrice, error) {
 	spAcc, err := sdk.AccAddressFromHexUnsafe(spAddr)
 	if err != nil {
@@ -55,6 +55,13 @@ func (c *Client) GetStoragePrice(ctx context.Context, spAddr string) (*spTypes.S
 	return &resp.SpStoragePrice, nil
 }
 
+// GetGlobalSpStorePrice -Get the global storage price, including update time and store price
+//
+// ctx: Context variables for the current API call.
+//
+// ret1: The global storage provider price detail
+//
+// ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpStorePrice, error) {
 	resp, err := c.chainClient.QueryGlobalSpStorePriceByTime(ctx, &spTypes.QueryGlobalSpStorePriceByTimeRequest{
 		Timestamp: 0,
@@ -65,8 +72,15 @@ func (c *Client) GetGlobalSpStorePrice(ctx context.Context) (*spTypes.GlobalSpSt
 	return &resp.GlobalSpStorePrice, nil
 }
 
-// ListStorageProviders return the storage provider info on chain
-// isInService indicates if only display the sp with STATUS_IN_SERVICE status
+// ListStorageProviders -List the storage providers info on chain
+//
+// ctx: Context variables for the current API call.
+//
+// isInService: The boolean value indicates if only display the sp with STATUS_IN_SERVICE status
+//
+// ret1: The global storage provider price detail
+//
+// ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListStorageProviders(ctx context.Context, isInService bool) ([]spTypes.StorageProvider, error) {
 	request := &spTypes.QueryStorageProvidersRequest{}
 	gnfdRep, err := c.chainClient.StorageProviders(ctx, request)
@@ -86,10 +100,18 @@ func (c *Client) ListStorageProviders(ctx context.Context, isInService bool) ([]
 	return spInfoList, nil
 }
 
-// GetStorageProviderInfo return the sp info with the sp chain address
-func (c *Client) GetStorageProviderInfo(ctx context.Context, SPAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
+// GetStorageProviderInfo -Get the specified storage providers info on chain
+//
+// ctx: Context variables for the current API call.
+//
+// spAddr: The HEX-encoded string of the storage provider address
+//
+// ret1: The Storage provider detail
+//
+// ret2: Return error when the request failed, otherwise return nil.
+func (c *Client) GetStorageProviderInfo(ctx context.Context, spAddr sdk.AccAddress) (*spTypes.StorageProvider, error) {
 	request := &spTypes.QueryStorageProviderByOperatorAddressRequest{
-		OperatorAddress: SPAddr.String(),
+		OperatorAddress: spAddr.String(),
 	}
 
 	gnfdRep, err := c.chainClient.StorageProviderByOperatorAddress(ctx, request)
@@ -132,7 +154,37 @@ func (c *Client) refreshStorageProviders(ctx context.Context) error {
 	return nil
 }
 
-// CreateStorageProvider will submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
+// CreateStorageProvider -Submit a CreateStorageProvider proposal and return proposalID, TxHash and err if it has.
+//
+// ctx: Context variables for the current API call.
+//
+// fundingAddr: The HEX-encoded string of the storage provider funding address, Used to deposit staking tokens and receive earnings.
+//
+// sealAddr: The HEX-encoded string of the storage provider seal address, Used to seal the user's object.
+//
+// approvalAddr: The HEX-encoded string of the storage provider approval address, Used to approve user's requests.
+//
+// gcAddr: The HEX-encoded string of the storage provider gc address, it is a special address for sp and is used by sp to clean up local expired or unwanted storage.
+//
+// maintenanceAddr: The HEX-encoded string of the storage provider maintenance address, it is used for SP self-testing while in maintenance mode.
+//
+// blsPubKey: The HEX-encoded string of the storage provider bls public key.
+//
+// blsProof: The HEX-encoded string of the storage provider bls signature.
+//
+// endpoint: Storage Provider endpoint
+//
+// depositAmount: The requested amount for a proposal.
+//
+// description: Description for the SP
+//
+// opts: options to specify the SP prices, and proposal details
+//
+// ret1: Proposal ID
+//
+// ret2: Transaction hash return from blockchain.
+//
+// ret3: Return error when the request failed, otherwise return nil.
 func (c *Client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAddr, approvalAddr, gcAddr, maintenanceAddr, blsPubKey, blsProof, endpoint string, depositAmount math.Int, description spTypes.Description, opts types.CreateStorageProviderOptions) (uint64, string, error) {
 	defaultAccount := c.MustGetDefaultAccount()
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
@@ -198,9 +250,22 @@ func (c *Client) CreateStorageProvider(ctx context.Context, fundingAddr, sealAdd
 		return 0, "", err
 	}
 
-	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOption})
+	return c.SubmitProposal(ctx, []sdk.Msg{msgCreateStorageProvider}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOpts: opts.TxOpts})
 }
 
+// GrantDepositForStorageProvider -Grant transaction to allow gov module account to deduct the specified number of tokens
+//
+// ctx: Context variables for the current API call.
+//
+// spAddr: The HEX-encoded string of the storage provider address
+//
+// depositAmount: The allowance of fee that allows grantee to spend up from the account of Granter.
+//
+// opts: The options for customizing the transaction.
+//
+// ret1: Transaction hash return from blockchain.
+//
+// ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GrantDepositForStorageProvider(ctx context.Context, spAddr string, depositAmount math.Int, opts types.GrantDepositForStorageProviderOptions) (string, error) {
 	granter := c.MustGetDefaultAccount()
 	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
@@ -222,14 +287,31 @@ func (c *Client) GrantDepositForStorageProvider(ctx context.Context, spAddr stri
 	if err != nil {
 		return "", err
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, &opts.TxOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgGrant}, &opts.TxOpts)
 	if err != nil {
 		return "", err
 	}
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *Client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, TxOption gnfdSdkTypes.TxOption) (string, error) {
+// UpdateSpStoragePrice -updates the read price, storage price and free read quota for a particular storage provider
+//
+// ctx: Context variables for the current API call.
+//
+// spAddr: The HEX-encoded string of the storage provider address.
+//
+// readPrice: The read price of the SP, in bnb wei per charge byte.
+//
+// storePrice: The store price of the SP, in bnb wei per charge byte.
+//
+// freeReadQuota: The free read quota of the SP.
+//
+// txOption: The options for customizing the transaction.
+//
+// ret1: Transaction hash return from blockchain.
+//
+// ret2: Return error when the request failed, otherwise return nil.
+func (c *Client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPrice, storePrice sdk.Dec, freeReadQuota uint64, txOption gnfdSdkTypes.TxOption) (string, error) {
 	spAcc, err := sdk.AccAddressFromHexUnsafe(spAddr)
 	if err != nil {
 		return "", err
@@ -240,14 +322,29 @@ func (c *Client) UpdateSpStoragePrice(ctx context.Context, spAddr string, readPr
 		StorePrice:    storePrice,
 		FreeReadQuota: freeReadQuota,
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateStoragePrice}, &TxOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateStoragePrice}, &txOption)
 	if err != nil {
 		return "", err
 	}
 	return resp.TxResponse.TxHash, nil
 }
 
-func (c *Client) UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, TxOption gnfdSdkTypes.TxOption) (string, error) {
+// UpdateSpStatus -Set an SP status between STATUS_IN_SERVICE and STATUS_IN_MAINTENANCE.
+//
+// ctx: Context variables for the current API call.
+//
+// spAddr: The HEX-encoded string of the storage provider address.
+//
+// status: The desired status.
+//
+// duration: duration is requested time(in second) an SP wish to stay in maintenance mode, for setting to STATUS_IN_SERVICE, duration is set to 0.
+//
+// txOption: The options for customizing the transaction.
+//
+// ret1: Transaction hash return from blockchain.
+//
+// ret2: Return error when the request failed, otherwise return nil.
+func (c *Client) UpdateSpStatus(ctx context.Context, spAddr string, status spTypes.Status, duration int64, txOption gnfdSdkTypes.TxOption) (string, error) {
 	spAcc, err := sdk.AccAddressFromHexUnsafe(spAddr)
 	if err != nil {
 		return "", err
@@ -257,7 +354,7 @@ func (c *Client) UpdateSpStatus(ctx context.Context, spAddr string, status spTyp
 		Status:    status,
 		Duration:  duration,
 	}
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateSpStatus}, &TxOption)
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{msgUpdateSpStatus}, &txOption)
 	if err != nil {
 		return "", err
 	}
