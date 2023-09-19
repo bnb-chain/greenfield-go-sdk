@@ -20,7 +20,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
-// IChallengeClient - Client APIs for operating and querying Greenfield payment accounts and stream records.
+// IPaymentClient - Client APIs for operating and querying Greenfield payment accounts and stream records.
 type IPaymentClient interface {
 	GetStreamRecord(ctx context.Context, streamAddress string) (*paymentTypes.StreamRecord, error)
 	Deposit(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
