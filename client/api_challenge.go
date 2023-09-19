@@ -171,6 +171,8 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 //
 // - segmentIndex: The index of the segment/piece to be challenged. If randomIndex is true, then segmentIndex will be ignored.
 //
+// - txOption: The options for sending the tx.
+//
 // - ret1: The response of Greenfield transaction.
 //
 // - ret2: Return error when submitting challenge tx failed, otherwise return nil.
