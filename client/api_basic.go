@@ -209,6 +209,9 @@ func (c *client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 // BroadcastTx broadcasts a transaction containing the provided messages to the chain.
 // The function returns a pointer to a BroadcastTxResponse and any error that occurred during the operation.
 func (c *client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
+	if len(msgs) == 0 {
+		return nil, fmt.Errorf("msg is not provided in the transaction")
+	}
 	for _, msg := range msgs {
 		if err := msg.ValidateBasic(); err != nil {
 			return nil, err
