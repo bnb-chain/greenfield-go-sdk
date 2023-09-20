@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"io"
 	"math"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
+// IBucketClient interface defines functions related to bucket
 type IBucketClient interface {
 	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error)
 	// CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain
@@ -72,7 +74,15 @@ type IBucketClient interface {
 	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
 }
 
-// GetCreateBucketApproval returns the signature info for the approval of preCreating resources
+// GetCreateBucketApproval - Send create bucket approval request to SP and returns the signature info for the approval of preCreating resources.
+//
+// - ctx: Context variables for the current API call.
+//
+// - createBucketMsg: The msg of create bucket which defined by the greenfield chain.
+//
+// - ret1: The msg of create bucket which contain the approval signature from the storage provider
+//
+// - ret2: Return error when get approval failed, otherwise return nil.
 func (c *Client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error) {
 	unsignedBytes := createBucketMsg.GetSignBytes()
 
@@ -121,7 +131,21 @@ func (c *Client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 	return &signedMsg, nil
 }
 
-// CreateBucket get approval of creating bucket and send createBucket txn to greenfield chain, it returns the transaction hash value and error
+// CreateBucket - Create a new bucket in greenfield.
+//
+// This API sends a request to the storage provider to get approval for creating  bucket and sends the createBucket transaction to the Greenfield.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket to be created.
+//
+// - primaryAddr: The primary SP address to which the bucket will be created on.
+//
+// - opts: The Options indicates the meta to construct createBucket msg and the way to send transaction
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error if create bucket failed, otherwise return nil.
 func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error) {
 	address, err := sdk.AccAddressFromHexUnsafe(primaryAddr)
 	if err != nil {
@@ -184,7 +208,17 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	return txnHash, nil
 }
 
-// DeleteBucket send DeleteBucket txn to greenfield chain and return txn hash
+// DeleteBucket - Sends DeleteBucket txn to greenfield chain and return txn hash.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket to be deleted
+//
+// - opt: The Options for customizing the transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error if delete bucket failed, otherwise return nil.
 func (c *Client) DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
@@ -193,7 +227,19 @@ func (c *Client) DeleteBucket(ctx context.Context, bucketName string, opt types.
 	return c.sendTxn(ctx, delBucketMsg, opt.TxOpts)
 }
 
-// UpdateBucketVisibility update the visibilityType of bucket
+// UpdateBucketVisibility - Update the visibilityType of bucket.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket to be updated.
+//
+// - visibility: The VisibilityType defines on greenfield which can be PUBLIC_READ, PRIVATE or INHERIT
+//
+// - opt: The Options for customizing the transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error if update visibility failed, otherwise return nil.
 func (c *Client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 	visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption,
 ) (string, error) {
@@ -211,7 +257,19 @@ func (c *Client) UpdateBucketVisibility(ctx context.Context, bucketName string,
 	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
 }
 
-// UpdateBucketPaymentAddr  update the payment addr of bucket
+// UpdateBucketPaymentAddr - Update the payment address of bucket
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket to be updated.
+//
+// - paymentAddr: The payment address from which deduct the cost of bucket storage or quota.
+//
+// - opt: The Options for customizing the transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error if update payment address failed, otherwise return nil.
 func (c *Client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 	paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption,
 ) (string, error) {
@@ -224,7 +282,19 @@ func (c *Client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
 }
 
-// UpdateBucketInfo update the bucket meta on chain, including read quota, payment address or visibility
+// UpdateBucketInfo - Update the bucket meta on chain, including read quota, payment address or visibility
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket to be updated.
+//
+// - paymentAddr: The payment address from which deduct the cost of bucket storage or quota.
+//
+// - opts: The Options used to specify which metas need to be updated and the option to send transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error if update bucket meta failed, otherwise return nil.
 func (c *Client) UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error) {
 	bucketInfo, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
@@ -275,8 +345,15 @@ func (c *Client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 	return c.sendTxn(ctx, updateBucketMsg, opts.TxOpts)
 }
 
-// HeadBucket query the bucketInfo on chain, return the bucket info if exists
-// return err info if bucket not exist
+// HeadBucket - query the bucketInfo on chain by bucket name, return the bucket info if exists
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket to query.
+//
+// - ret1: The bucket specific metadata information, including Visibility, payment address, charged quota and so on.
+//
+// - ret2: Return error if bucket not exist, otherwise return nil.
 func (c *Client) HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error) {
 	queryHeadBucketRequest := storageTypes.QueryHeadBucketRequest{
 		BucketName: bucketName,
@@ -289,8 +366,15 @@ func (c *Client) HeadBucket(ctx context.Context, bucketName string) (*storageTyp
 	return queryHeadBucketResponse.BucketInfo, nil
 }
 
-// HeadBucketByID query the bucketInfo on chain by bucketId, return the bucket info if exists
-// return err info if bucket not exist
+// HeadBucketByID - query the bucketInfo on chain by the bucket id, return the bucket info if exists
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket to query.
+//
+// - ret1: The bucket specific metadata information, including Visibility, payment address, charged quota and so on.
+//
+// - ret2: Return error if bucket not exist, otherwise return nil.
 func (c *Client) HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error) {
 	headBucketRequest := &storageTypes.QueryHeadBucketByIdRequest{
 		BucketId: bucketID,
@@ -304,7 +388,21 @@ func (c *Client) HeadBucketByID(ctx context.Context, bucketID string) (*storageT
 	return headBucketResponse.BucketInfo, nil
 }
 
-// PutBucketPolicy apply bucket policy to the principal, return the txn hash
+// PutBucketPolicy - Apply bucket policy to the principal, return the txn hash
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - principalStr: Indicates the marshaled principal content of greenfield permission types, users can generate it by NewPrincipalWithAccount or NewPrincipalWithGroupId method.
+//
+// - statements: Policies outline the specific details of permissions, including the Effect, ActionList, and Resources.
+//
+// - opt: The options for customizing the policy expiration time and transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) PutBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal,
 	statements []*permTypes.Statement, opt types.PutPolicyOption,
 ) (string, error) {
@@ -320,7 +418,19 @@ func (c *Client) PutBucketPolicy(ctx context.Context, bucketName string, princip
 	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)
 }
 
-// DeleteBucketPolicy delete the bucket policy of the principal
+// DeleteBucketPolicy - Delete the bucket policy of the principal
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - principalStr: Indicates the marshaled principal content of greenfield permission types, users can generate it by NewPrincipalWithAccount or NewPrincipalWithGroupId method.
+//
+// - opt: The option for send delete policy transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) DeleteBucketPolicy(ctx context.Context, bucketName string, principalStr types.Principal, opt types.DeletePolicyOption) (string, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 	principal := &permTypes.Principal{}
@@ -331,7 +441,19 @@ func (c *Client) DeleteBucketPolicy(ctx context.Context, bucketName string, prin
 	return c.sendDelPolicyTxn(ctx, c.MustGetDefaultAccount().GetAddress(), resource, principal, opt.TxOpts)
 }
 
-// IsBucketPermissionAllowed check if the permission of bucket is allowed to the user.
+// IsBucketPermissionAllowed - Check if the permission of bucket is allowed to the user.
+//
+// - ctx: Context variables for the current API call.
+//
+// - userAddr: The HEX-encoded string of the user address
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - action: Indicates the permission corresponding to which type of action needs to be verified
+//
+// - ret1: Return EFFECT_ALLOW if the permission is allowed and EFFECT_DENY if the permission is denied
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) IsBucketPermissionAllowed(ctx context.Context, userAddr string,
 	bucketName string, action permTypes.ActionType,
 ) (permTypes.Effect, error) {
@@ -353,7 +475,15 @@ func (c *Client) IsBucketPermissionAllowed(ctx context.Context, userAddr string,
 	return verifyResp.Effect, nil
 }
 
-// GetBucketPolicy get the bucket policy info of the user specified by principalAddr.
+// GetBucketPolicy - Get the bucket policy info of the user specified by principalAddr.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - principalAddr: The HEX-encoded string of the principal address.
+//
+// - ret1: The bucket policy info defined on greenfield.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetBucketPolicy(ctx context.Context, bucketName string, principalAddr string) (*permTypes.Policy, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
 	if err != nil {
@@ -398,7 +528,15 @@ func (m *listBucketsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartE
 	return nil
 }
 
-// ListBuckets list buckets for the owner
+// ListBuckets - Lists the bucket info of the user. If the opts.Account is not set, the user is default set as the sender.
+//
+// - ctx: Context variables for the current API call.
+//
+// - opts: The options to set the meta to list the bucket
+//
+// - ret1: The result of list bucket
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error) {
 	params := url.Values{}
 	params.Set("include-removed", strconv.FormatBool(opts.ShowRemovedBucket))
@@ -465,8 +603,17 @@ func (c *Client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 	return listBucketsResult, nil
 }
 
-// ListBucketReadRecord returns the read record of this month, the return items should be no more than maxRecords
-// ListReadRecordOption indicates the start timestamp of return read records
+// ListBucketReadRecord - List the download record info of the specific bucket of the current month.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - opts: Indicates the start timestamp of return read records and the max number of return items
+//
+// - ret1: The read record info of the bucket returned by SP
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.QuotaRecordInfo{}, err
@@ -534,7 +681,15 @@ func (c *Client) ListBucketReadRecord(ctx context.Context, bucketName string, op
 	return QuotaRecords, nil
 }
 
-// GetBucketReadQuota return quota info of bucket of current month, include chain quota, free quota and consumed quota
+// GetBucketReadQuota - Query the quota info of the specific bucket of current month.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - ret1: The info of quota which contains the consumed quota, the charged quota and free quota info of the bucket
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetBucketReadQuota(ctx context.Context, bucketName string) (types.QuotaInfo, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.QuotaInfo{}, err
@@ -585,6 +740,15 @@ func (c *Client) GetBucketReadQuota(ctx context.Context, bucketName string) (typ
 	return QuotaResult, nil
 }
 
+// GetQuotaUpdateTime - Query the update time stamp of the bucket quota info.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - ret1: The update time stamp.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetQuotaUpdateTime(ctx context.Context, bucketName string) (int64, error) {
 	resp, err := c.chainClient.QueryQuotaUpdateTime(ctx, &storageTypes.QueryQuoteUpdateTimeRequest{
 		BucketName: bucketName,
