@@ -151,13 +151,25 @@ func (s *ValidatorTestSuite) Test_Validator_Operations() {
 	// query the new validator, status is BONDED again
 	validators, err = s.Client.ListValidators(context.Background(), "BOND_STATUS_BONDED")
 	s.Require().NoError(err)
-	isPresent = false
-	for _, v := range validators.Validators {
-		if v.SelfDelAddress == newValidatorAddr.String() {
-			isPresent = true
-		}
-	}
-	s.Require().True(isPresent)
+	s.Require().Equal(len(validators.Validators), 2)
+
+	// create a proposal to impeach the new Validator
+	s.Client.SetDefaultAccount(validator0Account)
+	proposalID, txHash, err = s.Client.ImpeachValidator(context.Background(), newValidatorAddr.String(), delegationAmount, "title", "summary ", "meta", gnfdsdktypes.TxOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, txHash)
+	s.Require().NoError(err)
+
+	// vote for the proposal
+	txHash, err = s.Client.VoteProposal(s.ClientContext, proposalID, govTypesV1.OptionYes, types.VoteProposalOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, txHash)
+	s.Require().NoError(err)
+	err = s.Client.WaitForNBlocks(s.ClientContext, 10)
+	s.Require().NoError(err)
+	validators, err = s.Client.ListValidators(context.Background(), "BOND_STATUS_BONDED")
+	s.Require().NoError(err)
+	s.Require().Equal(len(validators.Validators), 1)
 }
 
 func TestValidatorTestSuite(t *testing.T) {
