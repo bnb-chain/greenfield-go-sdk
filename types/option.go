@@ -6,7 +6,6 @@ import (
 
 	"cosmossdk.io/math"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
-	"github.com/bnb-chain/greenfield/types/common"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -22,10 +21,8 @@ type CreateBucketOptions struct {
 }
 
 type MigrateBucketOptions struct {
-	DstPrimarySPID       uint32
-	DstPrimarySPApproval common.Approval
-	TxOpts               *gnfdsdktypes.TxOption
-	IsAsyncMode          bool // indicate whether to create the bucket in asynchronous mode
+	TxOpts      *gnfdsdktypes.TxOption
+	IsAsyncMode bool // indicate whether to create the bucket in asynchronous mode
 }
 
 type CancelMigrateBucketOptions struct {
