@@ -29,7 +29,7 @@ type IPaymentClient interface {
 	ListUserPaymentAccounts(ctx context.Context, opts types.ListUserPaymentAccountsOptions) (types.ListUserPaymentAccountsResult, error)
 }
 
-// GetStreamRecord retrieves stream record information for a given stream address.
+// GetStreamRecord - Retrieve stream record information for a given stream address.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -50,7 +50,7 @@ func (c *Client) GetStreamRecord(ctx context.Context, streamAddress string) (*pa
 	return &pa.StreamRecord, nil
 }
 
-// Deposit deposits BNB to a stream account.
+// Deposit - Deposit BNB to a payment account.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -80,7 +80,12 @@ func (c *Client) Deposit(ctx context.Context, toAddress string, amount math.Int,
 	return tx.TxResponse.TxHash, nil
 }
 
-// Withdraw withdraws BNB from a stream account.
+// Withdraw - Withdraws BNB from a payment account.
+//
+// Withdrawal will trigger settlement, i.e., updating static balance and buffer balance.
+// If the withdrawal amount is greater than the static balance after settlement it will fail.
+// If the withdrawal amount is equal to or greater than 100BNB, it will be timelock-ed for 1 day duration.
+// And after the duration, a message without `from` field should be sent to get the funds.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -110,7 +115,9 @@ func (c *Client) Withdraw(ctx context.Context, fromAddress string, amount math.I
 	return tx.TxResponse.TxHash, nil
 }
 
-// DisableRefund disables refund/withdrawal for a stream account.
+// DisableRefund - Disable refund/withdrawal for a payment account.
+//
+// After disabling withdrawal of a payment account, no more withdrawal can be executed. The action cannot be reverted.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -137,7 +144,7 @@ func (c *Client) DisableRefund(ctx context.Context, paymentAddress string, txOpt
 	return tx.TxResponse.TxHash, nil
 }
 
-// ListUserPaymentAccounts lists payment info by user address.
+// ListUserPaymentAccounts - List payment info by a user address.
 //
 // - ctx: Context variables for the current API call.
 //
