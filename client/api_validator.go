@@ -77,7 +77,7 @@ func (c *Client) CreateValidator(ctx context.Context, description stakingtypes.D
 	if err = msg.ValidateBasic(); err != nil {
 		return 0, "", err
 	}
-	return c.SubmitProposal(ctx, []sdktypes.Msg{msg}, proposalDepositAmount, proposalTitle, proposalSummary, types.SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
+	return c.SubmitProposal(ctx, []sdktypes.Msg{msg}, proposalDepositAmount, proposalTitle, proposalSummary, types.SubmitProposalOptions{Metadata: proposalMetadata, TxOpts: txOption})
 }
 
 // EditValidator edits a existing validator info.
@@ -210,7 +210,7 @@ func (c *Client) ImpeachValidator(ctx context.Context, validatorAddr string, pro
 	}
 	govAccountAddr := govModule.GetAddress()
 	msg := slashingtypes.NewMsgImpeach(validator, govAccountAddr)
-	return c.SubmitProposal(ctx, []sdktypes.Msg{msg}, proposalDepositAmount, proposalTitle, proposalSummary, types.SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
+	return c.SubmitProposal(ctx, []sdktypes.Msg{msg}, proposalDepositAmount, proposalTitle, proposalSummary, types.SubmitProposalOptions{Metadata: proposalMetadata, TxOpts: txOption})
 }
 
 func pubKeyFromHex(pk string) (cryptotypes.PubKey, error) {

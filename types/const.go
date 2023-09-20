@@ -60,7 +60,7 @@ const (
 	MaxDownloadTryTime   = 3
 	DownloadBackOffDelay = time.Millisecond * 500
 
-	// MinPartSize - minimum part size 16MiB per object after which
+	// MinPartSize - minimum part size 32MiB per object after which
 	// putObject behaves internally as multipart.
 	MinPartSize = 1024 * 1024 * 32
 
