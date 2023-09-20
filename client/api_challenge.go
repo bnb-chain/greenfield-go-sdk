@@ -28,7 +28,10 @@ type IChallengeClient interface {
 	ChallengeParams(ctx context.Context, req *challengetypes.QueryParamsRequest) (*challengetypes.QueryParamsResponse, error)
 }
 
-// GetChallengeInfo sends request to storage provider, and returns the integrity hash and data stored on the sp.
+// GetChallengeInfo - Send request to storage provider, and get the integrity hash and data stored on the sp.
+//
+// This api is used for validators to judge whether a challenge valid or not. A validator's challenger account should be
+// provided when constructing the client, otherwise the authorization will fail.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -155,7 +158,10 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 	return result, nil
 }
 
-// SubmitChallenge challenges a storage provider's data integrity for a specific data object.
+// SubmitChallenge - Challenge a storage provider's data integrity for a specific data object.
+//
+// User can submit a challenge when he/she find his/her data is lost or tampered. A successful challenge will punish
+// the storage provider and reward the challenge submitter.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -193,7 +199,10 @@ func (c *Client) SubmitChallenge(ctx context.Context, challengerAddress, spOpera
 	return resp.TxResponse, nil
 }
 
-// AttestChallenge will send the attestation result of a challenge. The attestation can include a valid challenge or is only for heartbeat purpose.
+// AttestChallenge - Send the attestation result of a challenge.
+//
+// In-turn validator can submit the attestation when enough votes are collected.
+// The attestation can include a valid challenge or is only for heartbeat purpose.
 // If the challenge is valid, the related storage provider will be slashed, otherwise the storage provider will not be slashed.
 //
 // - ctx: Context variables for the current API call.
@@ -245,7 +254,7 @@ func (c *Client) AttestChallenge(ctx context.Context, submitterAddress, challeng
 	return resp.TxResponse, nil
 }
 
-// LatestAttestedChallenges will query the latest attested challenges (including heartbeat challenges).
+// LatestAttestedChallenges - Query the latest attested challenges (including heartbeat challenges).
 //
 // Greenfield will not keep the results of all challenges, only the latest ones will be kept and old ones will be pruned.
 //
@@ -260,9 +269,9 @@ func (c *Client) LatestAttestedChallenges(ctx context.Context, req *challengetyp
 	return c.chainClient.LatestAttestedChallenges(ctx, req)
 }
 
-// InturnAttestationSubmitter will query the in-turn validator to submit challenge attestation.
+// InturnAttestationSubmitter - Query the in-turn validator to submit challenge attestation.
 //
-// Greenfield will allow validators to submit challenge attestations in turn.
+// Greenfield will only allow the in-turn validator to submit challenge attestations.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -275,7 +284,7 @@ func (c *Client) InturnAttestationSubmitter(ctx context.Context, req *challenget
 	return c.chainClient.InturnAttestationSubmitter(ctx, req)
 }
 
-// ChallengeParams returns the on Greenfield parameters for challenge module.
+// ChallengeParams - Get challenge module's parameters of Greenfield blockchain.
 //
 // - ctx: Context variables for the current API call.
 //
