@@ -37,7 +37,7 @@ type Validator interface {
 	GrantDelegationForValidator(ctx context.Context, delegationAmount math.Int, txOption gnfdsdktypes.TxOption) (string, error)
 
 	UnJailValidator(ctx context.Context, txOption gnfdsdktypes.TxOption) (string, error)
-	ImpeachValidator(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
+	ImpeachValidator(ctx context.Context, validatorAddr string, proposalDepositAmount math.Int, proposalTitle, proposalSummary, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error)
 }
 
 func (c *client) ListValidators(ctx context.Context, status string) (*stakingtypes.QueryValidatorsResponse, error) {
@@ -204,17 +204,18 @@ func (c *client) UnJailValidator(ctx context.Context, txOption gnfdsdktypes.TxOp
 }
 
 // ImpeachValidator impeaches a validator
-func (c *client) ImpeachValidator(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error) {
+func (c *client) ImpeachValidator(ctx context.Context, validatorAddr string, proposalDepositAmount math.Int, proposalTitle, proposalSummary, proposalMetadata string, txOption gnfdsdktypes.TxOption) (uint64, string, error) {
 	validator, err := sdktypes.AccAddressFromHexUnsafe(validatorAddr)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
-	msg := slashingtypes.NewMsgImpeach(validator, c.MustGetDefaultAccount().GetAddress())
-	resp, err := c.BroadcastTx(ctx, []sdktypes.Msg{msg}, &txOption)
+	govModule, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
-	return resp.TxResponse.TxHash, nil
+	govAccountAddr := govModule.GetAddress()
+	msg := slashingtypes.NewMsgImpeach(validator, govAccountAddr)
+	return c.SubmitProposal(ctx, []sdktypes.Msg{msg}, proposalDepositAmount, proposalTitle, proposalSummary, types.SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
 }
 
 func pubKeyFromHex(pk string) (cryptotypes.PubKey, error) {
