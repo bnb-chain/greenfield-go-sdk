@@ -869,7 +869,17 @@ func (c *Client) GetObjectPolicy(ctx context.Context, bucketName, objectName str
 	return queryPolicyResp.Policy, nil
 }
 
-// ListObjects return object list of the specific bucket
+// ListObjects - Lists the object info of the bucket. If opts.ShowRemovedObject set to false, these objects will be skipped.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - opts: The options to set the meta to list the objects
+//
+// - ret1: The result of list objects under specific bucket
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return types.ListObjectsResult{}, err
@@ -1201,9 +1211,19 @@ func (m *listObjectsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartE
 	return nil
 }
 
-// ListObjectsByObjectID list objects by object ids
-// By inputting a collection of object IDs, we can retrieve the corresponding object data.
-// If the object is nonexistent or has been deleted, a null value will be returned
+// ListObjectsByObjectID - List objects by object ids. If opts.ShowRemovedObject set to false, these objects will be skipped.
+//
+// By inputting a collection of object IDs, we can retrieve the corresponding object data. If the object is nonexistent or has been deleted, a null value will be returned
+//
+// - ctx: Context variables for the current API call.
+//
+// - objectIds: The list of object ids
+//
+// - opts: The options to set the meta to list objects by object id
+//
+// - ret1: The result of object info map by given object ids
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error) {
 	const MaximumListObjectsSize = 100
 	if len(objectIds) == 0 || len(objectIds) > MaximumListObjectsSize {
@@ -1270,7 +1290,23 @@ func (c *Client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, 
 	return objects, nil
 }
 
-// ListObjectPolicies list object policies by object info and action type
+// ListObjectPolicies - List object policies by object info and action type.
+//
+// If the limit is set to 0, it will default to 50. If the limit exceeds 1000, only 1000 records will be returned.
+//
+// - ctx: Context variables for the current API call.
+//
+// - objectName: The object name identifies the object.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - actionType: The action type defines the requested action type of permission.
+//
+// - opts: The options to set the meta to list object policies
+//
+// - ret1: The result of object policy meta
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error) {
 	params := url.Values{}
 	params.Set("object-policies", "")

@@ -151,6 +151,7 @@ type ListReadRecordOptions struct {
 	MaxRecords     int
 }
 
+// ListObjectsOptions indicates the metadata to list the object info of the bucket
 type ListObjectsOptions struct {
 	// ShowRemovedObject determines whether to include objects that have been marked as removed in the list.
 	// If set to false, these objects will be skipped.
@@ -232,6 +233,7 @@ type GetSecondaryPieceOptions struct {
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+// ListGroupsOptions indicates the metadata to list the group info by given prefix and name
 type ListGroupsOptions struct {
 	SourceType string
 	Limit      int64
@@ -240,6 +242,7 @@ type ListGroupsOptions struct {
 	SPAddress  string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+// GroupMembersPaginationOptions indicates the metadata to list the group members pagination info
 type GroupMembersPaginationOptions struct {
 	// Limit determines the number of group data records to be returned.
 	// If the limit is set to 0, it will default to 50.
@@ -251,6 +254,7 @@ type GroupMembersPaginationOptions struct {
 	SPAddress  string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+// GroupsOwnerPaginationOptions indicates the metadata to list user owned groups pagination info
 type GroupsOwnerPaginationOptions struct {
 	// Limit determines the number of group data records to be returned.
 	// If the limit is set to 0, it will default to 50.
@@ -265,6 +269,7 @@ type GroupsOwnerPaginationOptions struct {
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+// GroupsPaginationOptions indicates the metadata to list of all groups that the user has joined pagination info
 type GroupsPaginationOptions struct {
 	// Limit determines the number of group data records to be returned.
 	// If the limit is set to 0, it will default to 50.
@@ -296,11 +301,13 @@ func (o *GetObjectOptions) SetRange(start, end int64) error {
 	return nil
 }
 
+// EndPointOptions indicates the metadata to choose sp by given endpoint or sp address
 type EndPointOptions struct {
 	Endpoint  string // indicates the endpoint of sp
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+// ListBucketsOptions indicates the medata to list the bucket info of the user
 type ListBucketsOptions struct {
 	// ShowRemovedObject determines whether to include buckets that have been marked as removed in the list.
 	// If set to false, these buckets will be skipped.
@@ -314,11 +321,13 @@ type ListBucketsOptions struct {
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+// ListBucketsByPaymentAccountOptions indicates the medata to list bucket info by payment account
 type ListBucketsByPaymentAccountOptions struct {
 	Endpoint  string // indicates the endpoint of sp
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+// ListUserPaymentAccountsOptions indicates the medata to list payment info by user address
 type ListUserPaymentAccountsOptions struct {
 	// Account defines the user account address
 	// if account is set to "", it will default to current user address
@@ -327,6 +336,7 @@ type ListUserPaymentAccountsOptions struct {
 	SPAddress string // indicates the HEX-encoded string of the sp address to be challenged
 }
 
+// ListObjectPoliciesOptions indicates the medata to list object policies by object info and action type
 type ListObjectPoliciesOptions struct {
 	// Limit determines the number of policies data records to be returned.
 	// If the limit is set to 0, it will default to 50.

@@ -534,7 +534,7 @@ func (m *listBucketsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartE
 //
 // - opts: The options to set the meta to list the bucket
 //
-// - ret1: The result of list bucket
+// - ret1: The result of list bucket under specific user address
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions) (types.ListBucketsResult, error) {
@@ -781,9 +781,19 @@ func (c *Client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 	return resp.TxResponse.TxHash, err
 }
 
-// ListBucketsByBucketID list buckets by bucket ids
-// By inputting a collection of bucket IDs, we can retrieve the corresponding bucket data.
-// If the bucket is nonexistent or has been deleted, a null value will be returned
+// ListBucketsByBucketID - List buckets by bucket ids.
+//
+// By inputting a collection of bucket IDs, we can retrieve the corresponding bucket data. If the bucket is nonexistent or has been deleted, a null value will be returned
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketIds: The list of bucket ids
+//
+// - opts: The options to set the meta to list buckets by bucket id
+//
+// - ret1: The result of bucket info map by given bucket ids
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error) {
 	const MaximumListBucketsSize = 1000
 	if len(bucketIds) == 0 || len(bucketIds) > MaximumListBucketsSize {
@@ -959,7 +969,19 @@ func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 	return c.SubmitProposal(ctx, []sdk.Msg{cancelBucketMsg}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOpts})
 }
 
-// ListBucketsByPaymentAccount list bucket by payment account
+// ListBucketsByPaymentAccount - List bucket info by payment account.
+//
+// By inputting a collection of bucket IDs, we can retrieve the corresponding bucket data. If the bucket is nonexistent or has been deleted, a null value will be returned
+//
+// - ctx: Context variables for the current API call.
+//
+// - paymentAccount: Payment account defines the address of payment account
+//
+// - opts: The options to set the meta to list buckets by payment account
+//
+// - ret1: The result of bucket info under specific payment account
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error) {
 
 	_, err := sdk.AccAddressFromHexUnsafe(paymentAccount)
