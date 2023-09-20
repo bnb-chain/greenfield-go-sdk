@@ -35,7 +35,7 @@ type IValidatorClient interface {
 	ImpeachValidator(ctx context.Context, validatorAddr string, txOption gnfdsdktypes.TxOption) (string, error)
 }
 
-// ListValidators lists all validators (if status is empty string) or validators filtered by status.
+// ListValidators - List all validators (if status is empty string) or validators filtered by status.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -48,7 +48,7 @@ func (c *Client) ListValidators(ctx context.Context, status string) (*stakingtyp
 	return c.chainClient.StakingQueryClient.Validators(ctx, &stakingtypes.QueryValidatorsRequest{Status: status})
 }
 
-// CreateValidator submits a proposal to the Greenfield for creating a validator, and it returns a proposal ID and tx hash.
+// CreateValidator - Submit a proposal to Greenfield for creating a validator, and return a proposal id and tx hash.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -127,7 +127,7 @@ func (c *Client) CreateValidator(ctx context.Context, description stakingtypes.D
 	return c.SubmitProposal(ctx, []sdktypes.Msg{msg}, proposalDepositAmount, proposalTitle, proposalSummary, types.SubmitProposalOptions{Metadata: proposalMetadata, TxOption: txOption})
 }
 
-// EditValidator edits a existing validator info.
+// EditValidator - Edit an existing validator's info.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -169,7 +169,7 @@ func (c *Client) EditValidator(ctx context.Context, newDescription stakingtypes.
 	return resp.TxResponse.TxHash, nil
 }
 
-// DelegateValidator makes a delegation to a validator by delegator.
+// DelegateValidator - Make a delegation to a validator by the delegator.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -195,7 +195,7 @@ func (c *Client) DelegateValidator(ctx context.Context, validatorAddr string, am
 	return resp.TxResponse.TxHash, nil
 }
 
-// BeginRedelegate delegates coins from a delegator and source validator to a destination validator.
+// BeginRedelegate - Delegate coins from a delegator and source validator to a destination validator.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -227,7 +227,7 @@ func (c *Client) BeginRedelegate(ctx context.Context, validatorSrcAddr, validato
 	return resp.TxResponse.TxHash, nil
 }
 
-// Undelegate undelegates tokens from a validator by the delegator.
+// Undelegate - Undelegate tokens from a validator by the delegator.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -253,7 +253,7 @@ func (c *Client) Undelegate(ctx context.Context, validatorAddr string, amount ma
 	return resp.TxResponse.TxHash, nil
 }
 
-// CancelUnbondingDelegation cancel the unbonding delegation by delegator.
+// CancelUnbondingDelegation - Cancel the unbonding delegation by the delegator.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -281,7 +281,7 @@ func (c *Client) CancelUnbondingDelegation(ctx context.Context, validatorAddr st
 	return resp.TxResponse.TxHash, nil
 }
 
-// GrantDelegationForValidator grant the gov module for proposal execution.
+// GrantDelegationForValidator - Grant the gov module for proposal execution.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -319,7 +319,9 @@ func (c *Client) GrantDelegationForValidator(ctx context.Context, delegationAmou
 	return resp.TxResponse.TxHash, nil
 }
 
-// UnJailValidator unjails a validator. The default account's address will be treated the validator address to unjail.
+// UnJailValidator - Unjail a validator.
+//
+// The default account's address will be treated the validator address to unjail.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -337,7 +339,7 @@ func (c *Client) UnJailValidator(ctx context.Context, txOption gnfdsdktypes.TxOp
 	return resp.TxResponse.TxHash, nil
 }
 
-// ImpeachValidator impeaches a validator.
+// ImpeachValidator - Impeach a validator.
 //
 // - ctx: Context variables for the current API call.
 //
