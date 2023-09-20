@@ -66,13 +66,13 @@ func (c *Client) EnableTrace(output io.Writer, onlyTraceErr bool) {
 
 // GetNodeInfo - Get the current node info of the greenfield that the Client is connected to.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// ret1: The Node info.
+// - ret1: The Node info.
 //
-// ret2: The Version info.
+// - ret2: The Version info.
 //
-// ret3: Return error when the request failed, otherwise return nil.
+// - ret3: Return error when the request failed, otherwise return nil.
 func (c *Client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error) {
 	nodeInfoResponse, err := c.chainClient.TmClient.GetNodeInfo(ctx, &tmservice.GetNodeInfoRequest{})
 	if err != nil {
@@ -83,7 +83,7 @@ func (c *Client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmserv
 
 // GetStatus - Get the status of connected Node.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
 // - ret1: The detail of Node status.
 //
@@ -94,9 +94,9 @@ func (c *Client) GetStatus(ctx context.Context) (*ctypes.ResultStatus, error) {
 
 // GetCommit - Get the block commit detail.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// height: The block height.
+// - height: The block height.
 //
 // - ret1: The commit result.
 //
@@ -107,15 +107,15 @@ func (c *Client) GetCommit(ctx context.Context, height int64) (*ctypes.ResultCom
 
 // BroadcastRawTx - Broadcast raw transaction bytes to a Tendermint node.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// txBytes: The transaction bytes.
+// - txBytes: The transaction bytes.
 //
-// sync: A flag to specify the transaction mode. If it is true, the transaction is broadcast synchronously. If it is false, the transaction is broadcast asynchronously.
+// - sync: A flag to specify the transaction mode. If it is true, the transaction is broadcast synchronously. If it is false, the transaction is broadcast asynchronously.
 //
-// ret1: Transaction response, it can indicate both success and failed transaction.
+// - ret1: Transaction response, it can indicate both success and failed transaction.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) (*sdk.TxResponse, error) {
 	var mode tx.BroadcastMode
 	if sync {
@@ -132,15 +132,15 @@ func (c *Client) BroadcastRawTx(ctx context.Context, txBytes []byte, sync bool) 
 
 // SimulateRawTx - Simulate the execution of a raw transaction on the blockchain without broadcasting it to the network.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// txBytes: The transaction bytes.
+// - txBytes: The transaction bytes.
 //
-// opt: The grpc option(s) if Client is using grpc connection.
+// - opts: The grpc option(s) if Client is using grpc connection.
 //
-// ret1: The simulation result.
+// - ret1: The simulation result.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
 	simulateResponse, err := c.chainClient.TxClient.Simulate(
 		ctx,
@@ -157,11 +157,11 @@ func (c *Client) SimulateRawTx(ctx context.Context, txBytes []byte, opts ...grpc
 
 // GetLatestBlock - Get the latest block from the chain.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// ret1: The block result.
+// - ret1: The block result.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetLatestBlock(ctx context.Context) (*bfttypes.Block, error) {
 	res, err := c.chainClient.GetBlock(ctx, nil)
 	if err != nil {
@@ -172,11 +172,11 @@ func (c *Client) GetLatestBlock(ctx context.Context) (*bfttypes.Block, error) {
 
 // GetLatestBlockHeight - Get the height of the latest block from the chain.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// ret1: The block height.
+// - ret1: The block height.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetLatestBlockHeight(ctx context.Context) (int64, error) {
 	resp, err := c.GetLatestBlock(ctx)
 	if err != nil {
@@ -187,9 +187,9 @@ func (c *Client) GetLatestBlockHeight(ctx context.Context) (int64, error) {
 
 // WaitForBlockHeight - Wait until a specified block height is committed.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// ret: Return error when the request failed, otherwise return nil.
+// - ret: Return error when the request failed, otherwise return nil.
 func (c *Client) WaitForBlockHeight(ctx context.Context, h int64) error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -212,20 +212,20 @@ func (c *Client) WaitForBlockHeight(ctx context.Context, h int64) error {
 
 // WaitForNextBlock - Wait until the next block is committed since current block.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// ret: Return error when the request failed, otherwise return nil.
+// - ret: Return error when the request failed, otherwise return nil.
 func (c *Client) WaitForNextBlock(ctx context.Context) error {
 	return c.WaitForNBlocks(ctx, 1)
 }
 
 // WaitForNBlocks - Wait for another n blocks to be committed since current block.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// n: number of blocks to be waited.
+// - n: number of blocks to be waited.
 //
-// ret: Return error when the request failed, otherwise return nil.
+// - ret: Return error when the request failed, otherwise return nil.
 func (c *Client) WaitForNBlocks(ctx context.Context, n int64) error {
 	start, err := c.GetLatestBlock(ctx)
 	if err != nil {
@@ -236,13 +236,13 @@ func (c *Client) WaitForNBlocks(ctx context.Context, n int64) error {
 
 // WaitForTx - Wait for a transaction to be confirmed onchian, if transaction not found in current block, wait for the next block. API ends when a transaction is found or context is canceled.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// hash: The hex representation of transaction hash.
+// - hash: The hex representation of transaction hash.
 //
-// ret1: The transaction result details.
+// - ret1: The transaction result details.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, error) {
 	for {
 		var (
@@ -288,45 +288,45 @@ func (c *Client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 
 // BroadcastTx - Broadcast a transaction containing the provided message(s) to the chain.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// msgs: Message(s) to be broadcast to blockchain.
+// - msgs: Message(s) to be broadcast to blockchain.
 //
-// txOpt: txOpt contains options for customizing the transaction.
+// - txOpt: txOpt contains options for customizing the transaction.
 //
-// opt: The grpc option(s) if Client is using grpc connection.
+// - opts: The grpc option(s) if Client is using grpc connection.
 //
-// ret1: transaction response, it can indicate both success and failed transaction.
+// - ret1: transaction response, it can indicate both success and failed transaction.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
 	return c.chainClient.BroadcastTx(ctx, msgs, &txOpt, opts...)
 }
 
 // SimulateTx - Simulate a transaction containing the provided message(s) on the chain.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// msgs: Message(s) to be broadcast to blockchain.
+// - msgs: Message(s) to be broadcast to blockchain.
 //
-// txOpt: TxOpt contains options for customizing the transaction.
+// - txOpt: TxOpt contains options for customizing the transaction.
 //
-// opt: The grpc option(s) if Client is using grpc connection.
+// - opts: The grpc option(s) if Client is using grpc connection.
 //
-// ret1: The simulation result.
+// - ret1: The simulation result.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) SimulateTx(ctx context.Context, msgs []sdk.Msg, txOpt types.TxOption, opts ...grpc.CallOption) (*tx.SimulateResponse, error) {
 	return c.chainClient.SimulateTx(ctx, msgs, &txOpt, opts...)
 }
 
 // GetSyncing - Retrieve the syncing status of the node.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// ret1: The boolean value which indicates whether the node has caught up the latest block.
+// - ret1: The boolean value which indicates whether the node has caught up the latest block.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetSyncing(ctx context.Context) (bool, error) {
 	syncing, err := c.chainClient.GetSyncing(ctx, &tmservice.GetSyncingRequest{})
 	if err != nil {
@@ -337,13 +337,13 @@ func (c *Client) GetSyncing(ctx context.Context) (bool, error) {
 
 // GetBlockByHeight - Retrieve the block at the given height from the chain.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// height: The block height.
+// - height: The block height.
 //
-// ret1: The boolean value which indicates whether the node has caught up the latest block.
+// - ret1: The boolean value which indicates whether the node has caught up the latest block.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetBlockByHeight(ctx context.Context, height int64) (*bfttypes.Block, error) {
 	blockByHeight, err := c.chainClient.GetBlock(ctx, &height)
 	if err != nil {
@@ -354,26 +354,26 @@ func (c *Client) GetBlockByHeight(ctx context.Context, height int64) (*bfttypes.
 
 // GetBlockResultByHeight - Retrieve the block result at the given height from the chain.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// height: The block height.
+// - height: The block height.
 //
-// ret1: The boolean value which indicates whether the node has caught up the latest block.
+// - ret1: The boolean value which indicates whether the node has caught up the latest block.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetBlockResultByHeight(ctx context.Context, height int64) (*ctypes.ResultBlockResults, error) {
 	return c.chainClient.GetBlockResults(ctx, &height)
 }
 
 // GetValidatorSet - Retrieve the latest validator set from the chain.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// ret1: The latest height of block that validators set info retrieved from.
+// - ret1: The latest height of block that validators set info retrieved from.
 //
-// ret2: The list of validators.
+// - ret2: The list of validators.
 //
-// ret3: Return error when the request failed, otherwise return nil.
+// - ret3: Return error when the request failed, otherwise return nil.
 func (c *Client) GetValidatorSet(ctx context.Context) (int64, []*bfttypes.Validator, error) {
 	validatorSetResponse, err := c.chainClient.GetValidators(ctx, nil)
 	if err != nil {
@@ -384,13 +384,13 @@ func (c *Client) GetValidatorSet(ctx context.Context) (int64, []*bfttypes.Valida
 
 // GetValidatorsByHeight - Retrieve the validator set at a given block height from the chain.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// height: The block height.
+// - height: The block height.
 //
-// ret1: The list of validators.
+// - ret1: The list of validators.
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetValidatorsByHeight(ctx context.Context, height int64) ([]*bfttypes.Validator, error) {
 	validatorSetResponse, err := c.chainClient.GetValidators(ctx, &height)
 	if err != nil {
@@ -401,26 +401,26 @@ func (c *Client) GetValidatorsByHeight(ctx context.Context, height int64) ([]*bf
 
 // BroadcastVote - Broadcast a vote to the Node's VotePool, it is used by Greenfield relayer and challengers by now.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// vote: Contains vote details.
+// - vote: Contains vote details.
 //
-// ret: Return error when the request failed, otherwise return nil.
+// - ret: Return error when the request failed, otherwise return nil.
 func (c *Client) BroadcastVote(ctx context.Context, vote votepool.Vote) error {
 	return c.chainClient.BroadcastVote(ctx, vote)
 }
 
 // QueryVote - Query a vote from the Node's VotePool, it is used by Greenfield relayer and challengers by now.
 //
-// ctx: Context variables for the current API call.
+// - ctx: Context variables for the current API call.
 //
-// eventType: The type of vote to be queried.
+// - eventType: The type of vote to be queried.
 //
-// eventHash: The hash bytes of vote
+// - eventHash: The hash bytes of vote
 //
-// ret1: The vote result
+// - ret1: The vote result
 //
-// ret2: Return error when the request failed, otherwise return nil.
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) QueryVote(ctx context.Context, eventType int, eventHash []byte) (*ctypes.ResultQueryVote, error) {
 	return c.chainClient.QueryVote(ctx, eventType, eventHash)
 }
