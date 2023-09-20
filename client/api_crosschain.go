@@ -150,6 +150,7 @@ func (c *Client) GetChannelReceiveSequence(ctx context.Context, destChainId sdk.
 // - ctx: Context variables for the current API call.
 //
 // - req: The request to query in-turn relayer.
+//
 // - ret1: The response of the `QueryInturnRelayerRequest` query.
 //
 // - ret2: Return error if the query failed, otherwise return nil.
