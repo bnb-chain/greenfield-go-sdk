@@ -41,11 +41,11 @@ type QueryPieceInfo struct {
 	RedundancyIndex int
 }
 
-// ChallengeResult indicates the challenge hash and data results
+// ChallengeResult includes the integrity hash, data results and hashes for storage provide to respond to challenges.
 type ChallengeResult struct {
-	PieceData     io.ReadCloser
-	IntegrityHash string
-	PiecesHash    []string
+	IntegrityHash string        // the integrity hash of the challenged object
+	PieceData     io.ReadCloser // the data of the segment/piece being challenged
+	PiecesHash    []string      // the hashes of the object's segments/pieces
 }
 
 func RandStr(n int) string {
