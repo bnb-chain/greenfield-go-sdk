@@ -90,7 +90,7 @@ type Option struct {
 	// OffChainAuthOption consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
 	//
 	// This property should not be set in most cases unless you want to use go-sdk to test if the SP support off-chain-auth feature.
-	// Once this property is set, the request will be signed in "off-chain-auth" way rather than v1.
+	// Once this property is set, the request will be signed in "GNFD1-EDDSA" way rather than GNFD1-ECDSA.
 	OffChainAuthOption *OffChainAuthOption
 	// UseWebSocketConn specifies that connection to Chain is via websocket.
 	UseWebSocketConn bool
