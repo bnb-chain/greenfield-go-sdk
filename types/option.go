@@ -160,7 +160,6 @@ type ListReadRecordOptions struct {
 	MaxRecords     int
 }
 
-
 // ListObjectsOptions contains the options for `ListObjects` API.
 type ListObjectsOptions struct {
 	// ShowRemovedObject determines whether to include objects that have been marked as removed in the list.
@@ -226,7 +225,7 @@ type GetObjectOptions struct {
 	PartSize         uint64 // PartSize indicate the resumable download's part size, download a large file in multiple parts. The part size is an integer multiple of the segment size.
 }
 
-// GetChallengeInfoOptions contains the options for `GetChallengeInfo` API.
+// GetChallengeInfoOptions contains the options for querying challenge data.
 type GetChallengeInfoOptions struct {
 	Endpoint  string // Endpoint indicates the endpoint of sp
 	SPAddress string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
@@ -247,7 +246,6 @@ type ListGroupsOptions struct {
 	SPAddress  string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
 
-
 // GroupMembersPaginationOptions contains the options for `ListGroupMembers` API.
 type GroupMembersPaginationOptions struct {
 	// Limit determines the number of group data records to be returned.
@@ -258,7 +256,6 @@ type GroupMembersPaginationOptions struct {
 	Endpoint   string // indicates the endpoint of sp.
 	SPAddress  string // indicates the HEX-encoded string of the sp address to be challenged.
 }
-
 
 // GroupsOwnerPaginationOptions contains the options for `ListGroupsByOwner` API.
 type GroupsOwnerPaginationOptions struct {
@@ -271,7 +268,6 @@ type GroupsOwnerPaginationOptions struct {
 	Endpoint   string // Endpoint indicates the endpoint of sp.
 	SPAddress  string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
-
 
 // GroupsPaginationOptions contains the options for `ListGroupsByAccount` API.
 type GroupsPaginationOptions struct {
@@ -302,13 +298,11 @@ func (o *GetObjectOptions) SetRange(start, end int64) error {
 	return nil
 }
 
-
 // EndPointOptions contains the options for querying a specified SP.
 type EndPointOptions struct {
 	Endpoint  string // Endpoint indicates the endpoint of sp.
 	SPAddress string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
-
 
 // ListBucketsOptions contains the options for `ListBuckets` API.
 type ListBucketsOptions struct {
@@ -317,7 +311,6 @@ type ListBucketsOptions struct {
 	Endpoint          string // Endpoint indicates the endpoint of sp.
 	SPAddress         string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
-
 
 // ListBucketsByPaymentAccountOptions contains the options for `ListBucketsByPaymentAccount` API.
 type ListBucketsByPaymentAccountOptions struct {
@@ -331,7 +324,6 @@ type ListUserPaymentAccountsOptions struct {
 	Endpoint  string // Endpoint indicates the endpoint of sp.
 	SPAddress string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
-
 
 // ListObjectPoliciesOptions contains the options for `ListObjectPolicies` API.
 type ListObjectPoliciesOptions struct {
