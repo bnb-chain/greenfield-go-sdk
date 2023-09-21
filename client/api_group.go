@@ -74,7 +74,6 @@ type Group interface {
 	// ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
 	// By default, the user is the sender. Other users can be set using the option
 	ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error)
-	// ListGroupsByGroupID list groups by group ids
 	ListGroupsByGroupID(ctx context.Context, groupIDs []uint64, opts types.EndPointOptions) (types.ListGroupsByGroupIDResponse, error)
 }
 
@@ -571,17 +570,18 @@ func (c *client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPa
 	return groups, nil
 }
 
-type GfSpListGroupsByGroupIDsResponse map[uint64]*types.GroupMeta
+type gfSpListGroupsByGroupIDsResponse map[uint64]*types.GroupMeta
 
-type GroupEntry struct {
+type groupEntry struct {
 	Id    uint64
 	Value *types.GroupMeta
 }
 
-func (m *GfSpListGroupsByGroupIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	*m = GfSpListGroupsByGroupIDsResponse{}
+// UnmarshalXML unmarshal gfSpListGroupsByGroupIDsResponse xml response type
+func (m *gfSpListGroupsByGroupIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	*m = gfSpListGroupsByGroupIDsResponse{}
 	for {
-		var e GroupEntry
+		var e groupEntry
 
 		err := d.Decode(&e)
 		if err == io.EOF {
@@ -665,7 +665,7 @@ func (c *client) ListGroupsByGroupID(ctx context.Context, groupIDs []uint64, opt
 
 	groups := types.ListGroupsByGroupIDResponse{}
 	bufStr := buf.String()
-	err = xml.Unmarshal([]byte(bufStr), (*GfSpListGroupsByGroupIDsResponse)(&groups.Groups))
+	err = xml.Unmarshal([]byte(bufStr), (*gfSpListGroupsByGroupIDsResponse)(&groups.Groups))
 	if err != nil && groups.Groups == nil {
 		log.Error().Msgf("the list of groups in group ids:%v failed: %s", groups, err.Error())
 		return types.ListGroupsByGroupIDResponse{}, err
