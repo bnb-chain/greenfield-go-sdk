@@ -20,16 +20,24 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
+// IPaymentClient - Client APIs for operating and querying Greenfield payment accounts and stream records.
 type IPaymentClient interface {
 	GetStreamRecord(ctx context.Context, streamAddress string) (*paymentTypes.StreamRecord, error)
-
 	Deposit(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
 	Withdraw(ctx context.Context, fromAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error)
 	DisableRefund(ctx context.Context, paymentAddress string, txOption gnfdSdkTypes.TxOption) (string, error)
 	ListUserPaymentAccounts(ctx context.Context, opts types.ListUserPaymentAccountsOptions) (types.ListUserPaymentAccountsResult, error)
 }
 
-// GetStreamRecord retrieves stream record information for a given stream address.
+// GetStreamRecord - Retrieve stream record information for a given stream address.
+//
+// - ctx: Context variables for the current API call.
+//
+// - streamAddress: The address of the stream record to be queried.
+//
+// - ret1: The stream record information, including balances and net flow rate.
+//
+// - ret2: Return error when getting challenge info failed, otherwise return nil.
 func (c *Client) GetStreamRecord(ctx context.Context, streamAddress string) (*paymentTypes.StreamRecord, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(streamAddress)
 	if err != nil {
@@ -42,7 +50,19 @@ func (c *Client) GetStreamRecord(ctx context.Context, streamAddress string) (*pa
 	return &pa.StreamRecord, nil
 }
 
-// Deposit deposits BNB to a stream account.
+// Deposit - Deposit BNB to a payment account.
+//
+// - ctx: Context variables for the current API call.
+//
+// - toAddress: The address of the stream record to receive the deposit.
+//
+// - amount: The amount to deposit.
+//
+// - txOption: The options for sending the tx.
+//
+// - ret1: The response of Greenfield transaction.
+//
+// - ret2: Return error when deposit tx failed, otherwise return nil.
 func (c *Client) Deposit(ctx context.Context, toAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(toAddress)
 	if err != nil {
@@ -60,7 +80,24 @@ func (c *Client) Deposit(ctx context.Context, toAddress string, amount math.Int,
 	return tx.TxResponse.TxHash, nil
 }
 
-// Withdraw withdraws BNB from a stream account.
+// Withdraw - Withdraws BNB from a payment account.
+//
+// Withdrawal will trigger settlement, i.e., updating static balance and buffer balance.
+// If the withdrawal amount is greater than the static balance after settlement it will fail.
+// If the withdrawal amount is equal to or greater than 100BNB, it will be timelock-ed for 1 day duration.
+// And after the duration, a message without `from` field should be sent to get the funds.
+//
+// - ctx: Context variables for the current API call.
+//
+// - fromAddress: The address of the stream record to withdraw from.
+//
+// - amount: The amount to withdraw.
+//
+// - txOption: The options for sending the tx.
+//
+// - ret1: The response of Greenfield transaction.
+//
+// - ret2: Return error when withdrawal tx failed, otherwise return nil.
 func (c *Client) Withdraw(ctx context.Context, fromAddress string, amount math.Int, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(fromAddress)
 	if err != nil {
@@ -78,7 +115,19 @@ func (c *Client) Withdraw(ctx context.Context, fromAddress string, amount math.I
 	return tx.TxResponse.TxHash, nil
 }
 
-// DisableRefund disables refund for a stream account.
+// DisableRefund - Disable refund/withdrawal for a payment account.
+//
+// After disabling withdrawal of a payment account, no more withdrawal can be executed. The action cannot be reverted.
+//
+// - ctx: Context variables for the current API call.
+//
+// - paymentAddress: The address of the payment account to disable refund/withdrawal.
+//
+// - txOption: The options for sending the tx.
+//
+// - ret1: The response of Greenfield transaction.
+//
+// - ret2: Return error when disable refund tx failed, otherwise return nil.
 func (c *Client) DisableRefund(ctx context.Context, paymentAddress string, txOption gnfdSdkTypes.TxOption) (string, error) {
 	accAddress, err := sdk.AccAddressFromHexUnsafe(paymentAddress)
 	if err != nil {
@@ -95,7 +144,15 @@ func (c *Client) DisableRefund(ctx context.Context, paymentAddress string, txOpt
 	return tx.TxResponse.TxHash, nil
 }
 
-// ListUserPaymentAccounts list payment info by user address
+// ListUserPaymentAccounts - List payment info by a user address.
+//
+// - ctx: Context variables for the current API call.
+//
+// - opts: The options to define the user address for querying.
+//
+// - ret1: The response of streams records for the user address.
+//
+// - ret2: Return error when querying payment accounts failed, otherwise return nil.
 func (c *Client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUserPaymentAccountsOptions) (types.ListUserPaymentAccountsResult, error) {
 	params := url.Values{}
 	params.Set("user-payments", "")
