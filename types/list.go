@@ -75,8 +75,8 @@ type ListBucketsByPaymentAccountResult struct {
 }
 
 type ListUserPaymentAccountsResult struct {
-	// StreamRecords defines the list of stream records
-	StreamRecords []*StreamRecordsMeta `xml:"StreamRecords"`
+	// PaymentAccount defines the list of payment accounts
+	PaymentAccounts []*PaymentAccounts `xml:"PaymentAccounts"`
 }
 
 type ListGroupsResult struct {
@@ -274,6 +274,12 @@ type ListBucketsByBucketIDResponse struct {
 	Buckets map[uint64]*BucketMeta `xml:"Buckets"`
 }
 
+// ListGroupsByGroupIDResponse is response type for the ListGroupsByGroupID
+type ListGroupsByGroupIDResponse struct {
+	// Groups defines the information of a group map
+	Groups map[uint64]*GroupMeta `xml:"Groups"`
+}
+
 // GroupMeta is the structure for group information
 type GroupMeta struct {
 	// group defines the basic group info
@@ -308,11 +314,11 @@ type GroupInfo struct {
 	Extra string `xml:"Extra"`
 }
 
-type StreamRecordsMeta struct {
+type PaymentAccounts struct {
+	// refundable defines the payment account is refundable or not
+	PaymentAccount *PaymentAccount `xml:"PaymentAccount"`
 	// stream_records defines stream payment records of a stream account
 	StreamRecord *StreamRecord `xml:"StreamRecord"`
-	// refundable defines the payment account is refundable or not
-	Refundable bool `xml:"Refundable"`
 }
 
 // StreamRecord defines Record of a stream account
@@ -339,6 +345,20 @@ type StreamRecord struct {
 	OutFlowCount uint64 `xml:"OutFlowCount"`
 	// the frozen netflow rate, which is used when resuming stream account
 	FrozenNetflowRate int64 `xml:"FrozenNetflowRate"`
+}
+
+// PaymentAccount defines payment account info
+type PaymentAccount struct {
+	// Address defines the address of payment account
+	Address string `xml:"Address"`
+	// Owner defines the owner of this payment account
+	Owner string `xml:"Owner"`
+	// Refundable defines the payment account is refundable or not
+	Refundable bool `xml:"Refundable"`
+	// UpdateAt defines the update block height of this payment account
+	UpdateAt int64 `xml:"UpdateAt"`
+	// UpdateTime defines the update time of this payment account
+	UpdateTime int64 `xml:"UpdateTime"`
 }
 
 type ListObjectPoliciesResponse struct {
