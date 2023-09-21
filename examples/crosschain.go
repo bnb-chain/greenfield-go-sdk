@@ -31,7 +31,7 @@ func main() {
 	mirrorBucket(cli, ctx)
 }
 
-func transferOut(cli client.Client, ctx context.Context) {
+func transferOut(cli client.IClient, ctx context.Context) {
 	// cross chain transfer to BSC
 	txResp, err := cli.TransferOut(ctx, toAddress, math.NewInt(123456), gnfdSdkTypes.TxOption{})
 	handleErr(err, "crossChainTransfer")
@@ -40,7 +40,7 @@ func transferOut(cli client.Client, ctx context.Context) {
 	log.Printf("the tx log is %s", txResp.String())
 }
 
-func mirrorBucket(cli client.Client, ctx context.Context) {
+func mirrorBucket(cli client.IClient, ctx context.Context) {
 	// get storage providers list
 	spLists, err := cli.ListStorageProviders(ctx, true)
 	if err != nil {
