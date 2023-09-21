@@ -199,7 +199,19 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 	return txnHash, nil
 }
 
-// DeleteObject send DeleteBucket txn to greenfield chain and return txn hash
+// DeleteObject - Send DeleteObject msg to greenfield chain and return txn hash.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket which contain the object.
+//
+// - objectName: The name of the object to be deleted.
+//
+// - opt: The Options for customizing the DeleteObject transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error if delete bucket failed, otherwise return nil.
 func (c *Client) DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error) {
 	if err := s3util.CheckValidBucketName(bucketName); err != nil {
 		return "", err
@@ -1217,11 +1229,11 @@ func (m *listObjectsByIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartE
 //
 // - ctx: Context variables for the current API call.
 //
-// - objectIds: The list of object ids
+// - objectIds: The list of object ids.
 //
-// - opts: The options to set the meta to list objects by object id
+// - opts: The options to set the meta to list objects by object id.
 //
-// - ret1: The result of object info map by given object ids
+// - ret1: The result of object info map by given object ids.
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error) {

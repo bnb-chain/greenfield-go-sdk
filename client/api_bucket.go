@@ -191,7 +191,7 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	return txnHash, nil
 }
 
-// DeleteBucket - Sends DeleteBucket msg to greenfield chain and return txn hash.
+// DeleteBucket - Send DeleteBucket msg to greenfield chain and return txn hash.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -596,7 +596,7 @@ func (c *Client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 //
 // - opts: Indicates the start timestamp of return read records and the max number of return items
 //
-// - ret1: The read record info of the bucket returned by SP
+// - ret1: The read record info of the bucket returned by SP.
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBucketReadRecord(ctx context.Context, bucketName string, opts types.ListReadRecordOptions) (types.QuotaRecordInfo, error) {
@@ -781,11 +781,11 @@ func (c *Client) BuyQuotaForBucket(ctx context.Context, bucketName string, targe
 //
 // - ctx: Context variables for the current API call.
 //
-// - bucketIds: The list of bucket ids
+// - bucketIds: The list of bucket ids.
 //
-// - opts: The options to set the meta to list buckets by bucket id
+// - opts: The options to set the meta to list buckets by bucket id.
 //
-// - ret1: The result of bucket info map by given bucket ids
+// - ret1: The result of bucket info map by given bucket ids.
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error) {
@@ -1002,11 +1002,11 @@ func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 //
 // - ctx: Context variables for the current API call.
 //
-// - paymentAccount: Payment account defines the address of payment account
+// - paymentAccount: Payment account defines the address of payment account.
 //
-// - opts: The options to set the meta to list buckets by payment account
+// - opts: The options to set the meta to list buckets by payment account.
 //
-// - ret1: The result of bucket info under specific payment account
+// - ret1: The result of bucket info under specific payment account.
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error) {
