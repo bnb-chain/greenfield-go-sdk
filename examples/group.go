@@ -104,6 +104,19 @@ func main() {
 		log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
 	}
 
+	ids := []uint64{1, 2, 333}
+	// list groups by group ids
+	groupList, err := cli.ListGroupsByGroupID(ctx, ids, types.EndPointOptions{
+		Endpoint:  httpsAddr,
+		SPAddress: "",
+	})
+	log.Println("list groups result:")
+	for _, group := range groupList.Groups {
+		if group != nil {
+			log.Printf("name: %s, source type: %s\n", group.Group.GroupName, group.Group.SourceType)
+		}
+	}
+
 	// delete group
 	delTx, err := cli.DeleteGroup(ctx, groupName, types.DeleteGroupOption{})
 	handleErr(err, "DeleteGroup")

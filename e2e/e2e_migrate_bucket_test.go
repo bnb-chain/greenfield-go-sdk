@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/suite"
 	"io"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/suite"
 
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -191,7 +192,7 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Case() {
 	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
 
 	// normal no conflict send migrate bucket transaction
-	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, destSP.GetId(), types.MigrateBucketOptions{TxOpts: nil, IsAsyncMode: false})
 	s.Require().NoError(err)
 
 	s.T().Logf("MigrateBucket : %s", txhash)
@@ -245,7 +246,7 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 	conflictSPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[0]
 	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", conflictSPID)
 
-	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: conflictSPID, IsAsyncMode: false})
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, conflictSPID, types.MigrateBucketOptions{TxOpts: nil, IsAsyncMode: false})
 	s.Require().NoError(err)
 
 	s.T().Logf("MigrateBucket : %s", txhash)
@@ -307,7 +308,7 @@ func (s *BucketMigrateTestSuite) Test_Empty_Bucket_Migrate_Simple_Case() {
 	s.T().Logf(":Migrate Bucket DstPrimarySPID %s", destSP.String())
 
 	// normal no conflict send migrate bucket transaction
-	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, types.MigrateBucketOptions{TxOpts: nil, DstPrimarySPID: destSP.GetId(), IsAsyncMode: false})
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, destSP.GetId(), types.MigrateBucketOptions{TxOpts: nil, IsAsyncMode: false})
 	s.Require().NoError(err)
 
 	s.T().Logf("MigrateBucket : %s", txhash)

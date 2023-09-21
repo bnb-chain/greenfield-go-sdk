@@ -46,9 +46,9 @@ func ParseMnemonicFromFile(fileName string) string {
 type BaseSuite struct {
 	suite.Suite
 	DefaultAccount  *types.Account
-	Client          client.Client
+	Client          client.IClient
 	ClientContext   context.Context
-	ChallengeClient client.Client
+	ChallengeClient client.IClient
 }
 
 // ParseValidatorMnemonic read the validator mnemonic from file
