@@ -599,7 +599,7 @@ func (c *Client) FGetObjectResumable(ctx context.Context, bucketName, objectName
 	}
 	maxSegmentSize = int64(params.GetMaxSegmentSize())
 
-	// minPartSize: 16MB
+	// minPartSize: 32MB
 	if opts.PartSize == 0 {
 		partSize = types.MinPartSize
 	} else {

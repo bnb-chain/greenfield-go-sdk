@@ -993,7 +993,7 @@ func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 		return 0, "", err
 	}
 
-	return c.SubmitProposal(ctx, []sdk.Msg{cancelBucketMsg}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetaData, TxOption: opts.TxOpts})
+	return c.SubmitProposal(ctx, []sdk.Msg{cancelBucketMsg}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetadata, TxOpts: opts.TxOpts})
 }
 
 // ListBucketsByPaymentAccount - List bucket info by payment account.

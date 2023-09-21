@@ -23,72 +23,94 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 )
 
+// IGroupClient interface defines functions related to Group.
 type IGroupClient interface {
-	// CreateGroup create a new group on greenfield chain the group members can be initialized  or not
 	CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error)
-	// DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
 	DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error)
-	// UpdateGroupMember support adding or removing members from the group and return the txn hash
-	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
-	// addAddresses indicates the HEX-encoded string list of the member addresses to be added
-	// removeAddresses indicates the HEX-encoded string list of the member addresses to be removed
-	// expirationTime  indicates the expiration time of the group member, user need set the expiration time for the addAddresses
 	UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
 		addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption) (string, error)
-	// LeaveGroup make the member leave the specific group
-	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error)
-	// HeadGroup query the groupInfo on chain, return the group info if exists return err info if group not exist
-	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
 	HeadGroup(ctx context.Context, groupName string, groupOwnerAddr string) (*storageTypes.GroupInfo, error)
-	// HeadGroupMember query the group member info on chain, return true if the member exists in group
-	// groupOwnerAddr indicates the HEX-encoded string of the group owner address
-	// headMember indicates the HEX-encoded string of the group member address
 	HeadGroupMember(ctx context.Context, groupName string, groupOwner, headMember string) bool
-	// PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
-	// principalAddr indicates the HEX-encoded string of the principal address
 	PutGroupPolicy(ctx context.Context, groupName string, principalAddr string, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
-	// DeleteGroupPolicy  delete group policy of the principal, the sender need to be the owner of the group
-	// principalAddr indicates the HEX-encoded string of the principal address
 	DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr string, opt types.DeletePolicyOption) (string, error)
-	// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
-	// it queries a bucket policy that grants permission to a group
 	GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error)
-	// GetObjectPolicyOfGroup get the object policy info of the group specified by group id
-	// it queries an object policy that grants permission to a group
 	GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error)
-	// GetGroupPolicy get the group policy info of the user specified by principalAddr
 	GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error)
-	// ListGroup get the group list by name and prefix.
-	// prefix is the start of the search pattern. The system will only return groups that start with this prefix.
-	// name is the ending of the search pattern.
-	// it providers fuzzy searches by inputting a specific name and prefix
 	ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error)
-	// RenewGroupMember renew a list of group members and their expiration time
 	RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string, memberAddresses []string, opts types.RenewGroupMemberOption) (string, error)
-	// ListGroupMembers returns a list of members contained within the group specified by the group id, including those for which the user's expiration time has already elapsed
 	ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupMembersPaginationOptions) (*types.GroupMembersResult, error)
-	// ListGroupsByAccount returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
-	// By default, the user is the sender. Other users can be set using the option
 	ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error)
-	// ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
-	// By default, the user is the sender. Other users can be set using the option
 	ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error)
 }
 
-// CreateGroup create a new group on greenfield chain, the group members can be initialized or not
+// CreateGroup - Create a new group without group members on Greenfield blockchain, and group members can be added by UpdateGroupMember transaction.
+//
+// A `Group` is a collection of accounts that share the same permissions, allowing them to be handled as a single entity.
+//
+// Examples of permissions include:
+//
+// Put, List, Get, Delete, Copy, and Execute data objects;
+// Create, Delete, and List buckets
+// Create, Delete, ListMembers, Leave groups
+// Create, Associate payment accounts
+// Grant, Revoke the above permissions
+//
+// # For more details regarding `Group`, please refer to https://docs.bnbchain.org/greenfield-docs/docs/guide/greenfield-blockchain/modules/permission
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - opt: The options for customizing a group and transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret3: Return error when the request failed, otherwise return nil.
 func (c *Client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
 	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.Extra)
 	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
 }
 
-// DeleteGroup send DeleteGroup txn to greenfield chain and return txn hash
+// DeleteGroup - Delete a group on Greenfield blockchain. The sender MUST only be the group owner, group members or others would fail to send this transaction.
+//
+// Note: Deleting a group will result in granted permission revoked. Members within the group will no longer have access to resources (bucket, object) which granted permission on.
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - opt: The options for customizing the transaction
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret3: Return error when the request failed, otherwise return nil.
 func (c *Client) DeleteGroup(ctx context.Context, groupName string, opt types.DeleteGroupOption) (string, error) {
 	deleteGroupMsg := storageTypes.NewMsgDeleteGroup(c.MustGetDefaultAccount().GetAddress(), groupName)
 	return c.sendTxn(ctx, deleteGroupMsg, opt.TxOpts)
 }
 
-// UpdateGroupMember support adding or removing members from the group and return the txn hash
+// UpdateGroupMember - Update a group by adding or removing members. The sender can be the group owner or any individual account(Principle) that
+// has been granted permission by the group owner.
+//
+// Note: The group owner can only grant ACTION_UPDATE_GROUP_MEMBER permission to an individual account, there is no way to grant permission to a group to allow members
+// within such group to manipulate another group or the group itself.
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - groupOwnerAddr: The HEX-encoded string of the group owner address.
+//
+// - addAddresses: The HEX-encoded string list of the member addresses to be added.
+//
+// - removeAddresses: The HEX-encoded string list of the member addresses to be removed.
+//
+// - opt: The options for customizing the group members expiration time and transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) UpdateGroupMember(ctx context.Context, groupName string, groupOwnerAddr string,
 	addAddresses, removeAddresses []string, opts types.UpdateGroupMemberOption,
 ) (string, error) {
@@ -138,7 +160,19 @@ func (c *Client) UpdateGroupMember(ctx context.Context, groupName string, groupO
 	return c.sendTxn(ctx, updateGroupMsg, opts.TxOpts)
 }
 
-// LeaveGroup make the member leave the specific group
+// LeaveGroup - Leave a group. A group member initially leaves a group.
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - groupOwnerAddr: The HEX-encoded string of the group owner address.
+//
+// - opt: The options for customizing the transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) LeaveGroup(ctx context.Context, groupName string, groupOwnerAddr string, opt types.LeaveGroupOption) (string, error) {
 	groupOwner, err := sdk.AccAddressFromHexUnsafe(groupOwnerAddr)
 	if err != nil {
@@ -148,8 +182,17 @@ func (c *Client) LeaveGroup(ctx context.Context, groupName string, groupOwnerAdd
 	return c.sendTxn(ctx, leaveGroupMsg, opt.TxOpts)
 }
 
-// HeadGroup query the groupInfo on chain, return the group info if exists
-// return err info if group not exist
+// HeadGroup - Query the groupInfo on chain, return the group info if exists otherwise error.
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - groupOwnerAddr: The HEX-encoded string of the group owner address.
+//
+// - ret1: The group info details
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) HeadGroup(ctx context.Context, groupName string, groupOwnerAddr string) (*storageTypes.GroupInfo, error) {
 	headGroupRequest := storageTypes.QueryHeadGroupRequest{
 		GroupOwner: groupOwnerAddr,
@@ -164,7 +207,17 @@ func (c *Client) HeadGroup(ctx context.Context, groupName string, groupOwnerAddr
 	return headGroupResponse.GroupInfo, nil
 }
 
-// HeadGroupMember query the group member info on chain, return true if the member exists in group
+// HeadGroupMember - Query the group member info on chain.
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - groupOwnerAddr: The HEX-encoded string of the group owner address.
+//
+// - eadMemberAddr: The HEX-encoded string of the group member address
+//
+// - ret: The boolean value indicates whether the group member exists
 func (c *Client) HeadGroupMember(ctx context.Context, groupName string, groupOwnerAddr, headMemberAddr string) bool {
 	headGroupRequest := storageTypes.QueryHeadGroupMemberRequest{
 		GroupName:  groupName,
@@ -176,7 +229,21 @@ func (c *Client) HeadGroupMember(ctx context.Context, groupName string, groupOwn
 	return err == nil
 }
 
-// PutGroupPolicy apply group policy to user specified by principalAddr, the sender need to be the owner of the group
+// PutGroupPolicy - Apply group policy to user specified by principalAddr, the sender needs to be the owner of the group.
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - principalAddr: The HEX-encoded string of the principal address.
+//
+// - statements: Policies outline the specific details of permissions, including the Effect, ActionList, and Resources.
+//
+// - opt: The options for customizing the policy expiration time and transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) PutGroupPolicy(ctx context.Context, groupName string, principalAddr string,
 	statements []*permTypes.Statement, opt types.PutPolicyOption,
 ) (string, error) {
@@ -195,8 +262,17 @@ func (c *Client) PutGroupPolicy(ctx context.Context, groupName string, principal
 	return c.sendPutPolicyTxn(ctx, putPolicyMsg, opt.TxOpts)
 }
 
-// GetBucketPolicyOfGroup get the bucket policy info of the group specified by group id
-// it queries a bucket policy that grants permission to a group
+// GetBucketPolicyOfGroup - Get the bucket policy info of the group.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - groupId: The group id identity the group.
+//
+// - ret1: The bucket policy.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, groupId uint64) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewBucketGRN(bucketName).String()
 
@@ -213,8 +289,19 @@ func (c *Client) GetBucketPolicyOfGroup(ctx context.Context, bucketName string, 
 	return queryPolicyResp.Policy, nil
 }
 
-// GetObjectPolicyOfGroup get the object policy info of the group specified by group id
-// it queries an object policy that grants permission to a group
+// GetObjectPolicyOfGroup - Get the object policy info of the group.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - objectName: The object name identifies the object.
+//
+// - groupId: The group id identity the group.
+//
+// - ret1: The object policy
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectName string, groupId uint64) (*permTypes.Policy, error) {
 	resource := gnfdTypes.NewObjectGRN(bucketName, objectName)
 	queryPolicy := storageTypes.QueryPolicyForGroupRequest{
@@ -230,7 +317,19 @@ func (c *Client) GetObjectPolicyOfGroup(ctx context.Context, bucketName, objectN
 	return queryPolicyResp.Policy, nil
 }
 
-// DeleteGroupPolicy delete group policy of the principal, the sender need to be the owner of the group
+// DeleteGroupPolicy - Delete the group policy of the principal, the sender needs to be the owner of the group
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - principalAddr: The HEX-encoded string of the principal address
+//
+// - opt: The options for customizing the transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) DeleteGroupPolicy(ctx context.Context, groupName string, principalAddr string, opt types.DeletePolicyOption) (string, error) {
 	sender := c.MustGetDefaultAccount().GetAddress()
 	resource := gnfdTypes.NewGroupGRN(sender, groupName).String()
@@ -245,7 +344,17 @@ func (c *Client) DeleteGroupPolicy(ctx context.Context, groupName string, princi
 	return c.sendDelPolicyTxn(ctx, sender, resource, principal, opt.TxOpts)
 }
 
-// GetGroupPolicy get the group policy info of the user specified by principalAddr
+// GetGroupPolicy - Get the group policy info of the user.
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - principalAddr: The HEX-encoded string of the principal address.
+//
+// - ret1: The group policy.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetGroupPolicy(ctx context.Context, groupName string, principalAddr string) (*permTypes.Policy, error) {
 	_, err := sdk.AccAddressFromHexUnsafe(principalAddr)
 	if err != nil {
@@ -267,7 +376,15 @@ func (c *Client) GetGroupPolicy(ctx context.Context, groupName string, principal
 	return queryPolicyResp.Policy, nil
 }
 
-// ListGroup get the group list by name and prefix
+// ListGroup - Get the group list by name and prefix. It provides fuzzy searches by inputting a specific name and prefix.
+//
+// - prefix: The start of the search pattern. The system will only return groups that start with this prefix.
+//
+// - name: The ending of the search pattern.
+//
+// - ret1: The groups response.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListGroup(ctx context.Context, name, prefix string, opts types.ListGroupsOptions) (types.ListGroupsResult, error) {
 	const (
 		MaximumGetGroupListLimit  = 1000
@@ -353,6 +470,21 @@ func (c *Client) ListGroup(ctx context.Context, name, prefix string, opts types.
 	return listGroupsResult, nil
 }
 
+// RenewGroupMember - Renew a list group members and their expiration time.
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupName: The group name identifies the group.
+//
+// - groupOwnerAddr: The HEX-encoded string of the group owner address.
+//
+// - memberAddresses: The HEX-encoded string list of the member addresses to be renewed.
+//
+// - opts: The options for customizing the transaction and each group member's expiration time.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName string,
 	memberAddresses []string, opts types.RenewGroupMemberOption,
 ) (string, error) {
@@ -388,7 +520,13 @@ func (c *Client) RenewGroupMember(ctx context.Context, groupOwnerAddr, groupName
 	return c.sendTxn(ctx, msg, opts.TxOpts)
 }
 
-// ListGroupMembers returns a list of members contained within the group specified by the group id, including those for which the user's expiration time has already elapsed
+// ListGroupMembers - List members within a group, including those for which the user's expiration time has already elapsed.
+//
+// - groupId: The group id identifies a group.
+//
+// - ret1: Group members detail.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupMembersPaginationOptions) (*types.GroupMembersResult, error) {
 	params := url.Values{}
 	params.Set("group-members", "")
@@ -441,8 +579,15 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupID int64, opts types
 	return groups, nil
 }
 
-// ListGroupsByAccount returns a list of all groups that the user has joined, including those for which the user's expiration time has already elapsed
-// By default, the user is the sender. Other users can be set using the option
+// ListGroupsByAccount - List groups that a user has joined, including those which the user's expiration time has already elapsed
+//
+// - ctx: Context variables for the current API call.
+//
+// - opts: The query option, By default, the user is the sender. Other users can be set using the option
+//
+// - ret1: Groups details.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error) {
 	params := url.Values{}
 	params.Set("user-groups", "")
@@ -505,8 +650,15 @@ func (c *Client) ListGroupsByAccount(ctx context.Context, opts types.GroupsPagin
 	return groups, nil
 }
 
-// ListGroupsByOwner returns a list of groups owned by the specified user, including those for which the user's expiration time has already elapsed
-// By default, the user is the sender. Other users can be set using the option
+// ListGroupsByOwner - List groups owned by the specified user, including those for which the user's expiration time has already elapsed
+//
+// - ctx: Context variables for the current API call.
+//
+// - opts: The query option, By default, the user is the sender. Other users can be set using the option
+//
+// - ret1: Groups details.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error) {
 	params := url.Values{}
 	params.Set("owned-groups", "")
