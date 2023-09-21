@@ -57,11 +57,11 @@ func main() {
 	handleErr(err, "GetStreamRecord")
 	log.Printf("stream record has balance %s", streamRecordAfterWithdraw.StaticBalance)
 	streamRecords, err := cli.ListUserPaymentAccounts(ctx, types.ListUserPaymentAccountsOptions{
-		Account:   "0x4FEAA841B3436624C54B652695320830FCB1B309",
+		Account:   "0x6bda8d05a24688f1f2ed05e503d19576aba7da2c",
 		Endpoint:  httpsAddr,
 		SPAddress: "",
 	})
-	for _, record := range streamRecords.StreamRecords {
-		log.Printf("stream record %s", record.StreamRecord.OutFlowCount)
+	for _, record := range streamRecords.PaymentAccounts {
+		log.Printf("payment account %s", record.PaymentAccount.Address)
 	}
 }
