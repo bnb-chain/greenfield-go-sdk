@@ -301,6 +301,14 @@ func (c *Client) WaitForTx(ctx context.Context, hash string) (*ctypes.ResultTx, 
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) BroadcastTx(ctx context.Context, msgs []sdk.Msg, txOpt *types.TxOption, opts ...grpc.CallOption) (*tx.BroadcastTxResponse, error) {
+	if len(msgs) == 0 {
+		return nil, fmt.Errorf("msg is not provided in the transaction")
+	}
+	for _, msg := range msgs {
+		if err := msg.ValidateBasic(); err != nil {
+			return nil, err
+		}
+	}
 	resp, err := c.chainClient.BroadcastTx(ctx, msgs, txOpt, opts...)
 	if err != nil {
 		return nil, err

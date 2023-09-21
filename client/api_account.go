@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	"cosmossdk.io/math"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -299,6 +300,13 @@ func (c *Client) MultiTransfer(ctx context.Context, details []types.TransferDeta
 	denom := gnfdSdkTypes.Denom
 	sum := math.NewInt(0)
 	for i := 0; i < len(details); i++ {
+		_, err := sdk.AccAddressFromHexUnsafe(details[i].ToAddress)
+		if err != nil {
+			return "", err
+		}
+		if details[i].Amount.IsNil() || details[i].Amount.IsNegative() {
+			return "", fmt.Errorf("transfer amount is not valid")
+		}
 		outputs = append(outputs, bankTypes.Output{
 			Address: details[i].ToAddress,
 			Coins:   []sdk.Coin{{Denom: denom, Amount: details[i].Amount}},
