@@ -760,7 +760,7 @@ func (m *gfSpListGroupsByGroupIDsResponse) UnmarshalXML(d *xml.Decoder, start xm
 // - ret1: The result of group info map by given group ids.
 //
 // - ret2: Return error when the request failed, otherwise return nil.
-func (c *client) ListGroupsByGroupID(ctx context.Context, groupIDs []uint64, opts types.EndPointOptions) (types.ListGroupsByGroupIDResponse, error) {
+func (c *Client) ListGroupsByGroupID(ctx context.Context, groupIDs []uint64, opts types.EndPointOptions) (types.ListGroupsByGroupIDResponse, error) {
 	const MaximumListBucketsSize = 1000
 	if len(groupIDs) == 0 || len(groupIDs) > MaximumListBucketsSize {
 		return types.ListGroupsByGroupIDResponse{}, nil
