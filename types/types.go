@@ -15,26 +15,24 @@ import (
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 // Principal indicates the marshaled Principal content of greenfield permission types,
-// user can generate it by NewPrincipalWithAccount or NewPrincipalWithGroupId method in utils
+// user can generate it by NewPrincipalWithAccount or NewPrincipalWithGroupId method in utils.
 type Principal string
 
-// ObjectStat contains the metadata of downloaded objects
+// ObjectStat contains the metadata of the downloaded object.
 type ObjectStat struct {
 	ObjectName  string
 	ContentType string
 	Size        int64 // Object size
 }
 
-// ObjectInfo
-
+// ObjectDetail contains the detailed info of the object stored on Greenfield.
 type ObjectDetail struct {
 	ObjectInfo         *storagetypes.ObjectInfo
 	GlobalVirtualGroup *types.GlobalVirtualGroup
 }
 
-// QueryPieceInfo indicates the challenge or recovery object piece info
-// RedundancyIndex if it is primary sp, the value should be -1，
-// else it indicates the index of secondary sp
+// QueryPieceInfo indicates the challenge or recovery object piece info.
+// If it is primary sp, the RedundancyIndex value should be -1， else it indicates the index of secondary sp.
 type QueryPieceInfo struct {
 	ObjectId        string
 	PieceIndex      int
@@ -48,6 +46,7 @@ type ChallengeResult struct {
 	PiecesHash    []string      // the hashes of the object's segments/pieces
 }
 
+// RandStr - Generate a random string for test usage.
 func RandStr(n int) string {
 	b := make([]rune, n)
 	randMarker := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -57,6 +56,7 @@ func RandStr(n int) string {
 	return string(b)
 }
 
+// StorageProvider indicates the metadata of SP that stored on-chain.
 type StorageProvider struct {
 	Id              uint32
 	OperatorAddress sdk.AccAddress
