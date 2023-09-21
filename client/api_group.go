@@ -42,6 +42,8 @@ type IGroupClient interface {
 	ListGroupMembers(ctx context.Context, groupID int64, opts types.GroupMembersPaginationOptions) (*types.GroupMembersResult, error)
 	ListGroupsByAccount(ctx context.Context, opts types.GroupsPaginationOptions) (*types.GroupsResult, error)
 	ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPaginationOptions) (*types.GroupsResult, error)
+	// ListGroupsByGroupID list groups by group ids
+	ListGroupsByGroupID(ctx context.Context, groupIDs []uint64, opts types.EndPointOptions) (types.ListGroupsByGroupIDResponse, error)
 }
 
 // CreateGroup - Create a new group without group members on Greenfield blockchain, and group members can be added by UpdateGroupMember transaction.
@@ -716,6 +718,109 @@ func (c *Client) ListGroupsByOwner(ctx context.Context, opts types.GroupsOwnerPa
 	if err != nil {
 		log.Error().Msgf("retrieve groups where the user is the owner in account id:%v failed: %s", owner, err.Error())
 		return &types.GroupsResult{}, err
+	}
+
+	return groups, nil
+}
+
+type GfSpListGroupsByGroupIDsResponse map[uint64]*types.GroupMeta
+
+type GroupEntry struct {
+	Id    uint64
+	Value *types.GroupMeta
+}
+
+func (m *GfSpListGroupsByGroupIDsResponse) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	*m = GfSpListGroupsByGroupIDsResponse{}
+	for {
+		var e GroupEntry
+
+		err := d.Decode(&e)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		} else {
+			(*m)[e.Id] = e.Value
+		}
+	}
+	return nil
+}
+
+// ListGroupsByGroupID - List groups by group ids.
+//
+// By inputting a collection of group IDs, we can retrieve the corresponding object data. If the group is nonexistent or has been deleted, a null value will be returned
+//
+// - ctx: Context variables for the current API call.
+//
+// - groupIDs: The list of group ids.
+//
+// - opts: The options to set the meta to list groups by group id.
+//
+// - ret1: The result of group info map by given group ids.
+//
+// - ret2: Return error when the request failed, otherwise return nil.
+func (c *client) ListGroupsByGroupID(ctx context.Context, groupIDs []uint64, opts types.EndPointOptions) (types.ListGroupsByGroupIDResponse, error) {
+	const MaximumListBucketsSize = 1000
+	if len(groupIDs) == 0 || len(groupIDs) > MaximumListBucketsSize {
+		return types.ListGroupsByGroupIDResponse{}, nil
+	}
+
+	groupIDMap := make(map[uint64]bool)
+	for _, id := range groupIDs {
+		if _, ok := groupIDMap[id]; ok {
+			// repeat id keys in request
+			return types.ListGroupsByGroupIDResponse{}, nil
+		}
+		groupIDMap[id] = true
+	}
+
+	idStr := make([]string, len(groupIDs))
+	for i, id := range groupIDs {
+		idStr[i] = strconv.FormatUint(id, 10)
+	}
+	IDs := strings.Join(idStr, ",")
+
+	params := url.Values{}
+	params.Set("groups-query", "")
+	params.Set("ids", IDs)
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getEndpointByOpt(&opts)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("get endpoint by option failed %s", err.Error()))
+		return types.ListGroupsByGroupIDResponse{}, err
+
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.ListGroupsByGroupIDResponse{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msgf("the list of groups in group ids:%v failed: %s", groupIDs, err.Error())
+		return types.ListGroupsByGroupIDResponse{}, err
+	}
+
+	groups := types.ListGroupsByGroupIDResponse{}
+	bufStr := buf.String()
+	err = xml.Unmarshal([]byte(bufStr), (*GfSpListGroupsByGroupIDsResponse)(&groups.Groups))
+	if err != nil && groups.Groups == nil {
+		log.Error().Msgf("the list of groups in group ids:%v failed: %s", groups, err.Error())
+		return types.ListGroupsByGroupIDResponse{}, err
 	}
 
 	return groups, nil
