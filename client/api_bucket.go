@@ -31,7 +31,8 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
-// IBucketClient interface defines functions related to bucket
+// IBucketClient interface defines functions related to bucket.
+// The concept of "bucket" is the same as the concept of a bucket in AWS S3 storage.
 type IBucketClient interface {
 	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error)
 	CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error)
