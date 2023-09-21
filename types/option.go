@@ -6,7 +6,6 @@ import (
 
 	"cosmossdk.io/math"
 	gnfdsdktypes "github.com/bnb-chain/greenfield/sdk/types"
-	"github.com/bnb-chain/greenfield/types/common"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -22,10 +21,8 @@ type CreateBucketOptions struct {
 
 // MigrateBucketOptions indicates the metadata to construct `MigrateBucket` msg of storage module.
 type MigrateBucketOptions struct {
-	DstPrimarySPID       uint32                 // DstPrimarySPID defines the designate primary Storage Provider.
-	DstPrimarySPApproval common.Approval        // DstPrimarySPApproval is the signature information returned by the Primary Storage Provider.
-	TxOpts               *gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.
-	IsAsyncMode          bool                   // IsAsyncMode indicates whether to create the bucket in asynchronous mode.
+	TxOpts      *gnfdsdktypes.TxOption
+	IsAsyncMode bool // indicate whether to create the bucket in asynchronous mode
 }
 
 // CancelMigrateBucketOptions indicates the metadata to construct `CancelMigrateBucket` msg of storage module.
@@ -163,6 +160,7 @@ type ListReadRecordOptions struct {
 	MaxRecords     int
 }
 
+
 // ListObjectsOptions contains the options for `ListObjects` API.
 type ListObjectsOptions struct {
 	// ShowRemovedObject determines whether to include objects that have been marked as removed in the list.
@@ -249,6 +247,7 @@ type ListGroupsOptions struct {
 	SPAddress  string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
 
+
 // GroupMembersPaginationOptions contains the options for `ListGroupMembers` API.
 type GroupMembersPaginationOptions struct {
 	// Limit determines the number of group data records to be returned.
@@ -259,6 +258,7 @@ type GroupMembersPaginationOptions struct {
 	Endpoint   string // indicates the endpoint of sp.
 	SPAddress  string // indicates the HEX-encoded string of the sp address to be challenged.
 }
+
 
 // GroupsOwnerPaginationOptions contains the options for `ListGroupsByOwner` API.
 type GroupsOwnerPaginationOptions struct {
@@ -271,6 +271,7 @@ type GroupsOwnerPaginationOptions struct {
 	Endpoint   string // Endpoint indicates the endpoint of sp.
 	SPAddress  string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
+
 
 // GroupsPaginationOptions contains the options for `ListGroupsByAccount` API.
 type GroupsPaginationOptions struct {
@@ -301,11 +302,13 @@ func (o *GetObjectOptions) SetRange(start, end int64) error {
 	return nil
 }
 
+
 // EndPointOptions contains the options for querying a specified SP.
 type EndPointOptions struct {
 	Endpoint  string // Endpoint indicates the endpoint of sp.
 	SPAddress string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
+
 
 // ListBucketsOptions contains the options for `ListBuckets` API.
 type ListBucketsOptions struct {
@@ -314,6 +317,7 @@ type ListBucketsOptions struct {
 	Endpoint          string // Endpoint indicates the endpoint of sp.
 	SPAddress         string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
+
 
 // ListBucketsByPaymentAccountOptions contains the options for `ListBucketsByPaymentAccount` API.
 type ListBucketsByPaymentAccountOptions struct {
@@ -327,6 +331,7 @@ type ListUserPaymentAccountsOptions struct {
 	Endpoint  string // Endpoint indicates the endpoint of sp.
 	SPAddress string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
 }
+
 
 // ListObjectPoliciesOptions contains the options for `ListObjectPolicies` API.
 type ListObjectPoliciesOptions struct {
