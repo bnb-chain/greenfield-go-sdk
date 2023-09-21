@@ -11,43 +11,47 @@ type QuotaInfo struct {
 	XMLName             xml.Name `xml:"GetReadQuotaResult"`
 	Version             string   `xml:"version,attr"`
 	BucketName          string   `xml:"BucketName"`
-	BucketID            string   `xml:"BucketID"`
-	ReadQuotaSize       uint64   `xml:"ReadQuotaSize"`       // the bucket read quota value on chain
-	SPFreeReadQuotaSize uint64   `xml:"SPFreeReadQuotaSize"` // the free quota of this month
-	ReadConsumedSize    uint64   `xml:"ReadConsumedSize"`    // the consumed total read quota of this month
-	FreeConsumedSize    uint64   `xml:"FreeConsumedSize"`    // the consumed free quota
+	BucketID            string   `xml:"BucketID"`            // BucketID defines the bucket read quota value on chain
+	ReadQuotaSize       uint64   `xml:"ReadQuotaSize"`       // ReadQuotaSize defines the bucket read quota value on chain
+	SPFreeReadQuotaSize uint64   `xml:"SPFreeReadQuotaSize"` // SPFreeReadQuotaSize defines the free quota of this month
+	ReadConsumedSize    uint64   `xml:"ReadConsumedSize"`    // ReadConsumedSize defines the consumed total read quota of this month
+	FreeConsumedSize    uint64   `xml:"FreeConsumedSize"`    // FreeConsumedSize defines the consumed free quota
 }
 
+// ReadRecord indicate the download record info
 type ReadRecord struct {
 	XMLName            xml.Name `xml:"ReadRecord"`
-	ObjectName         string   `xml:"ObjectName"`
-	ObjectID           string   `xml:"ObjectID"`
-	ReadAccountAddress string   `xml:"ReadAccountAddress"`
-	ReadTimestampUs    int64    `xml:"ReadTimestampUs"`
-	ReadSize           uint64   `xml:"ReadSize"`
+	ObjectName         string   `xml:"ObjectName"`         // ObjectName The download object name
+	ObjectID           string   `xml:"ObjectID"`           // ObjectID The download object id
+	ReadAccountAddress string   `xml:"ReadAccountAddress"` // ReadAccountAddress The sender address of the download request
+	ReadTimestampUs    int64    `xml:"ReadTimestampUs"`    // ReadTimestampUs The download time stamp
+	ReadSize           uint64   `xml:"ReadSize"`           // ReadSize The download object size
 }
 
 // QuotaRecordInfo indicates the quota read record
 type QuotaRecordInfo struct {
-	XMLName              xml.Name     `xml:"GetBucketReadQuotaResult"`
-	Version              string       `xml:"version,attr"`
-	NextStartTimestampUs int64        `xml:"NextStartTimestampUs"`
-	ReadRecords          []ReadRecord `xml:"ReadRecord"`
+	XMLName xml.Name `xml:"GetBucketReadQuotaResult"`
+	Version string   `xml:"version,attr"` // The Version defines version info
+	// When using ListBucketReadRecord to list items, if the returned results do not cover all items, the NextStartTimestampUs will be returned to indicate the timestamp of the current traversal progress.
+	// When you call the ListBucketReadRecord again, you can set opt.StartTimeStamp to this timestamp.
+	NextStartTimestampUs int64 `xml:"NextStartTimestampUs"`
+	// ReadRecords defines the result record list.
+	ReadRecords []ReadRecord `xml:"ReadRecord"`
 }
 
 // UploadProgress indicates the progress info of uploading object
 type UploadProgress struct {
 	XMLName             xml.Name `xml:"QueryUploadProgress"`
-	Version             string   `xml:"version,attr"`
-	ProgressDescription string   `xml:"ProgressDescription"`
-	ErrorDescription    string   `xml:"ErrorDescription"`
+	Version             string   `xml:"version,attr"`        // Version defines version info
+	ProgressDescription string   `xml:"ProgressDescription"` // ProgressDescription defines a string message representing the upload progress.
+	ErrorDescription    string   `xml:"ErrorDescription"`    // ErrorDescription defines a string message representing an upload error exception.
 }
 
 // UploadOffset indicates the offset of resumable uploading object
 type UploadOffset struct {
 	XMLName xml.Name `xml:"QueryResumeOffset"`
-	Version string   `xml:"version,attr"`
-	Offset  uint64   `xml:"Offset"`
+	Version string   `xml:"version,attr"` // Version defines version info
+	Offset  uint64   `xml:"Offset"`       // Offset defines the offset info of resumable uploading object
 }
 
 type ListObjectsResult struct {
