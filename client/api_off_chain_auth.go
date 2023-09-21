@@ -24,11 +24,16 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
+// IAuthClient - Client APIs for register Greenfield off chain auth keys and make signatures.
 type IAuthClient interface {
 	RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error)
+	GetNextNonce(spEndpoint string) (string, error)
 	OffChainAuthSign(unsignBytes []byte) string
 }
 
+// OffChainAuthSign - generate EdDSA private key according to a preconfigured seed and then make the signature for given []byte
+//
+// - ret1: The signature made by EdDSA private key of the Client.
 func (c *Client) OffChainAuthSign(unsignBytes []byte) string {
 	sk, _ := generateEddsaPrivateKey(c.offChainAuthOption.Seed)
 	hFunc := mimc.NewMiMC()
@@ -46,6 +51,10 @@ type requestNonceResp struct {
 }
 
 // GetNextNonce get the nonce value by giving user account and domain
+//
+// - ret1: The next nonce value for the Client if it needs to register a new EdDSA public key
+//
+// - ret2: Return error when getting next nonce failed, otherwise return nil.
 func (c *Client) GetNextNonce(spEndpoint string) (string, error) {
 	header := make(map[string]string)
 	header["X-Gnfd-User-Address"] = c.defaultAccount.GetAddress().String()
@@ -79,6 +88,20 @@ Resources:
 - SP %s (name: SP_001) with nonce: %s`
 )
 
+// RegisterEDDSAPublicKey register EdDSA public key of this client for the given sp address and spEndpoint
+//
+// To enable EdDSA authentication, you need to config OffChainAuthOption for the client.
+// The overall register process could be referred to https://docs.bnbchain.org/greenfield-docs/docs/guide/storage-provider/modules/authenticator#workflow.
+//
+// The EdDSA registering process is typically used in a website, e.g. https://dcellar.io,
+// which obtains a user's signature via a wallet and then posts the user's EdDSA public key to a sp.
+//
+// Here we also provide an SDK method to implement this process, because sometimes you might want to test if a given SP provides correct EdDSA authentication or not.
+// It also helps if you want implement it on a non-browser environment.
+//
+// - ret1: The register result when invoking SP UpdateUserPublicKey API.
+//
+// - ret2: Return error when registering failed, otherwise return nil.
 func (c *Client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error) {
 	appDomain := c.offChainAuthOption.Domain
 	eddsaSeed := c.offChainAuthOption.Seed
@@ -91,7 +114,7 @@ func (c *Client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 	log.Info().Msg("userEddsaPublicKeyStr is " + userEddsaPublicKeyStr)
 
 	IssueDate := time.Now().Format(time.RFC3339)
-	// ExpiryDate formate := "2023-06-27T06:35:24Z"
+	// ExpiryDate format := "2023-06-27T06:35:24Z"
 	ExpiryDate := time.Now().Add(time.Hour * 24).Format(time.RFC3339)
 
 	unSignedContent := fmt.Sprintf(unsignedContentTemplate, appDomain, c.defaultAccount.GetAddress().String(), userEddsaPublicKeyStr, appDomain, IssueDate, ExpiryDate, spAddress, nextNonce)
