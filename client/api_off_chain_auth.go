@@ -31,7 +31,7 @@ type IAuthClient interface {
 	OffChainAuthSign(unsignedBytes []byte) string
 }
 
-// OffChainAuthSign - generate EdDSA private key according to a preconfigured seed and then make the signature for given []byte
+// OffChainAuthSign - Generate EdDSA private key according to a preconfigured seed and then make the signature for given input.
 //
 // - unsignedBytes: The content which needs to be signed by client's EdDSA private key
 //
@@ -44,7 +44,7 @@ func (c *Client) OffChainAuthSign(unsignedBytes []byte) string {
 	return authString
 }
 
-// requestNonceResp - is the structure for off chain auth nonce response
+// requestNonceResp is the structure for off chain auth nonce response.
 type requestNonceResp struct {
 	CurrentNonce     int32  `xml:"CurrentNonce"`
 	NextNonce        int32  `xml:"NextNonce"`
@@ -52,7 +52,7 @@ type requestNonceResp struct {
 	ExpiryDate       int64  `xml:"ExpiryDate"`
 }
 
-// GetNextNonce - get the nonce value by giving user account and domain
+// GetNextNonce - Get the nonce value by giving user account and domain.
 //
 // - spEndpoint: The sp endpoint where the client means to get the next nonce
 //
@@ -92,7 +92,7 @@ Resources:
 - SP %s (name: SP_001) with nonce: %s`
 )
 
-// RegisterEDDSAPublicKey - register EdDSA public key of this client for the given sp address and spEndpoint
+// RegisterEDDSAPublicKey - Register EdDSA public key of this client for the given sp address and spEndpoint.
 //
 // To enable EdDSA authentication, you need to config OffChainAuthOption for the client.
 // The overall register process could be referred to https://docs.bnbchain.org/greenfield-docs/docs/guide/storage-provider/modules/authenticator#workflow.
