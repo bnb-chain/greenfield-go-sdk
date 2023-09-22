@@ -27,7 +27,6 @@ type IBasicClient interface {
 	EnableTrace(outputStream io.Writer, onlyTraceErr bool)
 
 	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error)
-
 	GetStatus(ctx context.Context) (*ctypes.ResultStatus, error)
 	GetCommit(ctx context.Context, height int64) (*ctypes.ResultCommit, error)
 	GetLatestBlockHeight(ctx context.Context) (int64, error)
@@ -179,11 +178,11 @@ func (c *Client) GetLatestBlock(ctx context.Context) (*bfttypes.Block, error) {
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) GetLatestBlockHeight(ctx context.Context) (int64, error) {
-	resp, err := c.GetLatestBlock(ctx)
+	resp, err := c.chainClient.GetStatus(ctx)
 	if err != nil {
 		return 0, nil
 	}
-	return resp.Header.Height, nil
+	return resp.SyncInfo.LatestBlockHeight, nil
 }
 
 // WaitForBlockHeight - Wait until a specified block height is committed.
