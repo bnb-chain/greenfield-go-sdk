@@ -25,7 +25,7 @@ func main() {
 		math.NewIntWithDecimal(1000, gnfdSdkTypes.DecimalBNB), // deposit, various from different env
 		"Change BSC contract parameter",
 		"Change BSC contract parameter",
-		types.SubmitProposalOptions{TxOption: gnfdSdkTypes.TxOption{}},
+		types.SubmitProposalOptions{TxOpts: gnfdSdkTypes.TxOption{}},
 	)
 	if err != nil {
 		log.Fatalf("unable to submit proposal , %v", err)
