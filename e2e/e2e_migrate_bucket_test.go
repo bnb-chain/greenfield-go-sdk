@@ -244,7 +244,10 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 
 	// migrate bucket with conflict
 	conflictSPID := objectDetail.GlobalVirtualGroup.SecondarySpIds[0]
-	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", conflictSPID)
+
+	quotaBefore, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	s.T().Logf("Migrate bucket %s from %d to DstPrimarySPID %d, current quota:%v", bucketName, objectDetail.GlobalVirtualGroup.PrimarySpId, conflictSPID, quotaBefore)
 
 	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, conflictSPID, types.MigrateBucketOptions{TxOpts: nil, IsAsyncMode: false})
 	s.Require().NoError(err)
@@ -263,6 +266,14 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 		time.Sleep(3 * time.Second)
 	}
 
+	quotaAfter, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	s.T().Logf("succeed to migrate Bucket, current quota:%v", quotaAfter)
+	expectQuotaUsed := int(objectDetail.ObjectInfo.PayloadSize)
+	freeQuotaConsumed := quotaAfter.FreeConsumedSize - quotaBefore.FreeConsumedSize
+	s.Require().Equal(uint64(expectQuotaUsed), freeQuotaConsumed)
+	s.Require().Equal(quotaAfter.FreeConsumedSize+quotaAfter.SPFreeReadQuotaSize, quotaBefore.FreeConsumedSize+quotaBefore.SPFreeReadQuotaSize)
+
 	family, err := s.Client.QueryVirtualGroupFamily(s.ClientContext, bucketInfo.GlobalVirtualGroupFamilyId)
 	s.Require().NoError(err)
 	s.Require().Equal(family.PrimarySpId, conflictSPID)
@@ -275,6 +286,13 @@ func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Simple_Conflict_Case() {
 		s.Require().Equal(objectBytes, buffer.Bytes())
 	}
 	s.CheckChallenge(uint32(objectDetail.ObjectInfo.Id.Uint64()))
+}
+
+func (s *BucketMigrateTestSuite) Test_Empty_Quota_Simple_Case() {
+	bucketName := "hks1vldl"
+	quotaAfter, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	s.T().Logf("succeed to migrate Bucket, current quota:%v", quotaAfter)
 }
 
 // test empty bucket case
@@ -349,4 +367,93 @@ func (s *BucketMigrateTestSuite) CheckChallenge(objectId uint32) bool {
 	}
 
 	return true
+}
+
+// test cancel migrate bucket
+func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Cancel_Case() {
+	// 1) create bucket and object in srcSP
+	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
+
+	// test only one object's case
+	objectDetails, _, err := s.CreateObjects(bucketName, 1)
+	s.Require().NoError(err)
+
+	objectDetail := objectDetails[0]
+	//buffer := contentBuffer[0]
+
+	// selete a storage provider to miragte
+	destSP := s.SelectDestSP(objectDetail)
+
+	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
+
+	// normal no conflict send migrate bucket transaction
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, destSP.GetId(), types.MigrateBucketOptions{TxOpts: nil, IsAsyncMode: false})
+	s.Require().NoError(err)
+	s.T().Logf("MigrateBucket txhash : %s", txhash)
+	createTx, err := s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Log(createTx.TxResult.String())
+
+	txhash, err = s.Client.CancelMigrateBucket(s.ClientContext, bucketName, types.CancelMigrateBucketOptions{})
+	s.Require().NoError(err)
+	s.T().Logf("CancelMigrateBucket txhash : %s", txhash)
+
+	createTx, err = s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Log(createTx.TxResult.String())
+
+	time.Sleep(10 * time.Second)
+
+	txhash, err = s.Client.MigrateBucket(s.ClientContext, bucketName, destSP.GetId(), types.MigrateBucketOptions{TxOpts: nil, IsAsyncMode: false})
+	s.Require().NoError(err)
+	s.T().Logf("MigrateBucket txhash : %s", txhash)
+	createTx, err = s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Log(createTx.TxResult.String())
+
+	s.waitUntilBucketMigrateFinish(bucketName, destSP)
+}
+
+// test cancel migrate bucket
+func (s *BucketMigrateTestSuite) Test_Bucket_Migrate_Cancel_Quota_Case() {
+	// 1) create bucket and object in srcSP
+	bucketName, _ := s.MustCreateBucket(storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
+
+	// test only one object's case
+	objectDetails, _, err := s.CreateObjects(bucketName, 1)
+	s.Require().NoError(err)
+
+	objectDetail := objectDetails[0]
+
+	// selete a storage provider to miragte
+	destSP := s.SelectDestSP(objectDetail)
+
+	s.T().Logf(":Migrate Bucket DstPrimarySPID %d", destSP.GetId())
+
+	quotaBefore, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	s.T().Logf("Migrate bucket %s from %d to DstPrimarySPID %d, current quota:%v", bucketName, objectDetail.GlobalVirtualGroup.PrimarySpId, destSP.GetId(), quotaBefore)
+
+	// normal no conflict send migrate bucket transaction
+	txhash, err := s.Client.MigrateBucket(s.ClientContext, bucketName, destSP.GetId(), types.MigrateBucketOptions{TxOpts: nil, IsAsyncMode: false})
+	s.Require().NoError(err)
+	s.T().Logf("MigrateBucket txhash : %s", txhash)
+	createTx, err := s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Log(createTx.TxResult.String())
+
+	time.Sleep(5 * time.Second)
+
+	txhash, err = s.Client.CancelMigrateBucket(s.ClientContext, bucketName, types.CancelMigrateBucketOptions{})
+	s.Require().NoError(err)
+	s.T().Logf("CancelMigrateBucket txhash : %s", txhash)
+
+	createTx, err = s.Client.WaitForTx(s.ClientContext, txhash)
+	s.Require().NoError(err)
+	s.T().Log(createTx.TxResult.String())
+
+	time.Sleep(10 * time.Second)
+	quotaAfter, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	s.T().Logf("succeed to cancel migrate bucket, current quota:%v", quotaAfter)
 }

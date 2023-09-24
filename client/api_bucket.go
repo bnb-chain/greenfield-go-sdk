@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	"io"
 	"math"
 	"net/http"
@@ -21,7 +22,6 @@ import (
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
-	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
@@ -51,7 +51,7 @@ type IBucketClient interface {
 	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error)
 	GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error)
 	MigrateBucket(ctx context.Context, bucketName string, dstPrimarySPID uint32, opts types.MigrateBucketOptions) (string, error)
-	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error)
+	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error)
 	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
 }
 
@@ -962,26 +962,46 @@ func (c *Client) MigrateBucket(ctx context.Context, bucketName string, dstPrimar
 //
 // - opt: The options of the proposal meta and transaction.
 //
-// - ret1: The proposal ID of canceling migration.
+// - ret1: Transaction hash return from blockchain.
 //
-// - ret2: Transaction hash return from blockchain.
-//
-// - ret3: Return error when the request of cancel migration failed, otherwise return nil.
-func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error) {
-	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
-	if err != nil {
-		return 0, "", err
-	}
-	cancelBucketMsg := storageTypes.NewMsgCancelMigrateBucket(
-		govModuleAddress.GetAddress(), bucketName,
-	)
+// - ret2: Return error when the request of cancel migration failed, otherwise return nil.
+func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error) {
 
-	err = cancelBucketMsg.ValidateBasic()
+	cancelMigrateBucketMsg := storageTypes.NewMsgCancelMigrateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName)
+
+	err := cancelMigrateBucketMsg.ValidateBasic()
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
 
-	return c.SubmitProposal(ctx, []sdk.Msg{cancelBucketMsg}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetadata, TxOpts: opts.TxOpts})
+	// set the default txn broadcast mode as block mode
+	if opts.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
+	}
+
+	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{cancelMigrateBucketMsg}, opts.TxOpts)
+	if err != nil {
+		return "", err
+	}
+
+	var txnResponse *ctypes.ResultTx
+	txnHash := resp.TxResponse.TxHash
+	if !opts.IsAsyncMode {
+		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
+		defer cancel()
+
+		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
+		if err != nil {
+			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
+		}
+
+		if txnResponse.TxResult.Code != 0 {
+			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+		}
+	}
+
+	return txnHash, nil
 }
 
 // ListBucketsByPaymentAccount - List bucket info by payment account.
