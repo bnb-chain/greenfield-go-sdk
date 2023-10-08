@@ -27,12 +27,8 @@ type MigrateBucketOptions struct {
 
 // CancelMigrateBucketOptions indicates the metadata to construct `CancelMigrateBucket` msg of storage module.
 type CancelMigrateBucketOptions struct {
-	ProposalDepositAmount math.Int              // ProposalDepositAmount defines the amount in wei BNB.
-	ProposalTitle         string                // ProposalTitle defines the title for proposal.
-	ProposalSummary       string                // ProposalSummary defines the summary for proposal.
-	ProposalMetadata      string                // ProposalMetadata defines the metadata for proposal.
-	TxOpts                gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.
-	IsAsyncMode           bool                  // IsAsyncMode indicates whether to create the bucket in asynchronous mode.
+	TxOpts      *gnfdsdktypes.TxOption
+	IsAsyncMode bool // indicate whether to create the bucket in asynchronous mode
 }
 
 // VoteProposalOptions indicates the metadata to construct `VoteProposal` msg.
