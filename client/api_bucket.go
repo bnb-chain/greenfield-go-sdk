@@ -79,8 +79,11 @@ func (c *Client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 	}
 
 	sendOpt := sendOptions{
-		method:     http.MethodGet,
-		isAdminApi: true,
+		method: http.MethodGet,
+		adminInfo: AdminAPIInfo{
+			isAdminApi:   true,
+			adminVersion: types.AdminV1Version,
+		},
 	}
 
 	primarySPAddr := createBucketMsg.GetPrimarySpAddress()
@@ -872,8 +875,11 @@ func (c *Client) GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg 
 	}
 
 	sendOpt := sendOptions{
-		method:     http.MethodGet,
-		isAdminApi: true,
+		method: http.MethodGet,
+		adminInfo: AdminAPIInfo{
+			isAdminApi:   true,
+			adminVersion: types.AdminV1Version,
+		},
 	}
 
 	primarySPID := migrateBucketMsg.DstPrimarySpId
