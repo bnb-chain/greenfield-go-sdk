@@ -88,12 +88,12 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 
 	if opts.UseV2version {
 		sendOpt.adminInfo = AdminAPIInfo{
-			isAdminApi:   true,
+			isAdminAPI:   true,
 			adminVersion: types.AdminV2Version,
 		}
 	} else {
 		sendOpt.adminInfo = AdminAPIInfo{
-			isAdminApi:   true,
+			isAdminAPI:   true,
 			adminVersion: types.AdminV1Version,
 		}
 	}
@@ -163,7 +163,7 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 
 		if challengeV2Info.IntegrityHash == "" || challengeV2Info.PieceHash == "" || challengeV2Info.PieceData == "" {
 			utils.CloseResponse(resp)
-			return types.ChallengeResult{}, errors.New("fail to fetch hash info")
+			return types.ChallengeResult{}, errors.New("the challenge info of response is empty")
 		}
 
 		hashListV2 := strings.Split(challengeV2Info.PieceHash, ",")
@@ -173,7 +173,7 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 
 		pieceData, decodeErr := hex.DecodeString(challengeV2Info.PieceData)
 		if decodeErr != nil {
-			return types.ChallengeResult{}, err
+			return types.ChallengeResult{}, decodeErr
 		}
 
 		result = types.ChallengeResult{
@@ -182,9 +182,9 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 			PiecesHash:    hashListV2,
 		}
 	} else {
-		// fetch integrity hash
+		// fetch integrity hash from header
 		integrityHash := resp.Header.Get(types.HTTPHeaderIntegrityHash)
-		// fetch piece hashes
+		// fetch piece hashes from header
 		pieceHashes := resp.Header.Get(types.HTTPHeaderPieceHash)
 
 		if integrityHash == "" || pieceHashes == "" {

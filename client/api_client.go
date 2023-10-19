@@ -73,7 +73,6 @@ type Client struct {
 	offChainAuthOption *OffChainAuthOption
 	useWebsocketConn   bool
 	expireSeconds      uint64
-	needAuth           bool
 }
 
 // Option - Configurations for providing optional parameters for the Greenfield SDK Client.
@@ -184,6 +183,7 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 			}
 		}
 	}
+
 	return &c, nil
 }
 
@@ -304,7 +304,7 @@ type sendOptions struct {
 
 // AdminAPIInfo - the admin api info
 type AdminAPIInfo struct {
-	isAdminApi   bool // indicate if it is an admin api request
+	isAdminAPI   bool // indicate if it is an admin api request
 	adminVersion int  // indicate the version of admin api, the default value is 1
 }
 
@@ -407,7 +407,7 @@ func (c *Client) newRequest(ctx context.Context, method string, meta requestMeta
 		req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
 	}
 
-	if adminAPIInfo.isAdminApi {
+	if adminAPIInfo.isAdminAPI {
 		if meta.txnMsg != "" {
 			req.Header.Set(types.HTTPHeaderUnsignedMsg, meta.txnMsg)
 		}
@@ -548,11 +548,12 @@ func (c *Client) generateURL(bucketName string, objectName string, relativePath 
 	}
 
 	var urlStr string
-	if adminInfo.isAdminApi {
+	if adminInfo.isAdminAPI {
 		var prefix string
-		if adminInfo.adminVersion == 1 {
+		// check the version and generate the url by the version
+		if adminInfo.adminVersion == types.AdminV1Version {
 			prefix = types.AdminURLPrefix + types.AdminURLV1Version
-		} else if adminInfo.adminVersion == 2 {
+		} else if adminInfo.adminVersion == types.AdminV2Version {
 			prefix = types.AdminURLPrefix + types.AdminURLV2Version
 		} else {
 			return nil, fmt.Errorf("invalid admin version %d", adminInfo.adminVersion)
