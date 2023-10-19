@@ -193,7 +193,6 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 		}
 
 		hashList := strings.Split(pieceHashes, ",")
-		// min hash num equals one segment hash plus EC dataShards, parityShards
 		if len(hashList) < 1 {
 			return types.ChallengeResult{}, errors.New("get piece hashes less than 1")
 		}

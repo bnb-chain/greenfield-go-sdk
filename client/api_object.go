@@ -121,10 +121,6 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	for id, hash := range expectCheckSums {
-		fmt.Printf("id: %d, hash val: %s \n", id, string(hash))
-	}
-
 	var contentType string
 	if opts.ContentType != "" {
 		contentType = opts.ContentType
