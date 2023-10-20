@@ -1,9 +1,13 @@
 package client
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -79,8 +83,19 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 
 	sendOpt := sendOptions{
 		method:           http.MethodGet,
-		isAdminApi:       true,
 		disableCloseBody: true,
+	}
+
+	if opts.UseV2version {
+		sendOpt.adminInfo = AdminAPIInfo{
+			isAdminAPI:   true,
+			adminVersion: types.AdminV2Version,
+		}
+	} else {
+		sendOpt.adminInfo = AdminAPIInfo{
+			isAdminAPI:   true,
+			adminVersion: types.AdminV1Version,
+		}
 	}
 
 	var endpoint *url.URL
@@ -134,27 +149,61 @@ func (c *Client) GetChallengeInfo(ctx context.Context, objectID string, pieceInd
 		return types.ChallengeResult{}, err
 	}
 
-	// fetch integrity hash
-	integrityHash := resp.Header.Get(types.HTTPHeaderIntegrityHash)
-	// fetch piece hashes
-	pieceHashes := resp.Header.Get(types.HTTPHeaderPieceHash)
+	var result types.ChallengeResult
 
-	if integrityHash == "" || pieceHashes == "" {
-		utils.CloseResponse(resp)
-		return types.ChallengeResult{}, errors.New("fail to fetch hash info")
+	// if it is the v2 challenge API, fetch the info from the xml body
+	if opts.UseV2version {
+		challengeV2Info := types.ChallengeV2Result{}
+		// decode the xml content from response body
+		err = xml.NewDecoder(resp.Body).Decode(&challengeV2Info)
+		if err != nil {
+			utils.CloseResponse(resp)
+			return types.ChallengeResult{}, err
+		}
+
+		if challengeV2Info.IntegrityHash == "" || challengeV2Info.PieceHash == "" || challengeV2Info.PieceData == "" {
+			utils.CloseResponse(resp)
+			return types.ChallengeResult{}, errors.New("the challenge info of response is empty")
+		}
+
+		hashListV2 := strings.Split(challengeV2Info.PieceHash, ",")
+		if len(hashListV2) < 1 {
+			return types.ChallengeResult{}, errors.New("get piece hashes less than 1")
+		}
+
+		pieceData, decodeErr := hex.DecodeString(challengeV2Info.PieceData)
+		if decodeErr != nil {
+			return types.ChallengeResult{}, decodeErr
+		}
+
+		result = types.ChallengeResult{
+			PieceData:     io.NopCloser(bytes.NewReader(pieceData)),
+			IntegrityHash: challengeV2Info.IntegrityHash,
+			PiecesHash:    hashListV2,
+		}
+	} else {
+		// fetch integrity hash from header
+		integrityHash := resp.Header.Get(types.HTTPHeaderIntegrityHash)
+		// fetch piece hashes from header
+		pieceHashes := resp.Header.Get(types.HTTPHeaderPieceHash)
+
+		if integrityHash == "" || pieceHashes == "" {
+			utils.CloseResponse(resp)
+			return types.ChallengeResult{}, errors.New("fail to fetch hash info")
+		}
+
+		hashList := strings.Split(pieceHashes, ",")
+		if len(hashList) < 1 {
+			return types.ChallengeResult{}, errors.New("get piece hashes less than 1")
+		}
+
+		result = types.ChallengeResult{
+			PieceData:     resp.Body,
+			IntegrityHash: integrityHash,
+			PiecesHash:    hashList,
+		}
 	}
 
-	hashList := strings.Split(pieceHashes, ",")
-	// min hash num equals one segment hash plus EC dataShards, parityShards
-	if len(hashList) < 1 {
-		return types.ChallengeResult{}, errors.New("get piece hashes less than 1")
-	}
-
-	result := types.ChallengeResult{
-		PieceData:     resp.Body,
-		IntegrityHash: integrityHash,
-		PiecesHash:    hashList,
-	}
 	return result, nil
 }
 

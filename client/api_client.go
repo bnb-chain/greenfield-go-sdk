@@ -183,6 +183,7 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 			}
 		}
 	}
+
 	return &c, nil
 }
 
@@ -294,11 +295,17 @@ type requestMeta struct {
 
 // SendOptions -  options to use to send the http message
 type sendOptions struct {
-	method           string      // request method
-	body             interface{} // request body
-	disableCloseBody bool        // indicate whether to disable automatic calls to resp.Body.Close()
-	txnHash          string      // the transaction hash info
-	isAdminApi       bool        // indicate if it is an admin api request
+	method           string       // request method
+	body             interface{}  // request body
+	disableCloseBody bool         // indicate whether to disable automatic calls to resp.Body.Close()
+	txnHash          string       // the transaction hash info
+	adminInfo        AdminAPIInfo // the admin API info
+}
+
+// AdminAPIInfo - the admin api info
+type AdminAPIInfo struct {
+	isAdminAPI   bool // indicate if it is an admin api request
+	adminVersion int  // indicate the version of admin api, the default value is 1
 }
 
 // downloadSegmentHook is hook for test
@@ -312,13 +319,13 @@ func DefaultDownloadSegmentHook(seg int64) error {
 
 // newRequest constructs the http request, set url, body and headers
 func (c *Client) newRequest(ctx context.Context, method string, meta requestMeta,
-	body interface{}, txnHash string, isAdminAPi bool, endpoint *url.URL,
+	body interface{}, txnHash string, adminAPIInfo AdminAPIInfo, endpoint *url.URL,
 ) (req *http.Request, err error) {
 	isVirtualHost := c.isVirtualHostStyleUrl(*endpoint, meta.bucketName)
 
 	// construct the target url
 	desURL, err := c.generateURL(meta.bucketName, meta.objectName, meta.urlRelPath,
-		meta.urlValues, isAdminAPi, endpoint, isVirtualHost)
+		meta.urlValues, adminAPIInfo, endpoint, isVirtualHost)
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("generate request url on SP: %s fail, err: %s", endpoint.String(), err))
 		return nil, err
@@ -400,7 +407,7 @@ func (c *Client) newRequest(ctx context.Context, method string, meta requestMeta
 		req.Header.Set(types.HTTPHeaderPieceIndex, strconv.Itoa(info.PieceIndex))
 	}
 
-	if isAdminAPi {
+	if adminAPIInfo.isAdminAPI {
 		if meta.txnMsg != "" {
 			req.Header.Set(types.HTTPHeaderUnsignedMsg, meta.txnMsg)
 		}
@@ -499,7 +506,7 @@ func (c *Client) doAPI(ctx context.Context, req *http.Request, meta requestMeta,
 
 // sendReq sends the message via REST and handles the response
 func (c *Client) sendReq(ctx context.Context, metadata requestMeta, opt *sendOptions, endpoint *url.URL) (res *http.Response, err error) {
-	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.isAdminApi, endpoint)
+	req, err := c.newRequest(ctx, opt.method, metadata, opt.body, opt.txnHash, opt.adminInfo, endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +532,7 @@ func (c *Client) SplitPartInfo(objectSize int64, configuredPartSize uint64) (tot
 
 // generateURL constructs the target request url based on the parameters
 func (c *Client) generateURL(bucketName string, objectName string, relativePath string,
-	queryValues url.Values, isAdminApi bool, endpoint *url.URL, isVirtualHost bool,
+	queryValues url.Values, adminInfo AdminAPIInfo, endpoint *url.URL, isVirtualHost bool,
 ) (*url.URL, error) {
 	host := endpoint.Host
 	scheme := endpoint.Scheme
@@ -541,8 +548,16 @@ func (c *Client) generateURL(bucketName string, objectName string, relativePath 
 	}
 
 	var urlStr string
-	if isAdminApi {
-		prefix := types.AdminURLPrefix + types.AdminURLVersion
+	if adminInfo.isAdminAPI {
+		var prefix string
+		// check the version and generate the url by the version
+		if adminInfo.adminVersion == types.AdminV1Version {
+			prefix = types.AdminURLPrefix + types.AdminURLV1Version
+		} else if adminInfo.adminVersion == types.AdminV2Version {
+			prefix = types.AdminURLPrefix + types.AdminURLV2Version
+		} else {
+			return nil, fmt.Errorf("invalid admin version %d", adminInfo.adminVersion)
+		}
 		urlStr = scheme + "://" + host + prefix + "/"
 	} else {
 		urlStr = scheme + "://" + host + "/"

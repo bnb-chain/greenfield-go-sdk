@@ -40,8 +40,11 @@ const (
 	EmptyStringSHA256       = `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
 	Iso8601DateFormatSecond = "2006-01-02T15:04:05Z"
 
-	AdminURLPrefix  = "/greenfield/admin"
-	AdminURLVersion = "/v1"
+	AdminURLPrefix    = "/greenfield/admin"
+	AdminURLV1Version = "/v1"
+	AdminURLV2Version = "/v2"
+	AdminV1Version    = 1
+	AdminV2Version    = 2
 
 	CreateObjectAction  = "CreateObject"
 	CreateBucketAction  = "CreateBucket"

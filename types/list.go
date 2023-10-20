@@ -54,6 +54,18 @@ type UploadOffset struct {
 	Offset  uint64   `xml:"Offset"`       // Offset defines the offset info of resumable uploading object
 }
 
+// ChallengeV2Result indicates the response info of challenge v2 API
+type ChallengeV2Result struct {
+	XMLName         xml.Name `xml:"GetChallengeInfo"`
+	Version         string   `xml:"version,attr"`
+	ObjectID        string   `xml:"ObjectID"`        // ObjectID defines the object id of the challenge request
+	RedundancyIndex string   `xml:"RedundancyIndex"` // RedundancyIndex defines the redundancy index of the challenge request
+	PieceIndex      string   `xml:"PieceIndex"`      // PieceIndex defines the piece index of the challenge request
+	IntegrityHash   string   `xml:"IntegrityHash"`   // IntegrityHash defines the integrity hash of the object
+	PieceHash       string   `xml:"PieceHash"`       // PieceHash defines the return piece hashes of the object
+	PieceData       string   `xml:"PieceData"`       // PieceData defines the return piece data of challenge request
+}
+
 // ListObjectsResult indicates the result of listObjects API.
 type ListObjectsResult struct {
 	// Objects defines the list of object

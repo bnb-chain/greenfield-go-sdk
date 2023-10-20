@@ -985,8 +985,11 @@ func (c *Client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *s
 	}
 
 	sendOpt := sendOptions{
-		method:     http.MethodGet,
-		isAdminApi: true,
+		method: http.MethodGet,
+		adminInfo: AdminAPIInfo{
+			isAdminAPI:   true,
+			adminVersion: types.AdminV1Version,
+		},
 	}
 
 	bucketName := createObjectMsg.BucketName
