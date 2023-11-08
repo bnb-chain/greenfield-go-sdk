@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	math2 "math"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -96,6 +97,10 @@ func (c *Client) ListStorageProviders(ctx context.Context, isInService bool) ([]
 		}
 		spInfoList = append(spInfoList, *info)
 	}
+
+	rand.Shuffle(len(spInfoList), func(i, j int) {
+		spInfoList[i], spInfoList[j] = spInfoList[j], spInfoList[i]
+	})
 
 	return spInfoList, nil
 }
