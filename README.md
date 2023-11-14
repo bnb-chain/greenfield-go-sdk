@@ -39,9 +39,9 @@ replace dependencies
 ```go.mod
 cosmossdk.io/api => github.com/bnb-chain/greenfield-cosmos-sdk/api v0.0.0-20230816082903-b48770f5e210
 cosmossdk.io/math => github.com/bnb-chain/greenfield-cosmos-sdk/math v0.0.0-20230816082903-b48770f5e210
-github.com/cometbft/cometbft => github.com/bnb-chain/greenfield-cometbft v1.0.0
+github.com/cometbft/cometbft => github.com/bnb-chain/greenfield-cometbft v1.1.0
 github.com/cometbft/cometbft-db => github.com/bnb-chain/greenfield-cometbft-db v0.8.1-alpha.1
-github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v1.0.0
+github.com/cosmos/cosmos-sdk => github.com/bnb-chain/greenfield-cosmos-sdk v1.1.0
 github.com/cosmos/iavl => github.com/bnb-chain/greenfield-iavl v0.20.1
 github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 github.com/consensys/gnark-crypto => github.com/consensys/gnark-crypto v0.7.0
