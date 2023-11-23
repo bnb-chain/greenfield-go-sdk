@@ -204,6 +204,12 @@ func (s *StorageTestSuite) Test_Object() {
 	}
 	wg.Wait()
 
+	s.T().Log("---> GetObjectMeta <---")
+	meta1, err := s.Client.GetObjectMeta(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectName, meta1.ObjectInfo.ObjectName)
+	s.Require().Equal(bucketName, meta1.ObjectInfo.BucketName)
+
 	expectQuotaUsed := int(objectSize) * concurrentNumber * downloadCount
 	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
 	s.Require().NoError(err)
