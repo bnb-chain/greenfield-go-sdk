@@ -1288,7 +1288,23 @@ func (c *Client) ListObjectsByObjectID(ctx context.Context, objectIds []uint64, 
 //
 // - bucketName: The bucket name identifies the bucket.
 //
-// - actionType: The action type defines the requested action type of permission.
+//   - actionType: The action type defines the requested action type of permission.
+//     | Value | Description                |
+//     | ----- | -------------------------- |
+//     | 0     | ACTION_UNSPECIFIED         |89
+//     | 1     | ACTION_UPDATE_BUCKET_INFO  |
+//     | 2     | ACTION_DELETE_BUCKET       |
+//     | 3     | ACTION_CREATE_OBJECT       |
+//     | 4     | ACTION_DELETE_OBJECT       |
+//     | 5     | ACTION_COPY_OBJECT         |
+//     | 6     | ACTION_GET_OBJECT          |
+//     | 7     | ACTION_EXECUTE_OBJECT      |
+//     | 8     | ACTION_LIST_OBJECT         |
+//     | 9     | ACTION_UPDATE_GROUP_MEMBER |
+//     | 10    | ACTION_DELETE_GROUP        |
+//     | 11    | ACTION_UPDATE_OBJECT_INFO  |
+//     | 12    | ACTION_UPDATE_GROUP_EXTRA  |
+//     | 99    | ACTION_TYPE_ALL            |
 //
 // - opts: The options to set the meta to list object policies
 //
@@ -1342,7 +1358,7 @@ func (c *Client) ListObjectPolicies(ctx context.Context, objectName, bucketName 
 
 	policies := types.ListObjectPoliciesResponse{}
 	bufStr := buf.String()
-	err = xml.Unmarshal([]byte(bufStr), &policies.Policies)
+	err = xml.Unmarshal([]byte(bufStr), &policies)
 	if err != nil {
 		log.Error().Msgf("the list object policies in bucket name:%s, object name:%s failed: %s", bucketName, objectName, err.Error())
 		return types.ListObjectPoliciesResponse{}, err
