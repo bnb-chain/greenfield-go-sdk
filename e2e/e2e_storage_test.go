@@ -18,6 +18,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
+	"github.com/bnb-chain/greenfield/types/resource"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
@@ -236,6 +237,12 @@ func (s *StorageTestSuite) Test_Object() {
 	objectPolicy, err := s.Client.GetObjectPolicy(s.ClientContext, bucketName, objectName, principal.GetAddress().String())
 	s.Require().NoError(err)
 	s.T().Logf("get object policy:%s\n", objectPolicy.String())
+
+	s.T().Log("--->  ListObjectPolicies <---")
+	objectPolicies, err := s.Client.ListObjectPolicies(s.ClientContext, objectName, bucketName, uint32(permTypes.ACTION_GET_OBJECT), types.ListObjectPoliciesOptions{})
+	s.Require().NoError(err)
+	s.Require().Equal(resource.RESOURCE_TYPE_OBJECT.String(), resource.ResourceType_name[objectPolicies.Policies[0].ResourceType])
+	s.T().Logf("list object policies principal type:%d principal value:%s \n", objectPolicies.Policies[0].PrincipalType, objectPolicies.Policies[0].PrincipalValue)
 
 	s.T().Log("---> DeleteObjectPolicy <---")
 

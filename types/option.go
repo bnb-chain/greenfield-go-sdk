@@ -233,8 +233,9 @@ type GetObjectOptions struct {
 
 // GetChallengeInfoOptions contains the options for querying challenge data.
 type GetChallengeInfoOptions struct {
-	Endpoint  string // Endpoint indicates the endpoint of sp
-	SPAddress string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
+	Endpoint     string // Endpoint indicates the endpoint of sp
+	SPAddress    string // SPAddress indicates the HEX-encoded string of the sp address to be challenged.
+	UseV2version bool   // UseV2version indicates whether using of the v2 version get-challenge API
 }
 
 // GetSecondaryPieceOptions contains the options for `GetSecondaryPiece` API.
