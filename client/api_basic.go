@@ -8,18 +8,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cometbft/cometbft/votepool"
-	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
-
 	"cosmossdk.io/errors"
-	gosdktypes "github.com/bnb-chain/greenfield-go-sdk/types"
-	"github.com/bnb-chain/greenfield/sdk/types"
 	"github.com/cometbft/cometbft/proto/tendermint/p2p"
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	bfttypes "github.com/cometbft/cometbft/types"
+	"github.com/cometbft/cometbft/votepool"
+	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"google.golang.org/grpc"
+
+	gosdktypes "github.com/bnb-chain/greenfield-go-sdk/types"
+	"github.com/bnb-chain/greenfield/sdk/types"
+	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 )
 
 // IBasicClient interface defines basic functions of greenfield Client.
@@ -50,6 +51,7 @@ type IBasicClient interface {
 
 	BroadcastVote(ctx context.Context, vote votepool.Vote) error
 	QueryVote(ctx context.Context, eventType int, eventHash []byte) (*ctypes.ResultQueryVote, error)
+	SetTag(ctx context.Context, resourceGRN string, tags storageTypes.ResourceTags, opts gosdktypes.SetTagsOptions) (string, error)
 }
 
 // EnableTrace support trace error info the request and the response
@@ -438,4 +440,28 @@ func (c *Client) BroadcastVote(ctx context.Context, vote votepool.Vote) error {
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) QueryVote(ctx context.Context, eventType int, eventHash []byte) (*ctypes.ResultQueryVote, error) {
 	return c.chainClient.QueryVote(ctx, eventType, eventHash)
+}
+
+// SetTag - Set tag for a given existing resource GRN (a bucket, a object or a group)
+//
+// This API sends a request to the greenfield chain to set tags for the given resource.
+//
+// - ctx: Context variables for the current API call.
+//
+// - resourceGRN: The GRN of resource that needs to set tags
+//
+// - tags: the tags to be set for the given resource
+//
+// - opts: The Options indicates the meta to construct setTag msg and the way to send transaction
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error if SetTag failed, otherwise return nil.
+func (c *Client) SetTag(ctx context.Context, resourceGRN string, tags storageTypes.ResourceTags, opts gosdktypes.SetTagsOptions) (string, error) {
+	msgSetTag := storageTypes.NewMsgSetTag(c.MustGetDefaultAccount().GetAddress(), resourceGRN, &tags)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{msgSetTag}, opts.TxOpts)
+	if err != nil {
+		return "", err
+	}
+	return resp.TxResponse.TxHash, err
 }

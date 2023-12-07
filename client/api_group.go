@@ -13,14 +13,14 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
-	gnfdTypes "github.com/bnb-chain/greenfield/types"
-	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
-	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
+	gnfdTypes "github.com/bnb-chain/greenfield/types"
+	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
+	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 )
 
 // IGroupClient interface defines functions related to Group.
@@ -70,6 +70,9 @@ type IGroupClient interface {
 // - ret3: Return error when the request failed, otherwise return nil.
 func (c *Client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
 	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.Extra)
+	if opt.Tags != nil {
+		createGroupMsg.Tags = *opt.Tags
+	}
 	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
 }
 

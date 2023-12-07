@@ -119,7 +119,7 @@ type GroupsResult struct {
 // GroupMembers indicates the group member info
 type GroupMembers struct {
 	// Group defines the basic group info
-	Group *GroupInfo `xml:"Group"`
+	Group *storageType.GroupInfo `xml:"Group"`
 	// Operator defines operator address of group
 	Operator string `xml:"Operator"`
 	// CreateAt defines the block number when the group created
@@ -141,7 +141,7 @@ type GroupMembers struct {
 // ObjectMeta is the structure for metadata service user object
 type ObjectMeta struct {
 	// ObjectInfo defines the information of the object.
-	ObjectInfo *ObjectInfo `xml:"ObjectInfo"`
+	ObjectInfo *storageType.ObjectInfo `xml:"ObjectInfo"`
 	// LockedBalance defines locked balance of object
 	LockedBalance string `xml:"LockedBalance"`
 	// Removed defines the object is deleted or not
@@ -189,7 +189,7 @@ type GlobalVirtualGroupFamily struct {
 // BucketMetaWithVGF BucketMeta is the structure for metadata service user bucket
 type BucketMetaWithVGF struct {
 	// BucketInfo defines the information of the bucket.
-	BucketInfo *BucketInfo `xml:"BucketInfo"`
+	BucketInfo *storageType.BucketInfo `xml:"BucketInfo"`
 	// Removed defines the bucket is deleted or not
 	Removed bool `xml:"Removed"`
 	// DeleteAt defines the block number when the bucket deleted.
@@ -213,7 +213,7 @@ type BucketMetaWithVGF struct {
 // BucketMeta is the structure for metadata service user bucket
 type BucketMeta struct {
 	// BucketInfo defines the information of the bucket.
-	BucketInfo *BucketInfo `xml:"BucketInfo"`
+	BucketInfo *storageType.BucketInfo `xml:"BucketInfo"`
 	// Removed defines the bucket is deleted or not
 	Removed bool `xml:"Removed"`
 	// DeleteAt defines the block number when the bucket deleted.
@@ -232,65 +232,6 @@ type BucketMeta struct {
 	UpdateTime int64 `xml:"UpdateTime"`
 }
 
-// ObjectInfo differ from ObjectInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
-type ObjectInfo struct {
-	// Owner defines the object owner
-	Owner string `xml:"Owner"`
-	// BucketName is the name of the bucket
-	BucketName string `xml:"BucketName"`
-	// ObjectName is the name of object
-	ObjectName string `xml:"ObjectName"`
-	// Id is the unique identifier of object
-	Id uint64 `xml:"Id"`
-	// LocalVirtualGroupId defines the lvg id of object
-	LocalVirtualGroupId uint32 `xml:"LocalVirtualGroupId"`
-	// PayloadSize is the total size of the object payload
-	PayloadSize uint64 `xml:"PayloadSize"`
-	// Visibility defines the highest permissions for object. When an object is public, everyone can access it.
-	Visibility storageType.VisibilityType `xml:"Visibility"`
-	// ContentType define the format of the object which should be a standard MIME type.
-	ContentType string `xml:"ContentType"`
-	// CreateAt define the block number when the object created
-	CreateAt int64 `xml:"CreateAt"`
-	// ObjectStatus define the upload status of the object.
-	ObjectStatus storageType.ObjectStatus `xml:"ObjectStatus"`
-	// RedundancyType define the type of the redundancy which can be multi-replication or EC.
-	RedundancyType storageType.RedundancyType `xml:"RedundancyType"`
-	// SourceType define the source of the object.
-	SourceType storageType.SourceType `xml:"SourceType"`
-	// Checksums define the root hash of the pieces which stored in a SP.
-	Checksums [][]byte `xml:"Checksums"`
-}
-
-// BucketInfo differ from BucketInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
-type BucketInfo struct {
-	// Owner is the account address of bucket creator, it is also the bucket owner.
-	Owner string `xml:"Owner"`
-	// BucketName is a globally unique name of bucket
-	BucketName string `xml:"BucketName"`
-	// Visibility defines the highest permissions for bucket. When a bucket is public, everyone can get storage objects in it.
-	Visibility storageType.VisibilityType `xml:"Visibility"`
-	// Id is the unique identification for bucket.
-	Id uint64 `xml:"Id"`
-	// SourceType defines which chain the user should send the bucket management transactions to
-	SourceType storageType.SourceType `xml:"SourceType"`
-	// CreateAt define the block number when the bucket created
-	CreateAt int64 `xml:"CreateAt"`
-	// PaymentAddress is the address of the payment account
-	PaymentAddress string `xml:"PaymentAddress"`
-	// PrimarySpId is the unique id of the primary sp. Objects belongs to this bucket will never
-	// leave this SP, unless you explicitly shift them to another SP.
-	PrimarySpId uint32 `xml:"PrimarySpId"`
-	// GlobalVirtualGroupFamilyId defines the unique id of gvg family
-	GlobalVirtualGroupFamilyId uint32 `xml:"GlobalVirtualGroupFamilyId"`
-	// ChargedReadQuota defines the traffic quota for read in bytes per month.
-	// The available read data for each user is the sum of the free read data provided by SP and
-	// the ChargeReadQuota specified here.
-	ChargedReadQuota uint64 `xml:"ChargedReadQuota"`
-	// BucketStatus define the status of the bucket.
-	BucketStatus storageType.BucketStatus `xml:"BucketStatus"`
-}
-
 // ListBucketsByBucketIDResponse is response type for the ListBucketsByBucketID
 type ListBucketsByBucketIDResponse struct {
 	// Buckets defines the information of a bucket map
@@ -306,7 +247,7 @@ type ListGroupsByGroupIDResponse struct {
 // GroupMeta is the structure for group information
 type GroupMeta struct {
 	// Group defines the basic group info
-	Group *GroupInfo `xml:"Group"`
+	Group *storageType.GroupInfo `xml:"Group"`
 	// NumberOfMembers defines how many members in this group
 	NumberOfMembers int64 `xml:"NumberOfMembers"`
 	// Operator defines operator address of group
@@ -321,20 +262,6 @@ type GroupMeta struct {
 	UpdateTime int64 `xml:"UpdateTime"`
 	// Removed defines the group is deleted or not
 	Removed bool `xml:"Removed"`
-}
-
-// GroupInfo differ from GroupInfo in greenfield as it adds uint64/int64 unmarshal guide in json part
-type GroupInfo struct {
-	// Owner is the owner of the group. It can not changed once it created.
-	Owner string `xml:"Owner"`
-	// GroupName is the name of group which is unique under an account.
-	GroupName string `xml:"GroupName"`
-	// SourceType
-	SourceType storageType.SourceType `xml:"SourceType"`
-	// Id is the unique identifier of group
-	Id uint64 `xml:"Id"`
-	// Extra is used to store extra info for the group
-	Extra string `xml:"Extra"`
 }
 
 type PaymentAccounts struct {

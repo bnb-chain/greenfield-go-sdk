@@ -14,15 +14,16 @@ import (
 	"strings"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
+	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/rs/zerolog/log"
+
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/tx"
-	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -148,8 +149,10 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		}
 	}
 
-	createBucketMsg := storageTypes.NewMsgCreateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName,
-		visibility, address, paymentAddr, 0, nil, opts.ChargedQuota)
+	createBucketMsg := storageTypes.NewMsgCreateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName, visibility, address, paymentAddr, 0, nil, opts.ChargedQuota)
+	if opts.Tags != nil {
+		createBucketMsg.Tags = *opts.Tags
+	}
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {

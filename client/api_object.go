@@ -137,6 +137,10 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 
 	createObjectMsg := storageTypes.NewMsgCreateObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName,
 		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil)
+	if opts.Tags != nil {
+		createObjectMsg.Tags = *opts.Tags
+	}
+
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
 		return "", err

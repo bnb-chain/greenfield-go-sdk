@@ -10,6 +10,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+type SetTagsOptions struct {
+	TxOpts *gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.
+}
+
 // CreateBucketOptions indicates the metadata to construct `CreateBucket` msg of storage module.
 type CreateBucketOptions struct {
 	Visibility     storageTypes.VisibilityType // Visibility defines the bucket public status.
@@ -17,6 +21,7 @@ type CreateBucketOptions struct {
 	PaymentAddress string                      // PaymentAddress indicates the HEX-encoded string of the payment address.
 	ChargedQuota   uint64                      // ChargedQuota defines the read data that users are charged for, measured in bytes.
 	IsAsyncMode    bool                        // indicate whether to create the bucket in asynchronous mode.
+	Tags           *storageTypes.ResourceTags  // set tags when creating bucket
 }
 
 // MigrateBucketOptions indicates the metadata to construct `MigrateBucket` msg of storage module.
@@ -122,12 +127,14 @@ type CreateObjectOptions struct {
 	IsReplicaType       bool                        // IsReplicaType indicates whether the object uses REDUNDANCY_REPLICA_TYPE.
 	IsAsyncMode         bool                        // IsAsyncMode indicate whether to create the object in asynchronous mode.
 	IsSerialComputeMode bool                        // IsSerialComputeMode indicate whether to compute integrity hash in serial way or parallel way when creating an object.
+	Tags                *storageTypes.ResourceTags  // set tags when creating bucket
 }
 
 // CreateGroupOptions indicates the metadata to construct `CreateGroup` msg.
 type CreateGroupOptions struct {
-	Extra  string                 // Extra defines the extra meta for a group.
-	TxOpts *gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.
+	Extra  string                     // Extra defines the extra meta for a group.
+	TxOpts *gnfdsdktypes.TxOption     // TxOpts defines the options to customize a transaction.
+	Tags   *storageTypes.ResourceTags // set tags when creating bucket
 }
 
 // UpdateGroupMemberOption indicates the metadata to construct `UpdateGroupMembers` msg.
