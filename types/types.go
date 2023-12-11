@@ -6,10 +6,11 @@ import (
 	"net/url"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/bnb-chain/greenfield/x/virtualgroup/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -27,8 +28,8 @@ type ObjectStat struct {
 
 // ObjectDetail contains the detailed info of the object stored on Greenfield.
 type ObjectDetail struct {
-	ObjectInfo         *storagetypes.ObjectInfo
-	GlobalVirtualGroup *types.GlobalVirtualGroup
+	ObjectInfo         *storagetypes.ObjectInfo  `protobuf:"bytes,1,opt,name=object_info" json:"object_info,omitempty"`
+	GlobalVirtualGroup *types.GlobalVirtualGroup `protobuf:"bytes,2,opt,name=global_virtual_group" json:"global_virtual_group,omitempty"`
 }
 
 // QueryPieceInfo indicates the challenge or recovery object piece info.
