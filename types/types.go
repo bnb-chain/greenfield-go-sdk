@@ -6,10 +6,12 @@ import (
 	"net/url"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	proto "github.com/cosmos/gogoproto/proto"
+
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/bnb-chain/greenfield/x/virtualgroup/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -27,9 +29,13 @@ type ObjectStat struct {
 
 // ObjectDetail contains the detailed info of the object stored on Greenfield.
 type ObjectDetail struct {
-	ObjectInfo         *storagetypes.ObjectInfo
-	GlobalVirtualGroup *types.GlobalVirtualGroup
+	ObjectInfo         *storagetypes.ObjectInfo  `protobuf:"bytes,1,opt,name=object_info" json:"object_info,omitempty"`
+	GlobalVirtualGroup *types.GlobalVirtualGroup `protobuf:"bytes,2,opt,name=global_virtual_group" json:"global_virtual_group,omitempty"`
 }
+
+func (m *ObjectDetail) ProtoMessage()  {}
+func (m *ObjectDetail) Reset()         { *m = ObjectDetail{} }
+func (m *ObjectDetail) String() string { return proto.CompactTextString(m) }
 
 // QueryPieceInfo indicates the challenge or recovery object piece info.
 // If it is primary sp, the RedundancyIndex value should be -1， else it indicates the index of secondary sp.
