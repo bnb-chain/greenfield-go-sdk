@@ -46,6 +46,8 @@ func ParseMnemonicFromFile(fileName string) string {
 type BaseSuite struct {
 	suite.Suite
 	DefaultAccount  *types.Account
+	SP0Account      *types.Account // SP to exit
+	SP7Account      *types.Account // successor
 	Client          client.IClient
 	ClientContext   context.Context
 	ChallengeClient client.IClient
@@ -66,6 +68,10 @@ func (s *BaseSuite) NewChallengeClient() {
 	s.Require().NoError(err)
 }
 
+func ParseSPMnemonic(i int) string {
+	return ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/sp%d/info", i))
+}
+
 func (s *BaseSuite) SetupSuite() {
 	mnemonic := ParseValidatorMnemonic(0)
 	account, err := types.NewAccountFromMnemonic("test", mnemonic)
@@ -76,6 +82,14 @@ func (s *BaseSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.ClientContext = context.Background()
 	s.DefaultAccount = account
+
+	sp0Account, err := types.NewAccountFromMnemonic("SP0", ParseSPMnemonic(0))
+	s.Require().NoError(err)
+	s.SP0Account = sp0Account
+
+	sp7Account, err := types.NewAccountFromMnemonic("SP7", ParseSPMnemonic(7))
+	s.Require().NoError(err)
+	s.SP7Account = sp7Account
 	s.NewChallengeClient()
 }
 
