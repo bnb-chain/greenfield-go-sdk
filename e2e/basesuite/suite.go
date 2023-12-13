@@ -47,6 +47,7 @@ type BaseSuite struct {
 	suite.Suite
 	DefaultAccount  *types.Account
 	SP0Account      *types.Account // SP to exit
+	SP1Account      *types.Account // Another primary SP
 	SP7Account      *types.Account // successor
 	Client          client.IClient
 	ClientContext   context.Context
@@ -87,9 +88,14 @@ func (s *BaseSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.SP0Account = sp0Account
 
+	sp1Account, err := types.NewAccountFromMnemonic("SP1", ParseSPMnemonic(1))
+	s.Require().NoError(err)
+	s.SP1Account = sp1Account
+
 	sp7Account, err := types.NewAccountFromMnemonic("SP7", ParseSPMnemonic(7))
 	s.Require().NoError(err)
 	s.SP7Account = sp7Account
+
 	s.NewChallengeClient()
 }
 
