@@ -648,7 +648,7 @@ func (s *StorageTestSuite) Test_Group_with_Tag() {
 	headResult, err := s.Client.HeadGroup(s.ClientContext, groupName, groupOwner.String())
 	s.Require().NoError(err)
 	s.Require().Equal(groupName, headResult.GroupName)
-	s.Require().Equal(tags, &headResult.Tags)
+	s.Require().Equal(tags, *headResult.Tags)
 }
 
 func (s *StorageTestSuite) Test_Group_without_Tag() {
@@ -680,7 +680,7 @@ func (s *StorageTestSuite) Test_Group_without_Tag() {
 	headResult, err = s.Client.HeadGroup(s.ClientContext, groupName, groupOwner.String())
 	s.Require().NoError(err)
 	s.Require().Equal(groupName, headResult.GroupName)
-	s.Require().Equal(tags, &headResult.Tags)
+	s.Require().Equal(tags, *headResult.Tags)
 }
 
 func (s *StorageTestSuite) Test_Bucket_with_Tag() {
@@ -704,6 +704,6 @@ func (s *StorageTestSuite) Test_Bucket_with_Tag() {
 	if err == nil {
 		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
 		s.Require().Equal(bucketInfo.ChargedReadQuota, chargedQuota)
-		s.Require().Equal(tags, &bucketInfo.Tags)
+		s.Require().Equal(tags, *bucketInfo.Tags)
 	}
 }
