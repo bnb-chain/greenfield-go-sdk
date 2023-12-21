@@ -17,6 +17,10 @@ import (
 	"strings"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
+	"github.com/rs/zerolog/log"
+
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -25,9 +29,6 @@ import (
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/tx"
-	"github.com/rs/zerolog/log"
 )
 
 // IObjectClient interface defines functions related to object operations.
@@ -137,9 +138,6 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 
 	createObjectMsg := storageTypes.NewMsgCreateObject(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName,
 		uint64(size), visibility, expectCheckSums, contentType, redundancyType, math.MaxUint, nil)
-	if opts.Tags != nil {
-		createObjectMsg.Tags = *opts.Tags
-	}
 
 	err = createObjectMsg.ValidateBasic()
 	if err != nil {
@@ -156,8 +154,16 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
+	msgs := []sdk.Msg{signedCreateObjectMsg}
 
-	resp, err := c.BroadcastTx(ctx, []sdk.Msg{signedCreateObjectMsg}, opts.TxOpts)
+	if opts.Tags != nil {
+		// Set tag
+		grn := gnfdTypes.NewObjectGRN(bucketName, objectName)
+		msgSetTag := storageTypes.NewMsgSetTag(c.MustGetDefaultAccount().GetAddress(), grn.String(), opts.Tags)
+		msgs = append(msgs, msgSetTag)
+	}
+
+	resp, err := c.BroadcastTx(ctx, msgs, opts.TxOpts)
 	if err != nil {
 		return "", err
 	}

@@ -12,17 +12,19 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
+	greenfield_types "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/resource"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	"github.com/stretchr/testify/suite"
 )
 
 type StorageTestSuite struct {
@@ -625,4 +627,83 @@ func (s *StorageTestSuite) Test_Upload_Object_With_Tampering_Content() {
 	s.Require().NoError(err)
 	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
 	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+}
+
+func (s *StorageTestSuite) Test_Group_with_Tag() {
+	//create group with tag
+	groupName := storageTestUtil.GenRandomGroupName()
+
+	groupOwner := s.DefaultAccount.GetAddress()
+	s.T().Log("---> CreateGroup and HeadGroup <---")
+
+	var tags storageTypes.ResourceTags
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key1", Value: "value1"})
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key2", Value: "value2"})
+
+	_, err := s.Client.CreateGroup(s.ClientContext, groupName, types.CreateGroupOptions{Tags: &tags})
+	s.Require().NoError(err)
+	s.T().Logf("create GroupName: %s", groupName)
+
+	time.Sleep(5 * time.Second)
+	headResult, err := s.Client.HeadGroup(s.ClientContext, groupName, groupOwner.String())
+	s.Require().NoError(err)
+	s.Require().Equal(groupName, headResult.GroupName)
+	s.Require().Equal(tags, &headResult.Tags)
+}
+
+func (s *StorageTestSuite) Test_Group_without_Tag() {
+	//create group with tag
+	groupName := storageTestUtil.GenRandomGroupName()
+
+	groupOwner := s.DefaultAccount.GetAddress()
+	s.T().Log("---> CreateGroup and HeadGroup <---")
+
+	_, err := s.Client.CreateGroup(s.ClientContext, groupName, types.CreateGroupOptions{})
+	s.Require().NoError(err)
+	s.T().Logf("create GroupName: %s", groupName)
+
+	time.Sleep(5 * time.Second)
+	headResult, err := s.Client.HeadGroup(s.ClientContext, groupName, groupOwner.String())
+	s.Require().NoError(err)
+	s.Require().Equal(groupName, headResult.GroupName)
+
+	grn := greenfield_types.NewGroupGRN(groupOwner, groupName)
+	var tags storageTypes.ResourceTags
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key1", Value: "value1"})
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key2", Value: "value2"})
+
+	_, err = s.Client.SetTag(s.ClientContext, grn.String(), tags, types.SetTagsOptions{})
+	s.Require().NoError(err)
+	s.T().Logf("set tag: %v for group %s", tags, groupName)
+
+	time.Sleep(5 * time.Second)
+	headResult, err = s.Client.HeadGroup(s.ClientContext, groupName, groupOwner.String())
+	s.Require().NoError(err)
+	s.Require().Equal(groupName, headResult.GroupName)
+	s.Require().Equal(tags, &headResult.Tags)
+}
+
+func (s *StorageTestSuite) Test_Bucket_with_Tag() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	var tags storageTypes.ResourceTags
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key1", Value: "value1"})
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key2", Value: "value2"})
+
+	chargedQuota := uint64(100)
+	s.T().Log("---> CreateBucket and HeadBucket <---")
+	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota, Tags: &tags}
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, opts)
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+		s.Require().Equal(bucketInfo.ChargedReadQuota, chargedQuota)
+		s.Require().Equal(tags, &bucketInfo.Tags)
+	}
 }
