@@ -651,7 +651,7 @@ func (s *StorageTestSuite) Test_Group_with_Tag() {
 	s.Require().Equal(tags, *headResult.Tags)
 }
 
-func (s *StorageTestSuite) Test_Group_without_Tag() {
+func (s *StorageTestSuite) Test_CreateGroup_And_Set_Tag() {
 	//create group with tag
 	groupName := storageTestUtil.GenRandomGroupName()
 
@@ -705,5 +705,142 @@ func (s *StorageTestSuite) Test_Bucket_with_Tag() {
 		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
 		s.Require().Equal(bucketInfo.ChargedReadQuota, chargedQuota)
 		s.Require().Equal(tags, *bucketInfo.Tags)
+	}
+}
+
+func (s *StorageTestSuite) Test_CreateBucket_And_Set_Tag() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+
+	chargedQuota := uint64(100)
+	s.T().Log("---> CreateBucket and HeadBucket <---")
+	opts := types.CreateBucketOptions{ChargedQuota: chargedQuota}
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, opts)
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+		s.Require().Equal(bucketInfo.ChargedReadQuota, chargedQuota)
+	}
+
+	// set tag
+	grn := greenfield_types.NewBucketGRN(bucketName)
+	var tags storageTypes.ResourceTags
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key1", Value: "value1"})
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key2", Value: "value2"})
+
+	_, err = s.Client.SetTag(s.ClientContext, grn.String(), tags, types.SetTagsOptions{})
+	s.Require().NoError(err)
+	s.T().Logf("set tag: %v for bucket %s", tags, bucketName)
+
+	time.Sleep(5 * time.Second)
+	bucketInfo, err = s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(tags, *bucketInfo.Tags)
+	}
+}
+
+func (s *StorageTestSuite) Test_Object_with_Tag() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*300; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	var tags storageTypes.ResourceTags
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key1", Value: "value1"})
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key2", Value: "value2"})
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()),
+		types.CreateObjectOptions{Tags: &tags})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+	s.Require().Equal(tags, *objectDetail.ObjectInfo.Tags)
+}
+
+func (s *StorageTestSuite) Test_Object_And_Set_Tag() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*300; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()),
+		types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	// set tag
+	grn := greenfield_types.NewObjectGRN(bucketName, objectName)
+	var tags storageTypes.ResourceTags
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key1", Value: "value1"})
+	tags.Tags = append(tags.Tags, storageTypes.ResourceTags_Tag{Key: "key2", Value: "value2"})
+
+	_, err = s.Client.SetTag(s.ClientContext, grn.String(), tags, types.SetTagsOptions{})
+	s.Require().NoError(err)
+	s.T().Logf("set tag: %v for object %s", tags, objectName)
+
+	time.Sleep(5 * time.Second)
+	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(tags, *objectDetail.ObjectInfo.Tags)
 	}
 }
