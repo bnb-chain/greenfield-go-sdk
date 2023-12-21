@@ -153,9 +153,6 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	}
 
 	createBucketMsg := storageTypes.NewMsgCreateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName, visibility, address, paymentAddr, 0, nil, opts.ChargedQuota)
-	if opts.Tags != nil {
-		createBucketMsg.Tags = *opts.Tags
-	}
 
 	err = createBucketMsg.ValidateBasic()
 	if err != nil {
@@ -171,7 +168,15 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
-	resp, err := c.BroadcastTx(ctx, []sdk.Msg{signedMsg}, opts.TxOpts)
+	msgs := []sdk.Msg{signedMsg}
+
+	if opts.Tags != nil {
+		// Set tag
+		grn := gnfdTypes.NewBucketGRN(bucketName)
+		msgSetTag := storageTypes.NewMsgSetTag(c.MustGetDefaultAccount().GetAddress(), grn.String(), opts.Tags)
+		msgs = append(msgs, msgSetTag)
+	}
+	resp, err := c.BroadcastTx(ctx, msgs, opts.TxOpts)
 	if err != nil {
 		return "", err
 	}

@@ -14,10 +14,12 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
+	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
@@ -70,10 +72,27 @@ type IGroupClient interface {
 // - ret3: Return error when the request failed, otherwise return nil.
 func (c *Client) CreateGroup(ctx context.Context, groupName string, opt types.CreateGroupOptions) (string, error) {
 	createGroupMsg := storageTypes.NewMsgCreateGroup(c.MustGetDefaultAccount().GetAddress(), groupName, opt.Extra)
-	if opt.Tags != nil {
-		createGroupMsg.Tags = *opt.Tags
+	// set the default txn broadcast mode as block mode
+	if opt.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+		opt.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
-	return c.sendTxn(ctx, createGroupMsg, opt.TxOpts)
+	msgs := []sdk.Msg{createGroupMsg}
+
+	if opt.Tags != nil {
+		// Set tag
+		grn := gnfdTypes.NewGroupGRN(c.MustGetDefaultAccount().GetAddress(), groupName)
+		msgSetTag := storageTypes.NewMsgSetTag(c.MustGetDefaultAccount().GetAddress(), grn.String(), opt.Tags)
+		msgs = append(msgs, msgSetTag)
+	}
+
+	resp, err := c.BroadcastTx(ctx, msgs, opt.TxOpts)
+	if err != nil {
+		return "", err
+	}
+	txnHash := resp.TxResponse.TxHash
+
+	return txnHash, nil
 }
 
 // DeleteGroup - Delete a group on Greenfield blockchain. The sender MUST only be the group owner, group members or others would fail to send this transaction.
