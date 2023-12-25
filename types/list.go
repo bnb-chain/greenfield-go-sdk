@@ -54,6 +54,16 @@ type UploadOffset struct {
 	Offset  uint64   `xml:"Offset"`       // Offset defines the offset info of resumable uploading object
 }
 
+// MigrationProgress indicates the progress info of bucket migration
+type MigrationProgress struct {
+	XMLName             xml.Name `xml:"QueryMigrationProgress"`
+	Version             string   `xml:"version,attr"`        // Version defines version info
+	ProgressDescription string   `xml:"ProgressDescription"` // ProgressDescription defines a string message representing the upload progress.
+	ErrorDescription    string   `xml:"ErrorDescription"`    // ErrorDescription defines a string message representing an upload error exception.
+	MigratedBytes       uint64   `xml:"MigratedBytes"`
+	MigrationState      uint64   `xml:"MigrationState"`
+}
+
 // ChallengeV2Result indicates the response info of challenge v2 API
 type ChallengeV2Result struct {
 	XMLName         xml.Name `xml:"GetChallengeInfo"`
