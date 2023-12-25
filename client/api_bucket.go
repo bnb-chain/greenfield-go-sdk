@@ -1085,6 +1085,16 @@ func (c *Client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount
 	return buckets, nil
 }
 
+// GetBucketMigrationProgress - Query the migration progress info of the specific bucket.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - ret1: The info of migration progress which contains the progress info of the bucket
+//
+// - ret2: Return error when the request failed, otherwise return nil.
+
 // GetBucketMigrationProgress return the status of object including the uploading progress
 func (c *Client) GetBucketMigrationProgress(ctx context.Context, bucketName string, destSP uint32) (types.MigrationProgress, error) {
 	_, err := c.HeadBucket(ctx, bucketName)
