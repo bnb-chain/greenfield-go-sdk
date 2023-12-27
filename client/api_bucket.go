@@ -995,7 +995,7 @@ func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
 
-	resp, err := c.chainClient.BroadcastTx(ctx, []sdk.Msg{cancelMigrateBucketMsg}, opts.TxOpts)
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{cancelMigrateBucketMsg}, opts.TxOpts)
 	if err != nil {
 		return "", err
 	}
