@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
@@ -23,7 +24,6 @@ import (
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -989,7 +989,7 @@ func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 		return "", err
 	}
 
-	// set the default txn broadcast mode as block mode
+	// set the default txn broadcast mode as sync mode
 	if opts.TxOpts == nil {
 		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
