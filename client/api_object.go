@@ -507,7 +507,7 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 		disableCloseBody: true,
 	}
 
-	var endpoint *url.URL
+	var endpoint = url.URL{}
 	//endpoint, err := c.getSPUrlByBucket(bucketName)
 	endpoint.Scheme = "https"
 	endpoint.Host = "gnfd-testnet-sp2.bnbchain.org"
@@ -516,7 +516,7 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 	//	return nil, types.ObjectStat{}, err
 	//}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, &endpoint)
 	if err != nil {
 		return nil, types.ObjectStat{}, err
 	}
