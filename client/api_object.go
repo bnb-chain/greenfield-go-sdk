@@ -510,7 +510,7 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 	var endpoint = url.URL{}
 	//endpoint, err := c.getSPUrlByBucket(bucketName)
 	endpoint.Scheme = "https"
-	endpoint.Host = "gnfd-testnet-sp2.bnbchain.org"
+	endpoint.Host = "gnfd-testnet-sp3.nodereal.io"
 	//if err != nil {
 	//	log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
 	//	return nil, types.ObjectStat{}, err

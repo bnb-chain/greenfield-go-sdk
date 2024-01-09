@@ -132,16 +132,21 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 		cc  *sdkclient.GreenfieldClient
 		err error
 	)
+	fmt.Println("sdkclient.NewGreenfieldClient starts: ", time.Now())
 	if option.UseWebSocketConn {
 		cc, err = sdkclient.NewGreenfieldClient(endpoint, chainID, sdkclient.WithWebSocketClient())
 	} else {
 		cc, err = sdkclient.NewGreenfieldClient(endpoint, chainID)
 	}
+	fmt.Println("sdkclient.NewGreenfieldClient ends: ", time.Now())
+
 	if err != nil {
 		return nil, err
 	}
 	if option.DefaultAccount != nil {
+		fmt.Println("cc.SetKeyManager starts: ", time.Now())
 		cc.SetKeyManager(option.DefaultAccount.GetKeyManager())
+		fmt.Println("cc.SetKeyManager ends: ", time.Now())
 	}
 
 	if option.ExpireSeconds > httplib.MaxExpiryAgeInSec {
@@ -160,8 +165,10 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 		expireSeconds:    option.ExpireSeconds,
 	}
 
+	fmt.Println("c.refreshStorageProviders starts: ", time.Now())
 	// fetch sp endpoints info from chain
 	err = c.refreshStorageProviders(context.Background())
+	fmt.Println("c.refreshStorageProviders ends: ", time.Now())
 
 	if err != nil {
 		return nil, err
