@@ -507,11 +507,14 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlByBucket(bucketName)
-	if err != nil {
-		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
-		return nil, types.ObjectStat{}, err
-	}
+	var endpoint *url.URL
+	//endpoint, err := c.getSPUrlByBucket(bucketName)
+	endpoint.Scheme = "https"
+	endpoint.Host = "gnfd-testnet-sp2.bnbchain.org"
+	//if err != nil {
+	//	log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
+	//	return nil, types.ObjectStat{}, err
+	//}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
