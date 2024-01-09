@@ -167,7 +167,7 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 
 	fmt.Println("c.refreshStorageProviders starts: ", time.Now())
 	// fetch sp endpoints info from chain
-	err = c.refreshStorageProviders(context.Background())
+	//err = c.refreshStorageProviders(context.Background())
 	fmt.Println("c.refreshStorageProviders ends: ", time.Now())
 
 	if err != nil {
