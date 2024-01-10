@@ -484,11 +484,12 @@ func (c *Client) FPutObject(ctx context.Context, bucketName, objectName, filePat
 func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 	opts types.GetObjectOptions,
 ) (io.ReadCloser, types.ObjectStat, error) {
-	if err := s3util.CheckValidBucketName(bucketName); err != nil {
+	var err error
+	if err = s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, types.ObjectStat{}, err
 	}
 
-	if err := s3util.CheckValidObjectName(objectName); err != nil {
+	if err = s3util.CheckValidObjectName(objectName); err != nil {
 		return nil, types.ObjectStat{}, err
 	}
 
@@ -507,16 +508,35 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 		disableCloseBody: true,
 	}
 
-	var endpoint = url.URL{}
-	//endpoint, err := c.getSPUrlByBucket(bucketName)
-	endpoint.Scheme = "https"
-	endpoint.Host = "gnfd-testnet-sp3.nodereal.io"
-	//if err != nil {
-	//	log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
-	//	return nil, types.ObjectStat{}, err
+	var endpoint *url.URL
+	//if opts.Endpoint != "" {
+	//	endpoint.Scheme = "https"
+	//	endpoint.Host = "gnfd-testnet-sp3.nodereal.io"
 	//}
 
-	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, &endpoint)
+	if opts.Endpoint != "" {
+		var useHttps bool
+		if strings.Contains(opts.Endpoint, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
+
+		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
+			return nil, types.ObjectStat{}, err
+		}
+	} else {
+		endpoint, err = c.getSPUrlByBucket(bucketName)
+
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
+			return nil, types.ObjectStat{}, err
+		}
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return nil, types.ObjectStat{}, err
 	}
