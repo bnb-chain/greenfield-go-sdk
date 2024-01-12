@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
-	govTypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/rs/zerolog/log"
 
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
@@ -52,7 +52,8 @@ type IBucketClient interface {
 	ListBucketsByBucketID(ctx context.Context, bucketIds []uint64, opts types.EndPointOptions) (types.ListBucketsByBucketIDResponse, error)
 	GetMigrateBucketApproval(ctx context.Context, migrateBucketMsg *storageTypes.MsgMigrateBucket) (*storageTypes.MsgMigrateBucket, error)
 	MigrateBucket(ctx context.Context, bucketName string, dstPrimarySPID uint32, opts types.MigrateBucketOptions) (string, error)
-	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error)
+	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error)
+	GetBucketMigrationProgress(ctx context.Context, bucketName string, destSP uint32) (types.MigrationProgress, error)
 	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
 }
 
@@ -976,26 +977,46 @@ func (c *Client) MigrateBucket(ctx context.Context, bucketName string, dstPrimar
 //
 // - opt: The options of the proposal meta and transaction.
 //
-// - ret1: The proposal ID of canceling migration.
+// - ret1: Transaction hash return from blockchain.
 //
-// - ret2: Transaction hash return from blockchain.
-//
-// - ret3: Return error when the request of cancel migration failed, otherwise return nil.
-func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (uint64, string, error) {
-	govModuleAddress, err := c.GetModuleAccountByName(ctx, govTypes.ModuleName)
-	if err != nil {
-		return 0, "", err
-	}
-	cancelBucketMsg := storageTypes.NewMsgCancelMigrateBucket(
-		govModuleAddress.GetAddress(), bucketName,
-	)
+// - ret2: Return error when the request of cancel migration failed, otherwise return nil.
+func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error) {
 
-	err = cancelBucketMsg.ValidateBasic()
+	cancelMigrateBucketMsg := storageTypes.NewMsgCancelMigrateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName)
+
+	err := cancelMigrateBucketMsg.ValidateBasic()
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
 
-	return c.SubmitProposal(ctx, []sdk.Msg{cancelBucketMsg}, opts.ProposalDepositAmount, opts.ProposalTitle, opts.ProposalSummary, types.SubmitProposalOptions{Metadata: opts.ProposalMetadata, TxOpts: opts.TxOpts})
+	// set the default txn broadcast mode as sync mode
+	if opts.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
+	}
+
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{cancelMigrateBucketMsg}, opts.TxOpts)
+	if err != nil {
+		return "", err
+	}
+
+	var txnResponse *ctypes.ResultTx
+	txnHash := resp.TxResponse.TxHash
+	if !opts.IsAsyncMode {
+		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
+		defer cancel()
+
+		txnResponse, err = c.WaitForTx(ctxTimeout, txnHash)
+		if err != nil {
+			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
+		}
+
+		if txnResponse.TxResult.Code != 0 {
+			return txnHash, fmt.Errorf("the createBucket txn has failed with response code: %d", txnResponse.TxResult.Code)
+		}
+	}
+
+	return txnHash, nil
 }
 
 // ListBucketsByPaymentAccount - List bucket info by payment account.
@@ -1062,4 +1083,66 @@ func (c *Client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount
 	}
 
 	return buckets, nil
+}
+
+// GetBucketMigrationProgress - Query the migration progress info of the specific bucket.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The bucket name identifies the bucket.
+//
+// - ret1: The info of migration progress which contains the progress info of the bucket
+//
+// - ret2: Return error when the request failed, otherwise return nil.
+
+// GetBucketMigrationProgress return the status of object including the uploading progress
+func (c *Client) GetBucketMigrationProgress(ctx context.Context, bucketName string, destSP uint32) (types.MigrationProgress, error) {
+	_, err := c.HeadBucket(ctx, bucketName)
+	if err != nil {
+		return types.MigrationProgress{}, err
+	}
+
+	// get object status from sp
+	migrationProgress, err := c.getMigrationStateFromSP(ctx, bucketName, destSP)
+	if err != nil {
+		return types.MigrationProgress{}, errors.New("fail to fetch bucket migration progress from sp" + err.Error())
+	}
+	return migrationProgress, nil
+}
+
+func (c *Client) getMigrationStateFromSP(ctx context.Context, bucketName string, destSP uint32) (types.MigrationProgress, error) {
+	params := url.Values{}
+	params.Set("bucket-migration-progress", "")
+
+	reqMeta := requestMeta{
+		urlValues:     params,
+		bucketName:    bucketName,
+		contentSHA256: types.EmptyStringSHA256,
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getSPUrlByID(destSP)
+	if err != nil {
+		return types.MigrationProgress{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.MigrationProgress{}, err
+	}
+
+	defer utils.CloseResponse(resp)
+
+	migrationProgress := types.MigrationProgress{}
+	// decode the xml content from response body
+	err = xml.NewDecoder(resp.Body).Decode(&migrationProgress)
+	if err != nil {
+		return types.MigrationProgress{}, err
+	}
+
+	return migrationProgress, nil
 }
