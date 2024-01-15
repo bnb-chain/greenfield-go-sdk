@@ -509,10 +509,6 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 	}
 
 	var endpoint *url.URL
-	//if opts.Endpoint != "" {
-	//	endpoint.Scheme = "https"
-	//	endpoint.Host = "gnfd-testnet-sp3.nodereal.io"
-	//}
 
 	if opts.Endpoint != "" {
 		var useHttps bool

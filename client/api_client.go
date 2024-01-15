@@ -96,8 +96,8 @@ type Option struct {
 	UseWebSocketConn bool
 	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000.
 	ExpireSeconds uint64
-	// SpEndpoint indicates the endpoint of sp
-	SpEndpoint string
+	// Endpoint indicates the endpoint of sp
+	Endpoint string
 }
 
 // OffChainAuthOption - The optional configurations for off-chain-auth.
@@ -134,21 +134,16 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 		cc  *sdkclient.GreenfieldClient
 		err error
 	)
-	fmt.Println("sdkclient.NewGreenfieldClient starts: ", time.Now())
 	if option.UseWebSocketConn {
 		cc, err = sdkclient.NewGreenfieldClient(endpoint, chainID, sdkclient.WithWebSocketClient())
 	} else {
 		cc, err = sdkclient.NewGreenfieldClient(endpoint, chainID)
 	}
-	fmt.Println("sdkclient.NewGreenfieldClient ends: ", time.Now())
-
 	if err != nil {
 		return nil, err
 	}
 	if option.DefaultAccount != nil {
-		fmt.Println("cc.SetKeyManager starts: ", time.Now())
 		cc.SetKeyManager(option.DefaultAccount.GetKeyManager())
-		fmt.Println("cc.SetKeyManager ends: ", time.Now())
 	}
 
 	if option.ExpireSeconds > httplib.MaxExpiryAgeInSec {
@@ -167,8 +162,7 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 		expireSeconds:    option.ExpireSeconds,
 	}
 
-	fmt.Println("c.refreshStorageProviders starts: ", time.Now())
-	if option.SpEndpoint == "" {
+	if option.Endpoint == "" {
 		// fetch sp endpoints info from chain
 		err = c.refreshStorageProviders(context.Background())
 
@@ -176,8 +170,6 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 			return nil, err
 		}
 	}
-	fmt.Println("c.refreshStorageProviders ends: ", time.Now())
-
 	// register off-chain-auth pubkey to all sps
 	if option.OffChainAuthOption != nil {
 		if option.OffChainAuthOption.Seed == "" || option.OffChainAuthOption.Domain == "" {
