@@ -510,19 +510,8 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 
 	var endpoint *url.URL
 
-	if opts.Endpoint != "" {
-		var useHttps bool
-		if strings.Contains(opts.Endpoint, "https") {
-			useHttps = true
-		} else {
-			useHttps = c.secure
-		}
-
-		endpoint, err = utils.GetEndpointURL(opts.Endpoint, useHttps)
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("fetch endpoint from opts %s fail:%v", opts.Endpoint, err))
-			return nil, types.ObjectStat{}, err
-		}
+	if c.forceToUseSpecifiedSpEndpointForDownloadOnly != nil {
+		endpoint = c.forceToUseSpecifiedSpEndpointForDownloadOnly
 	} else {
 		endpoint, err = c.getSPUrlByBucket(bucketName)
 

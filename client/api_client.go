@@ -73,6 +73,9 @@ type Client struct {
 	offChainAuthOption *OffChainAuthOption
 	useWebsocketConn   bool
 	expireSeconds      uint64
+	// forceToUseSpecifiedSpEndpointForDownloadOnly indicates a fixed endpoint of sp and shall only be used by get object cmd.
+	// Any other api shall not use this parameter.
+	forceToUseSpecifiedSpEndpointForDownloadOnly *url.URL
 }
 
 // Option - Configurations for providing optional parameters for the Greenfield SDK Client.
@@ -96,8 +99,9 @@ type Option struct {
 	UseWebSocketConn bool
 	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000.
 	ExpireSeconds uint64
-	// Endpoint indicates the endpoint of sp
-	Endpoint string
+	// ForceToUseSpecifiedSpEndpointForDownloadOnly indicates a fixed endpoint of sp and shall only be used by get object cmd.
+	// Any other api shall not use this parameter.
+	ForceToUseSpecifiedSpEndpointForDownloadOnly string
 }
 
 // OffChainAuthOption - The optional configurations for off-chain-auth.
@@ -162,7 +166,20 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 		expireSeconds:    option.ExpireSeconds,
 	}
 
-	if option.Endpoint == "" {
+	if option.ForceToUseSpecifiedSpEndpointForDownloadOnly != "" {
+		var useHttps bool
+		if strings.Contains(option.ForceToUseSpecifiedSpEndpointForDownloadOnly, "https") {
+			useHttps = true
+		} else {
+			useHttps = c.secure
+		}
+
+		c.forceToUseSpecifiedSpEndpointForDownloadOnly, err = utils.GetEndpointURL(option.ForceToUseSpecifiedSpEndpointForDownloadOnly, useHttps)
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("fetch endpoint from option %s fail:%v", option.ForceToUseSpecifiedSpEndpointForDownloadOnly, err))
+			return nil, err
+		}
+	} else {
 		// fetch sp endpoints info from chain
 		err = c.refreshStorageProviders(context.Background())
 
@@ -170,6 +187,13 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 			return nil, err
 		}
 	}
+
+	if option.OffChainAuthOption != nil && option.ForceToUseSpecifiedSpEndpointForDownloadOnly != "" {
+		errMessage := "forceToUseSpecifiedSpEndpointForDownloadOnly option does not support OffChainAuthOption, please adjust option inputs and try again"
+		log.Error().Msg(errMessage)
+		return nil, errors.New(errMessage)
+	}
+
 	// register off-chain-auth pubkey to all sps
 	if option.OffChainAuthOption != nil {
 		if option.OffChainAuthOption.Seed == "" || option.OffChainAuthOption.Domain == "" {
