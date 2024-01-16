@@ -844,3 +844,59 @@ func (s *StorageTestSuite) Test_Object_And_Set_Tag() {
 		s.Require().Equal(tags, *objectDetail.ObjectInfo.Tags)
 	}
 }
+
+func (s *StorageTestSuite) Test_Get_Object_With_ForcedSpEndpoint() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*300; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()),
+		types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+
+	s.Require().NoError(err)
+
+	s.T().Log("---> client.New with ForceToUseSpecifiedSpEndpointForDownloadOnly option filled <---")
+	s.Client, err = client.New(basesuite.ChainID, basesuite.Endpoint, client.Option{
+		DefaultAccount: s.DefaultAccount,
+		ForceToUseSpecifiedSpEndpointForDownloadOnly: s.PrimarySP.Endpoint,
+	})
+	s.Require().NoError(err)
+
+	s.T().Log("---> get object with ForceToUseSpecifiedSpEndpointForDownloadOnly <---")
+	objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+	if err != nil {
+		fmt.Printf("error: %v", err)
+		quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+		fmt.Printf("quota: %v", quota2)
+	}
+	objectBytes, err := io.ReadAll(objectContent)
+	s.Require().NoError(err)
+	s.Require().Equal(objectBytes, buffer.Bytes())
+	s.Require().NoError(err)
+}
