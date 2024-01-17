@@ -187,15 +187,11 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 			return nil, err
 		}
 	}
-
-	if option.OffChainAuthOption != nil && option.ForceToUseSpecifiedSpEndpointForDownloadOnly != "" {
-		errMessage := "forceToUseSpecifiedSpEndpointForDownloadOnly option does not support OffChainAuthOption, please adjust option inputs and try again"
-		log.Error().Msg(errMessage)
-		return nil, errors.New(errMessage)
-	}
-
 	// register off-chain-auth pubkey to all sps
 	if option.OffChainAuthOption != nil {
+		if option.ForceToUseSpecifiedSpEndpointForDownloadOnly != "" {
+			return nil, errors.New("forceToUseSpecifiedSpEndpointForDownloadOnly option does not support OffChainAuthOption, please adjust option inputs and try again")
+		}
 		if option.OffChainAuthOption.Seed == "" || option.OffChainAuthOption.Domain == "" {
 			return nil, errors.New("seed and domain can't be empty in OffChainAuthOption")
 		}
