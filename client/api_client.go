@@ -73,8 +73,8 @@ type Client struct {
 	offChainAuthOption *OffChainAuthOption
 	useWebsocketConn   bool
 	expireSeconds      uint64
-	// forceToUseSpecifiedSpEndpointForDownloadOnly indicates a fixed endpoint of sp and shall only be used by get object cmd.
-	// Any other api shall not use this parameter.
+	// forceToUseSpecifiedSpEndpointForDownloadOnly indicates a fixed SP endpoint to which to send the download request
+	// If this option is set, the client can only make download requests, and can only download from the fixed endpoint
 	forceToUseSpecifiedSpEndpointForDownloadOnly *url.URL
 }
 
@@ -99,8 +99,8 @@ type Option struct {
 	UseWebSocketConn bool
 	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000.
 	ExpireSeconds uint64
-	// ForceToUseSpecifiedSpEndpointForDownloadOnly indicates a fixed endpoint of sp and shall only be used by get object cmd.
-	// Any other api shall not use this parameter.
+	// ForceToUseSpecifiedSpEndpointForDownloadOnly indicates a fixed SP endpoint to which to send the download request
+	// If this option is set, the client can only make download requests, and can only download from the fixed endpoint
 	ForceToUseSpecifiedSpEndpointForDownloadOnly string
 }
 
