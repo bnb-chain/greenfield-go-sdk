@@ -851,7 +851,7 @@ func (s *StorageTestSuite) Test_Get_Object_With_ForcedSpEndpoint() {
 
 	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
 
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{Visibility: storageTypes.VISIBILITY_TYPE_PUBLIC_READ})
 	s.Require().NoError(err)
 
 	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
@@ -860,7 +860,7 @@ func (s *StorageTestSuite) Test_Get_Object_With_ForcedSpEndpoint() {
 	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
 	s.Require().NoError(err)
 	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
 	}
 
 	var buffer bytes.Buffer
@@ -871,17 +871,27 @@ func (s *StorageTestSuite) Test_Get_Object_With_ForcedSpEndpoint() {
 	}
 
 	s.T().Log("---> CreateObject and HeadObject <---")
-	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()),
-		types.CreateObjectOptions{})
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{Visibility: storageTypes.VISIBILITY_TYPE_PUBLIC_READ})
 	s.Require().NoError(err)
 	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
 	s.Require().NoError(err)
 
 	time.Sleep(5 * time.Second)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
 
+	objectSize := int64(buffer.Len())
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
-	s.T().Log("---> client.New with ForceToUseSpecifiedSpEndpointForDownloadOnly option filled <---")
+	s.WaitSealObject(bucketName, objectName)
+
+	s.T().Log("---> client.New with ForceToUseSpecifiedSpEndpointForDownloadOnly option param filled <---")
+	origClient := s.Client
 	s.Client, err = client.New(basesuite.ChainID, basesuite.Endpoint, client.Option{
 		DefaultAccount: s.DefaultAccount,
 		ForceToUseSpecifiedSpEndpointForDownloadOnly: s.PrimarySP.Endpoint,
@@ -899,4 +909,7 @@ func (s *StorageTestSuite) Test_Get_Object_With_ForcedSpEndpoint() {
 	s.Require().NoError(err)
 	s.Require().Equal(objectBytes, buffer.Bytes())
 	s.Require().NoError(err)
+
+	s.T().Log("---> restore client without ForceToUseSpecifiedSpEndpointForDownloadOnly option param <---")
+	s.Client = origClient
 }
