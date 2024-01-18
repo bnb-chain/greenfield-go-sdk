@@ -484,11 +484,12 @@ func (c *Client) FPutObject(ctx context.Context, bucketName, objectName, filePat
 func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 	opts types.GetObjectOptions,
 ) (io.ReadCloser, types.ObjectStat, error) {
-	if err := s3util.CheckValidBucketName(bucketName); err != nil {
+	var err error
+	if err = s3util.CheckValidBucketName(bucketName); err != nil {
 		return nil, types.ObjectStat{}, err
 	}
 
-	if err := s3util.CheckValidObjectName(objectName); err != nil {
+	if err = s3util.CheckValidObjectName(objectName); err != nil {
 		return nil, types.ObjectStat{}, err
 	}
 
@@ -507,10 +508,17 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 		disableCloseBody: true,
 	}
 
-	endpoint, err := c.getSPUrlByBucket(bucketName)
-	if err != nil {
-		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
-		return nil, types.ObjectStat{}, err
+	var endpoint *url.URL
+
+	if c.forceToUseSpecifiedSpEndpointForDownloadOnly != nil {
+		endpoint = c.forceToUseSpecifiedSpEndpointForDownloadOnly
+	} else {
+		endpoint, err = c.getSPUrlByBucket(bucketName)
+
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
+			return nil, types.ObjectStat{}, err
+		}
 	}
 
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
