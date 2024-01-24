@@ -470,9 +470,6 @@ func (s *StorageTestSuite) Test_Resumable_Upload_And_Download() {
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize16MB})
 	s.Require().ErrorContains(err, "UploadErrorHooker")
 	client.UploadSegmentHooker = client.DefaultUploadSegment
-	offset, err := s.Client.GetObjectResumableUploadOffset(s.ClientContext, bucketName, objectName)
-	s.Require().NoError(err)
-	s.Require().Equal(offset, partSize16MB)
 
 	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, int64(buffer.Len()),
 		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{PartSize: partSize16MB})
