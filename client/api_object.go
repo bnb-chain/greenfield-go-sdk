@@ -56,7 +56,6 @@ type IObjectClient interface {
 	ComputeHashRoots(reader io.Reader, isSerial bool) ([][]byte, int64, storageTypes.RedundancyType, error)
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
-	GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error)
 	ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error)
 	ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error)
 }
@@ -319,7 +318,7 @@ func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName 
 		return err
 	}
 
-	offset, err := c.GetObjectResumableUploadOffset(ctx, bucketName, objectName)
+	offset, err := c.getObjectResumableUploadOffset(ctx, bucketName, objectName)
 	if err != nil {
 		return err
 	}
@@ -1069,8 +1068,8 @@ func (c *Client) GetObjectUploadProgress(ctx context.Context, bucketName, object
 	return status.ObjectInfo.ObjectStatus.String(), nil
 }
 
-// GetObjectResumableUploadOffset return the status of object including the uploading progress
-func (c *Client) GetObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error) {
+// getObjectResumableUploadOffset return the status of object including the uploading progress
+func (c *Client) getObjectResumableUploadOffset(ctx context.Context, bucketName, objectName string) (uint64, error) {
 	status, err := c.HeadObject(ctx, bucketName, objectName)
 	if err != nil {
 		return 0, err
