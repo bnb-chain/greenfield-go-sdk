@@ -38,7 +38,7 @@ func (s *StorageTestSuite) SetupSuite() {
 	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
 	s.Require().NoError(err)
 	for _, sp := range spList {
-		if sp.Endpoint != "https://sp0.greenfield.io" {
+		if sp.Endpoint != "https://sp0.greenfield.io" && sp.Id == 1 {
 			s.PrimarySP = sp
 			break
 		}
@@ -909,4 +909,110 @@ func (s *StorageTestSuite) Test_Get_Object_With_ForcedSpEndpoint() {
 
 	s.T().Log("---> restore client without ForceToUseSpecifiedSpEndpointForDownloadOnly option param <---")
 	s.Client = origClient
+}
+
+func (s *StorageTestSuite) Test_Update_Object() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+	opts := types.CreateBucketOptions{ChargedQuota: 5000000000}
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, opts)
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	var buffer bytes.Buffer
+	line := `1234567890`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 10; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	objectSize := int64(buffer.Len())
+	s.T().Logf("---> PutObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+	s.WaitSealObject(bucketName, objectName)
+
+	//GET object
+	//time.Sleep(3 * time.Second)
+	//s.T().Logf("--->GetObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	//objectContent, objectStat, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+	//s.Require().NoError(err)
+	//s.Require().Equal(objectSize, objectStat.Size)
+	//
+	//objectBytes, err := io.ReadAll(objectContent)
+	//s.Require().NoError(err)
+	//s.Require().Equal(objectBytes, buffer.Bytes())
+	//s.T().Logf("")
+	//s.T().Logf("---> Object content: %s", hex.EncodeToString(objectBytes))
+
+	// 1. first update
+	s.T().Log("---> UpdateObject <---")
+
+	var updatedBuffer bytes.Buffer
+	updatedLine := `9876543210`
+	// Create 1MiB content where each line contains 1024 characters.
+	//for i := 0; i < 1; i++ {
+	//	updatedBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, updatedLine))
+	//}
+	for i := 0; i < 1024*6000; i++ {
+		updatedBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, updatedLine))
+	}
+
+	objectTx, err = s.Client.UpdateObjectContent(s.ClientContext, bucketName, objectName, bytes.NewReader(updatedBuffer.Bytes()), types.UpdateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+	s.T().Logf("UpdateObjectContent tx hash %s", objectTx)
+
+	objectSize = int64(updatedBuffer.Len())
+	s.T().Logf("---> PutObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
+		bytes.NewReader(updatedBuffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	//time.Sleep(30 * time.Second)
+	////
+	//// Second update
+	//s.T().Log("---> UpdateObject <---")
+	////Create 1MiB content where each line contains 1024 characters.
+	//
+	//var secondUpdatedBuffer bytes.Buffer
+	//secondaUpdatedLine := `9876543210`
+	//for i := 0; i < 2; i++ {
+	//	secondUpdatedBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, secondaUpdatedLine))
+	//}
+	//objectTx, err = s.Client.UpdateObjectContent(s.ClientContext, bucketName, objectName, bytes.NewReader(secondUpdatedBuffer.Bytes()), types.UpdateObjectOptions{})
+	//s.Require().NoError(err)
+	//_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	//s.Require().NoError(err)
+	//
+	//objectSize = int64(secondUpdatedBuffer.Len())
+	//s.T().Logf("---> PutObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	//err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
+	//	bytes.NewReader(secondUpdatedBuffer.Bytes()), types.PutObjectOptions{})
+	//s.Require().NoError(err)
+	//s.WaitSealObject(bucketName, objectName)
+
 }
