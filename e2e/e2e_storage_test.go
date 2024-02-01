@@ -181,6 +181,31 @@ func (s *StorageTestSuite) Test_Object() {
 
 	s.WaitSealObject(bucketName, objectName)
 
+	var updatedBuffer bytes.Buffer
+	for i := 0; i < 1024*300; i++ {
+		updatedBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+	objectTx, err = s.Client.UpdateObjectContent(s.ClientContext, bucketName, objectName, bytes.NewReader(updatedBuffer.Bytes()), types.UpdateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+	s.T().Logf("UpdateObjectContent tx hash %s", objectTx)
+
+	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(true, objectDetail.ObjectInfo.IsUpdating)
+
+	objectSize = int64(updatedBuffer.Len())
+	s.T().Logf("---> PutObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+
+	err = s.PutObjectWithRetry(bucketName, objectName, objectSize,
+		updatedBuffer, types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+
+	s.T().Log("---> Get bucket quota <---")
+
 	concurrentNumber := 5
 	downloadCount := 5
 	quota0, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
@@ -909,4 +934,18 @@ func (s *StorageTestSuite) Test_Get_Object_With_ForcedSpEndpoint() {
 
 	s.T().Log("---> restore client without ForceToUseSpecifiedSpEndpointForDownloadOnly option param <---")
 	s.Client = origClient
+}
+
+func (s *StorageTestSuite) PutObjectWithRetry(bucketName, objectName string, objectSize int64, buffer bytes.Buffer, option types.PutObjectOptions) error {
+	var err error
+	for retry := 0; retry < 5; retry++ {
+		err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
+			bytes.NewReader(buffer.Bytes()), option)
+		if err != nil {
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		break
+	}
+	return err
 }
