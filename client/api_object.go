@@ -36,6 +36,7 @@ import (
 type IObjectClient interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
+	UpdateObjectContent(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.UpdateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
@@ -177,6 +178,51 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 		}
 		if txnResponse.TxResult.Code != 0 {
 			return txnHash, fmt.Errorf("the createObject txn has failed with response code: %d, codespace:%s", txnResponse.TxResult.Code, txnResponse.TxResult.Codespace)
+		}
+	}
+	return txnHash, nil
+}
+
+// UpdateObjectContent get approval of updating object and send updateObjectContent txn to greenfield chain,
+// it returns the transaction hash value and error
+func (c *Client) UpdateObjectContent(ctx context.Context, bucketName, objectName string,
+	reader io.Reader, opts types.UpdateObjectOptions,
+) (string, error) {
+	if reader == nil {
+		return "", errors.New("fail to compute hash of payload, reader is nil")
+	}
+	object, err := c.HeadObject(ctx, bucketName, objectName)
+	if err != nil {
+		return "", err
+	}
+	if object.ObjectInfo.ObjectStatus != storageTypes.OBJECT_STATUS_SEALED {
+		return "", errors.New("object not sealed can not be updated")
+	}
+	// compute hash root of payload
+	expectCheckSums, size, _, err := c.ComputeHashRoots(reader, opts.IsSerialComputeMode)
+	if err != nil {
+		return "", err
+	}
+	updateObjectContentMsg := storageTypes.NewMsgUpdateObjectContent(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName,
+		uint64(size), expectCheckSums)
+	if opts.TxOpts == nil {
+		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
+	}
+	resp, err := c.BroadcastTx(ctx, []sdk.Msg{updateObjectContentMsg}, opts.TxOpts)
+	if err != nil {
+		return "", err
+	}
+	txnHash := resp.TxResponse.TxHash
+	if !opts.IsAsyncMode {
+		ctxTimeout, cancel := context.WithTimeout(ctx, types.ContextTimeout)
+		defer cancel()
+		txnResponse, err := c.WaitForTx(ctxTimeout, txnHash)
+		if err != nil {
+			return txnHash, fmt.Errorf("the transaction has been submitted, please check it later:%v", err)
+		}
+		if txnResponse.TxResult.Code != 0 {
+			return txnHash, fmt.Errorf("the updateObjectContent txn has failed with response code: %d, codespace:%s", txnResponse.TxResult.Code, txnResponse.TxResult.Codespace)
 		}
 	}
 	return txnHash, nil
