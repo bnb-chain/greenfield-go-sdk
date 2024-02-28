@@ -4,19 +4,25 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"os"
 	"path/filepath"
 	"time"
+
+	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/stretchr/testify/suite"
 )
 
+//var (
+//	Endpoint = "https://gnfd.qa.bnbchain.world:443"
+//	ChainID  = "greenfield_9000-1741"
+//)
+
 var (
-	Endpoint = "http://localhost:26750"
-	ChainID  = "greenfield_9000-121"
+	Endpoint = "https://gnfd-testnet-fullnode-tendermint-ap.bnbchain.org:443"
+	ChainID  = "greenfield_5600-1"
 )
 
 func ParseMnemonicFromFile(fileName string) string {
@@ -67,8 +73,7 @@ func (s *BaseSuite) NewChallengeClient() {
 }
 
 func (s *BaseSuite) SetupSuite() {
-	mnemonic := ParseValidatorMnemonic(0)
-	account, err := types.NewAccountFromMnemonic("test", mnemonic)
+	account, err := types.NewAccountFromPrivateKey("test", "a6f2041aeca9a09159c937b77316c9c7e2c0f1c5b7241832f84bf1d37eb49661")
 	s.Require().NoError(err)
 	s.Client, err = client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
@@ -76,7 +81,7 @@ func (s *BaseSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.ClientContext = context.Background()
 	s.DefaultAccount = account
-	s.NewChallengeClient()
+	//s.NewChallengeClient()
 }
 
 func (s *BaseSuite) WaitSealObject(bucketName string, objectName string) {
