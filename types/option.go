@@ -89,6 +89,11 @@ type UpdateObjectOption struct {
 	TxOpts *gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.
 }
 
+// CancelUpdateObjectOption indicates the metadata to construct `CancelUpdateObjectContent` msg of storage module.
+type CancelUpdateObjectOption struct {
+	TxOpts *gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.
+}
+
 // CancelCreateOption indicates the metadata to construct `CancelCreateObject` msg of storage module.
 type CancelCreateOption struct {
 	TxOpts *gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.

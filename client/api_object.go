@@ -37,6 +37,7 @@ type IObjectClient interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
 	UpdateObjectContent(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.UpdateObjectOptions) (string, error)
+	CancelUpdateObjectContent(ctx context.Context, bucketName, objectName string, opts types.CancelUpdateObjectOption) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
@@ -183,7 +184,7 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 	return txnHash, nil
 }
 
-// UpdateObjectContent get approval of updating object and send updateObjectContent txn to greenfield chain,
+// UpdateObjectContent sends updateObjectContent tx to greenfield chain,
 // it returns the transaction hash value and error
 func (c *Client) UpdateObjectContent(ctx context.Context, bucketName, objectName string,
 	reader io.Reader, opts types.UpdateObjectOptions,
@@ -226,6 +227,21 @@ func (c *Client) UpdateObjectContent(ctx context.Context, bucketName, objectName
 		}
 	}
 	return txnHash, nil
+}
+
+// CancelUpdateObjectContent sends CancelUpdateObjectContent tx to greenfield chain,
+// it returns the transaction hash value and error
+func (c *Client) CancelUpdateObjectContent(ctx context.Context, bucketName, objectName string, opts types.CancelUpdateObjectOption) (string, error) {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
+		return "", err
+	}
+
+	if err := s3util.CheckValidObjectName(objectName); err != nil {
+		return "", err
+	}
+
+	msg := storageTypes.NewMsgCancelUpdateObjectContent(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName)
+	return c.sendTxn(ctx, msg, opts.TxOpts)
 }
 
 // DeleteObject - Send DeleteObject msg to greenfield chain and return txn hash.
