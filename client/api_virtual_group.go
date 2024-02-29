@@ -10,6 +10,7 @@ import (
 type IVirtualGroupClient interface {
 	QueryVirtualGroupFamily(ctx context.Context, globalVirtualGroupFamilyID uint32) (*types.GlobalVirtualGroupFamily, error)
 	QuerySpAvailableGlobalVirtualGroupFamilies(ctx context.Context, spID uint32) ([]uint32, error)
+	QueryVirtualGroupParams(ctx context.Context) (*types.Params, error)
 }
 
 // QueryVirtualGroupFamily - Query the virtual group family by ID.
@@ -52,4 +53,21 @@ func (c *Client) QuerySpAvailableGlobalVirtualGroupFamilies(ctx context.Context,
 		return nil, err
 	}
 	return queryResponse.GlobalVirtualGroupFamilyIds, nil
+}
+
+// QueryVirtualGroupParams - Query the virtual group family param.
+//
+// Virtual group family(VGF) serve as a means of grouping global virtual groups. Each bucket must be associated with a unique global virtual group family and cannot cross families.
+//
+// - ctx: Context variables for the current API call.
+//
+// - ret1: Params holds all the parameters of this module..
+//
+// - ret2: Return error when the request failed, otherwise return nil.
+func (c *Client) QueryVirtualGroupParams(ctx context.Context) (*types.Params, error) {
+	queryResponse, err := c.chainClient.VirtualGroupQueryClient.Params(ctx, &types.QueryParamsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return &queryResponse.Params, nil
 }

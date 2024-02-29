@@ -54,11 +54,11 @@ type BaseSuite struct {
 
 // ParseValidatorMnemonic read the validator mnemonic from file
 func ParseValidatorMnemonic(i int) string {
-	return ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/validator%d/info", i))
+	return ParseMnemonicFromFile(fmt.Sprintf("/Users/barry/NodeReal/greenfield/deployment/localup/.local/validator%d/info", i))
 }
 
 func (s *BaseSuite) NewChallengeClient() {
-	mnemonic := ParseMnemonicFromFile(fmt.Sprintf("../../greenfield/deployment/localup/.local/challenger%d/challenger_info", 0))
+	mnemonic := ParseMnemonicFromFile(fmt.Sprintf("/Users/barry/NodeReal/greenfield/deployment/localup/.local/challenger%d/challenger_info", 0))
 	challengeAcc, err := types.NewAccountFromMnemonic("challenge_account", mnemonic)
 	s.Require().NoError(err)
 	s.ChallengeClient, err = client.New(ChainID, Endpoint, client.Option{

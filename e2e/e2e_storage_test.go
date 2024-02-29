@@ -7,17 +7,21 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
+	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
 	greenfield_types "github.com/bnb-chain/greenfield/types"
@@ -25,6 +29,7 @@ import (
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
+	virtualTypes "github.com/bnb-chain/greenfield/x/virtualgroup/types"
 )
 
 type StorageTestSuite struct {
@@ -34,15 +39,49 @@ type StorageTestSuite struct {
 
 func (s *StorageTestSuite) SetupSuite() {
 	s.BaseSuite.SetupSuite()
-
-	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
+	secondary := make([]uint32, 0)
+	spList, err := s.Client.ListStorageProviders(s.ClientContext, true)
 	s.Require().NoError(err)
+	isSelected := false
 	for _, sp := range spList {
-		if sp.Endpoint != "https://sp0.greenfield.io" {
+		if sp.Endpoint != "https://sp0.greenfield.io" && !isSelected {
 			s.PrimarySP = sp
-			break
+			isSelected = true
+		} else {
+			if len(secondary) == 6 {
+				break
+			}
+			secondary = append(secondary, sp.Id)
 		}
 	}
+	primarySPAddress, err := sdk.AccAddressFromHexUnsafe(s.PrimarySP.OperatorAddress)
+	s.Require().NoError(err)
+
+	virtualGroupParams, err := s.Client.QueryVirtualGroupParams(s.ClientContext)
+	s.Require().NoError(err)
+
+	createGVGMsg := virtualTypes.NewMsgCreateGlobalVirtualGroup(primarySPAddress, 0, secondary, sdk.Coin{
+		Denom:  virtualGroupParams.GetDepositDenom(),
+		Amount: virtualGroupParams.GvgStakingPerBytes.Mul(math.NewIntFromUint64(uint64(2) * 1024 * 1024 * 1024 * 1024)),
+	})
+
+	nextNonce, err := s.Client.GetNextNonce(s.PrimarySP.Endpoint)
+	s.Require().NoError(err)
+	nonce, err := strconv.ParseUint(nextNonce, 10, 64)
+	s.Require().NoError(err)
+
+	msgs := []sdk.Msg{createGVGMsg}
+	broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
+	resp, err := s.Client.BroadcastTx(s.ClientContext, msgs, &gnfdsdk.TxOption{Mode: &broadcastMode, GasLimit: 1200, FeeAmount: sdk.Coins{sdk.Coin{
+		Denom:  virtualGroupParams.GetDepositDenom(),
+		Amount: virtualGroupParams.GvgStakingPerBytes.Mul(math.NewIntFromUint64(6000000000000)),
+	}}, Nonce: nonce})
+
+	txHash := resp.TxResponse.TxHash
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, txHash)
+	s.Require().NoError(err)
 }
 
 func TestStorageTestSuite(t *testing.T) {
