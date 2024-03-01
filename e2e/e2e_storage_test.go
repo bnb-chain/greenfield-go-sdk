@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -65,9 +64,7 @@ func (s *StorageTestSuite) SetupSuite() {
 		Amount: virtualGroupParams.GvgStakingPerBytes.Mul(math.NewIntFromUint64(uint64(2) * 1024 * 1024 * 1024 * 1024)),
 	})
 
-	nextNonce, err := s.Client.GetNextNonce(s.PrimarySP.Endpoint)
-	s.Require().NoError(err)
-	nonce, err := strconv.ParseUint(nextNonce, 10, 64)
+	nonce, err := s.Client.GetNonceByAddr(s.ClientContext, primarySPAddress)
 	s.Require().NoError(err)
 
 	msgs := []sdk.Msg{createGVGMsg}
