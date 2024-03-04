@@ -12,8 +12,8 @@ on:
       - develop
 
 env:
-  GreenfieldTag: master
-  GreenfieldStorageProviderTag: master
+  GreenfieldTag: 5a0729673be023c3c34f34d862e89a322bd75a8a
+  GreenfieldStorageProviderTag: 3f1ffe22d70a50bba0504f13e0867dd4e9e641c2
   GOPRIVATE: github.com/bnb-chain
   GH_ACCESS_TOKEN: ${{ secrets.GH_TOKEN }}
   MYSQL_USER: root
