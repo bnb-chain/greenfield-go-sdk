@@ -38,7 +38,7 @@ func (s *StorageTestSuite) SetupSuite() {
 	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
 	s.Require().NoError(err)
 	for _, sp := range spList {
-		if sp.Endpoint != "https://sp0.greenfield.io" {
+		if sp.Endpoint != "https://sp0.greenfield.io" && sp.Id == 1 {
 			s.PrimarySP = sp
 			break
 		}
@@ -948,4 +948,43 @@ func (s *StorageTestSuite) PutObjectWithRetry(bucketName, objectName string, obj
 		break
 	}
 	return err
+}
+
+func (s *StorageTestSuite) Test_delegate_upload() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	for i := 0; i < 1024; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	objectSize := int64(buffer.Len())
+	err = s.Client.DelegatePutObject(s.ClientContext, bucketName, objectName, objectSize, bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	time.Sleep(10 * time.Second)
+
+	var newBuffer bytes.Buffer
+	for i := 0; i < 2048; i++ {
+		newBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+	newObjectSize := int64(newBuffer.Len())
+	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
 }

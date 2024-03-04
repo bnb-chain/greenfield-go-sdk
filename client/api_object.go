@@ -39,7 +39,8 @@ type IObjectClient interface {
 	UpdateObjectContent(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.UpdateObjectOptions) (string, error)
 	CancelUpdateObjectContent(ctx context.Context, bucketName, objectName string, opts types.CancelUpdateObjectOption) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
-	putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	DelegatePutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	DelegateUpdateObjectContent(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
@@ -327,6 +328,13 @@ func (c *Client) putObject(ctx context.Context, bucketName, objectName string, o
 	} else {
 		contentType = types.ContentDefault
 	}
+	urlValues := make(url.Values)
+	if opts.Delegated {
+		urlValues.Set("delegate", "")
+		urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
+		urlValues.Set("payload_size", strconv.FormatInt(objectSize, 10))
+		urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
+	}
 
 	reqMeta := requestMeta{
 		bucketName:    bucketName,
@@ -334,6 +342,7 @@ func (c *Client) putObject(ctx context.Context, bucketName, objectName string, o
 		contentSHA256: types.EmptyStringSHA256,
 		contentLength: objectSize,
 		contentType:   contentType,
+		urlValues:     urlValues,
 	}
 
 	var sendOpt sendOptions
@@ -449,7 +458,10 @@ func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName 
 		urlValues := make(url.Values)
 		urlValues.Set("offset", strconv.FormatInt(totalUploadedSize, 10))
 		urlValues.Set("complete", strconv.FormatBool(complete))
-
+		if opts.Delegated {
+			urlValues.Set("delegate", "")
+			urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
+		}
 		reqMeta := requestMeta{
 			bucketName:    bucketName,
 			objectName:    objectName,
@@ -1444,4 +1456,39 @@ func (c *Client) ListObjectPolicies(ctx context.Context, objectName, bucketName 
 	}
 
 	return policies, nil
+}
+
+func (c *Client) DelegatePutObject(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
+) (err error) {
+	if objectSize <= 0 {
+		return errors.New("object size should be more than 0")
+	}
+	params, err := c.GetParams()
+	if err != nil {
+		return err
+	}
+	opts.Delegated = true
+	// minPartSize: 16MB
+	if opts.PartSize == 0 {
+		opts.PartSize = types.MinPartSize
+	}
+	if opts.PartSize%params.GetMaxSegmentSize() != 0 {
+		return errors.New("part size should be an integer multiple of the segment size")
+	}
+
+	// upload an entire object to the storage provider in a single request
+	if objectSize <= int64(opts.PartSize) || opts.DisableResumable {
+		return c.putObject(ctx, bucketName, objectName, objectSize, reader, opts)
+	}
+
+	// resumableupload
+	return c.putObjectResumable(ctx, bucketName, objectName, objectSize, reader, opts)
+}
+
+func (c *Client) DelegateUpdateObjectContent(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
+) (err error) {
+	opts.IsUpdate = true
+	return c.DelegatePutObject(ctx, bucketName, objectName, objectSize, reader, opts)
 }
