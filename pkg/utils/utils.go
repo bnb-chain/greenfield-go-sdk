@@ -321,6 +321,22 @@ func ReadFull(r io.Reader, buf []byte) (n int, err error) {
 	return
 }
 
+// CheckObjectName  This code block checks for unsupported or potentially risky formats in object names.
+// The checks are essential for ensuring the security and compatibility of the object names within the system.
+// 1. ".." in object names: Checked to prevent path traversal attacks which might access directories outside the intended scope.
+// 2. Object name being "/": The root directory should not be used as an object name due to potential security risks and ambiguity.
+// 3. "\\" in object names: Backslashes are checked because they are often not supported in UNIX-like file systems and can cause issues in path parsing.
+// 4. SQL Injection patterns in object names: Ensures that the object name does not contain patterns that could be used for SQL injection attacks, maintaining the integrity of the database.
+func CheckObjectName(objectName string) bool {
+	if strings.Contains(objectName, "..") ||
+		objectName == "/" ||
+		strings.Contains(objectName, "\\") ||
+		IsSQLInjection(objectName) {
+		return false
+	}
+	return true
+}
+
 func IsSQLInjection(input string) bool {
 	// define patterns that may indicate SQL injection, especially those with a semicolon followed by common SQL keywords
 	patterns := []string{

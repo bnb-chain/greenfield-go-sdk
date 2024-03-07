@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -33,6 +34,7 @@ import (
 // IObjectClient interface defines functions related to object operations.
 // The concept of "object" is the same as the concept of the object in AWS S3 storage.
 type IObjectClient interface {
+	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
 	UpdateObjectContent(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.UpdateObjectOptions) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
@@ -120,10 +122,7 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 	// 2. Object name being "/": The root directory should not be used as an object name due to potential security risks and ambiguity.
 	// 3. "\\" in object names: Backslashes are checked because they are often not supported in UNIX-like file systems and can cause issues in path parsing.
 	// 4. SQL Injection patterns in object names: Ensures that the object name does not contain patterns that could be used for SQL injection attacks, maintaining the integrity of the database.
-	if strings.Contains(objectName, "..") ||
-		objectName == "/" ||
-		strings.Contains(objectName, "\\") ||
-		utils.IsSQLInjection(objectName) {
+	if !utils.CheckObjectName(objectName) {
 		return "", fmt.Errorf("fail to check object name:%s", objectName)
 	}
 
@@ -1035,6 +1034,58 @@ func (c *Client) ListObjects(ctx context.Context, bucketName string, opts types.
 	listObjectsResult.Objects = objectMetaList
 	listObjectsResult.KeyCount = strconv.Itoa(len(objectMetaList))
 	return listObjectsResult, nil
+}
+
+func (c *Client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error) {
+	unsignedBytes := createObjectMsg.GetSignBytes()
+
+	// set the action type
+	urlValues := url.Values{
+		"action": {types.CreateObjectAction},
+	}
+
+	reqMeta := requestMeta{
+		urlValues:     urlValues,
+		urlRelPath:    "get-approval",
+		contentSHA256: types.EmptyStringSHA256,
+		txnMsg:        hex.EncodeToString(unsignedBytes),
+	}
+
+	sendOpt := sendOptions{
+		method: http.MethodGet,
+		adminInfo: AdminAPIInfo{
+			isAdminAPI:   true,
+			adminVersion: types.AdminV1Version,
+		},
+	}
+
+	bucketName := createObjectMsg.BucketName
+	endpoint, err := c.getSPUrlByBucket(bucketName)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
+		return nil, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	// fetch primary signed msg from sp response
+	signedRawMsg := resp.Header.Get(types.HTTPHeaderSignedMsg)
+	if signedRawMsg == "" {
+		return nil, errors.New("fail to fetch pre createObject signature")
+	}
+
+	signedMsgBytes, err := hex.DecodeString(signedRawMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	var signedMsg storageTypes.MsgCreateObject
+	storageTypes.ModuleCdc.MustUnmarshalJSON(signedMsgBytes, &signedMsg)
+
+	return &signedMsg, nil
 }
 
 // CreateFolder send create empty object txn to greenfield chain

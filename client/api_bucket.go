@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -25,6 +24,7 @@ import (
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
+	virtualgroupTypes "github.com/bnb-chain/greenfield/x/virtualgroup/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -33,6 +33,7 @@ import (
 // IBucketClient interface defines functions related to bucket.
 // The concept of "bucket" is the same as the concept of a bucket in AWS S3 storage.
 type IBucketClient interface {
+	GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error)
 	CreateBucket(ctx context.Context, bucketName string, primaryAddr string, opts types.CreateBucketOptions) (string, error)
 	DeleteBucket(ctx context.Context, bucketName string, opt types.DeleteBucketOption) (string, error)
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
@@ -55,6 +56,66 @@ type IBucketClient interface {
 	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error)
 	GetBucketMigrationProgress(ctx context.Context, bucketName string, destSP uint32) (types.MigrationProgress, error)
 	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
+}
+
+// GetCreateBucketApproval - Send create bucket approval request to SP and returns the signature info for the approval of preCreating resources.
+//
+// - ctx: Context variables for the current API call.
+//
+// - createBucketMsg: The msg of create bucket which defined by the greenfield chain.
+//
+// - ret1: The msg of create bucket which contain the approval signature from the storage provider
+//
+// - ret2: Return error when get approval failed, otherwise return nil.
+func (c *Client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *storageTypes.MsgCreateBucket) (*storageTypes.MsgCreateBucket, error) {
+	unsignedBytes := createBucketMsg.GetSignBytes()
+
+	// set the action type
+	urlVal := make(url.Values)
+	urlVal["action"] = []string{types.CreateBucketAction}
+
+	reqMeta := requestMeta{
+		urlValues:     urlVal,
+		urlRelPath:    "get-approval",
+		contentSHA256: types.EmptyStringSHA256,
+		txnMsg:        hex.EncodeToString(unsignedBytes),
+	}
+
+	sendOpt := sendOptions{
+		method: http.MethodGet,
+		adminInfo: AdminAPIInfo{
+			isAdminAPI:   true,
+			adminVersion: types.AdminV1Version,
+		},
+	}
+
+	primarySPAddr := createBucketMsg.GetPrimarySpAddress()
+	endpoint, err := c.getSPUrlByAddr(primarySPAddr)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by addr: %s failed, err: %s", primarySPAddr, err.Error()))
+		return nil, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	// fetch primary signed msg from sp response
+	signedRawMsg := resp.Header.Get(types.HTTPHeaderSignedMsg)
+	if signedRawMsg == "" {
+		return nil, errors.New("fail to fetch pre createBucket signature")
+	}
+
+	signedMsgBytes, err := hex.DecodeString(signedRawMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	var signedMsg storageTypes.MsgCreateBucket
+	storageTypes.ModuleCdc.MustUnmarshalJSON(signedMsgBytes, &signedMsg)
+
+	return &signedMsg, nil
 }
 
 // CreateBucket - Create a new bucket in greenfield.
@@ -110,12 +171,12 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	families, err := c.QuerySpAvailableGlobalVirtualGroupFamilies(ctx, sp.Id)
+	familyID, err := c.QuerySpOptimalGlobalVirtualGroupFamily(ctx, sp.Id, virtualgroupTypes.Strategy_Maximize_Free_Store_Size)
 	if err != nil {
 		return "", err
 	}
 
-	createBucketMsg.PrimarySpApproval.GlobalVirtualGroupFamilyId = families[rand.Intn(len(families))]
+	createBucketMsg.PrimarySpApproval.GlobalVirtualGroupFamilyId = familyID
 
 	// set the default txn broadcast mode as block mode
 	if opts.TxOpts == nil {

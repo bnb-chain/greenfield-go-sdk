@@ -27,8 +27,6 @@ import (
 type IBasicClient interface {
 	EnableTrace(outputStream io.Writer, onlyTraceErr bool)
 
-	GetNonceByAddr(ctx context.Context, address sdk.AccAddress) (uint64, error)
-
 	GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmservice.VersionInfo, error)
 	GetStatus(ctx context.Context) (*ctypes.ResultStatus, error)
 	GetCommit(ctx context.Context, height int64) (*ctypes.ResultCommit, error)
@@ -83,17 +81,6 @@ func (c *Client) GetNodeInfo(ctx context.Context) (*p2p.DefaultNodeInfo, *tmserv
 		return nil, nil, err
 	}
 	return nodeInfoResponse.DefaultNodeInfo, nodeInfoResponse.ApplicationVersion, nil
-}
-
-// GetNonceByAddr - Get the nonce value by address.
-//
-// - address: The operator address.
-//
-// - ret1: The nonce value for the Client
-//
-// - ret2: Return error when getting next nonce failed, otherwise return nil.
-func (c *Client) GetNonceByAddr(ctx context.Context, address sdk.AccAddress) (uint64, error) {
-	return c.chainClient.GetNonceByAddr(ctx, address)
 }
 
 // GetStatus - Get the status of connected Node.
