@@ -116,12 +116,6 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	// This code block checks for unsupported or potentially risky formats in object names.
-	// The checks are essential for ensuring the security and compatibility of the object names within the system.
-	// 1. ".." in object names: Checked to prevent path traversal attacks which might access directories outside the intended scope.
-	// 2. Object name being "/": The root directory should not be used as an object name due to potential security risks and ambiguity.
-	// 3. "\\" in object names: Backslashes are checked because they are often not supported in UNIX-like file systems and can cause issues in path parsing.
-	// 4. SQL Injection patterns in object names: Ensures that the object name does not contain patterns that could be used for SQL injection attacks, maintaining the integrity of the database.
 	if !utils.CheckObjectName(objectName) {
 		return "", fmt.Errorf("fail to check object name:%s", objectName)
 	}
@@ -1036,6 +1030,7 @@ func (c *Client) ListObjects(ctx context.Context, bucketName string, opts types.
 	return listObjectsResult, nil
 }
 
+// Deprecated: GetCreateObjectApproval returns the signature info for the approval of preCreating resources
 func (c *Client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error) {
 	unsignedBytes := createObjectMsg.GetSignBytes()
 

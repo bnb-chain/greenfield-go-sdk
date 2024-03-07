@@ -58,7 +58,7 @@ type IBucketClient interface {
 	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
 }
 
-// GetCreateBucketApproval - Send create bucket approval request to SP and returns the signature info for the approval of preCreating resources.
+// Deprecated: GetCreateBucketApproval - Send create bucket approval request to SP and returns the signature info for the approval of preCreating resources.
 //
 // - ctx: Context variables for the current API call.
 //
