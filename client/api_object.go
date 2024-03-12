@@ -317,9 +317,11 @@ func (c *Client) PutObject(ctx context.Context, bucketName, objectName string, o
 func (c *Client) putObject(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
-	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
-		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
-		return err
+	if !opts.Delegated {
+		if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
+			log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
+			return err
+		}
 	}
 
 	var contentType string
@@ -329,6 +331,7 @@ func (c *Client) putObject(ctx context.Context, bucketName, objectName string, o
 		contentType = types.ContentDefault
 	}
 	urlValues := make(url.Values)
+
 	if opts.Delegated {
 		urlValues.Set("delegate", "")
 		urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
@@ -385,13 +388,21 @@ func DefaultUploadSegment(id int) error {
 func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
-	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
-		return err
-	}
 
-	offset, err := c.getObjectResumableUploadOffset(ctx, bucketName, objectName)
-	if err != nil {
-		return err
+	var (
+		offset uint64
+	)
+
+	if !opts.Delegated {
+		if err = c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
+			return err
+		}
+		offset, err = c.getObjectResumableUploadOffset(ctx, bucketName, objectName)
+		if err != nil {
+			return err
+		}
+	} else {
+		offset = 0
 	}
 
 	// Total data read and written to server. should be equal to
@@ -458,9 +469,12 @@ func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName 
 		urlValues := make(url.Values)
 		urlValues.Set("offset", strconv.FormatInt(totalUploadedSize, 10))
 		urlValues.Set("complete", strconv.FormatBool(complete))
+
 		if opts.Delegated {
-			urlValues.Set("delegate", "")
+			urlValues.Set("delegate_resumable", "")
 			urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
+			urlValues.Set("payload_size", strconv.FormatInt(objectSize, 10))
+			urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
 		}
 		reqMeta := requestMeta{
 			bucketName:    bucketName,

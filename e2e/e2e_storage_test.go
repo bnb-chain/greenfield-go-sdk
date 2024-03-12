@@ -969,22 +969,47 @@ func (s *StorageTestSuite) Test_delegate_upload() {
 	}
 	var buffer bytes.Buffer
 	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < 2048*1000/2; i++ {
 		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 
 	objectSize := int64(buffer.Len())
+	s.T().Logf("objectSize: %d", objectSize)
 	err = s.Client.DelegatePutObject(s.ClientContext, bucketName, objectName, objectSize, bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 
-	time.Sleep(10 * time.Second)
+	for {
+		time.Sleep(1 * time.Second)
+		object, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+		if err != nil {
+			continue
+		}
+		if object.ObjectInfo.ObjectStatus == storageTypes.OBJECT_STATUS_SEALED {
+			break
+		}
+		s.T().Log("object not sealed yet")
+	}
 
 	var newBuffer bytes.Buffer
-	for i := 0; i < 2048; i++ {
+	for i := 0; i < 2048*1000/5; i++ {
 		newBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
 	}
 	newObjectSize := int64(newBuffer.Len())
+	s.T().Logf("newObjectSize: %d", newObjectSize)
+
 	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
+
+	for {
+		time.Sleep(1 * time.Second)
+		object, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+		if err != nil {
+			continue
+		}
+		if !object.ObjectInfo.GetIsUpdating() {
+			break
+		}
+		s.T().Log("object not sealed yet")
+	}
 
 }
