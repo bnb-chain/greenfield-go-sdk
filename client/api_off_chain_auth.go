@@ -283,6 +283,9 @@ func (c *Client) DeleteUserPublicKeyV2(spEndpoint string, domain string, publicK
 	stNow := time.Now().UTC()
 	header[httplib.HTTPHeaderExpiryTimestamp] = stNow.Add(time.Second * types.DefaultExpireSeconds).Format(types.Iso8601DateFormatSecond)
 	req, err := http.NewRequest(http.MethodPost, spEndpoint+"/auth/delete_keys_v2", strings.NewReader(strings.Join(publicKeys, ",")))
+	if err != nil {
+		return false, err
+	}
 	for key, value := range header {
 		req.Header.Set(key, value)
 	}
