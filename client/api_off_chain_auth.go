@@ -2,6 +2,8 @@ package client
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/xml"
@@ -13,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/mimc"
 	"github.com/consensys/gnark-crypto/ecc/bn254/twistededwards"
@@ -22,6 +23,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/blake2b"
+
+	httplib "github.com/bnb-chain/greenfield-common/go/http"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 // IAuthClient - Client APIs for register Greenfield off chain auth keys and make signatures.
@@ -29,6 +33,12 @@ type IAuthClient interface {
 	RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (string, error)
 	GetNextNonce(spEndpoint string) (string, error)
 	OffChainAuthSign(unsignedBytes []byte) string
+
+	RegisterEDDSAPublicKeyV2(spEndpoint string) (string, error)
+	OffChainAuthSignV2(unsignedBytes []byte) string
+
+	ListUserPublicKeyV2(spEndpoint string, domain string) ([]string, error)
+	DeleteUserPublicKeyV2(spEndpoint string, domain string, publicKeys []string) (bool, error)
 }
 
 // OffChainAuthSign - Generate EdDSA private key according to a preconfigured seed and then make the signature for given input.
@@ -44,12 +54,36 @@ func (c *Client) OffChainAuthSign(unsignedBytes []byte) string {
 	return authString
 }
 
+// OffChainAuthSignV2 - Generate EdDSA private key according to a preconfigured seed and then make the signature for given input.
+// OffChainAuthSignV2 use ed25519 curve.
+//
+// - unsignedBytes: The content which needs to be signed by client's EdDSA private key
+//
+// - ret1: The signature made by EdDSA private key of the Client.
+func (c *Client) OffChainAuthSignV2(unsignedBytes []byte) string {
+	sk, _ := GetEd25519PrivateKeyAndPublicKey(c.offChainAuthOptionV2.Seed)
+	// Sign the message using the private key
+	sig := ed25519.Sign(sk, unsignedBytes)
+	authString := fmt.Sprintf("%s,Signature=%v", httplib.Gnfd2Eddsa, hex.EncodeToString(sig))
+	return authString
+}
+
 // requestNonceResp is the structure for off chain auth nonce response.
 type requestNonceResp struct {
 	CurrentNonce     int32  `xml:"CurrentNonce"`
 	NextNonce        int32  `xml:"NextNonce"`
 	CurrentPublicKey string `xml:"CurrentPublicKey"`
 	ExpiryDate       int64  `xml:"ExpiryDate"`
+}
+
+// ListUserPublicKeyV2Resp is the structure for off chain auth v2 ListUserPublicKeyV2 response.
+type ListUserPublicKeyV2Resp struct {
+	PublicKeys []string `xml:"Result"`
+}
+
+// DeleteUserPublicKeyV2Resp is the structure for off chain auth v2 DeleteUserPublicKeyV2 response.
+type DeleteUserPublicKeyV2Resp struct {
+	Result bool `xml:"Result"`
 }
 
 // GetNextNonce - Get the nonce value by giving user account and domain.
@@ -90,6 +124,17 @@ Issued At: %s
 Expiration Time: %s
 Resources:
 - SP %s (name: SP_001) with nonce: %s`
+
+	unsignedContentTemplateV2 string = `%s wants you to sign in with your BNB Greenfield account:
+%s
+
+Register your identity public key %s
+
+URI: %s
+Version: 1
+Chain ID: 5600
+Issued At: %s
+Expiration Time: %s`
 )
 
 // RegisterEDDSAPublicKey - Register EdDSA public key of this client for the given sp address and spEndpoint.
@@ -142,6 +187,130 @@ func (c *Client) RegisterEDDSAPublicKey(spAddress string, spEndpoint string) (st
 	jsonResult, error1 := httpPostWithHeader(spEndpoint+"/auth/update_key", "{}", headers)
 
 	return jsonResult, error1
+}
+
+// RegisterEDDSAPublicKeyV2 - Register EdDSA public key of this client for the given sp address and spEndpoint.
+//
+// To enable EdDSA authentication, you need to config OffChainAuthOptionV2 for the client.
+// The overall register process could be referred to https://docs.bnbchain.org/greenfield-docs/docs/guide/storage-provider/modules/authenticator#workflow.
+//
+// The EdDSA registering process is typically used in a website, e.g. https://dcellar.io,
+// which obtains a user's signature via a wallet and then posts the user's EdDSA public key to a sp.
+//
+// Here we also provide an SDK method to implement this process, because sometimes you might want to test if a given SP provides correct EdDSA authentication or not.
+// It also helps if you want implement it on a non-browser environment.
+//
+// - spEndpoint: The sp endpoint, to which this API will register client's EdDSA public key. It can be found via https://docs.bnbchain.org/greenfield-docs/docs/greenfield-api/storage-providers .
+//
+// - ret1: The register result when invoking SP UpdateUserPublicKey API.
+//
+// - ret2: Return error when registering failed, otherwise return nil.
+func (c *Client) RegisterEDDSAPublicKeyV2(spEndpoint string) (string, error) {
+	appDomain := c.offChainAuthOptionV2.Domain
+	eddsaSeed := c.offChainAuthOptionV2.Seed
+
+	// get the EDDSA private and public key
+	_, userEddsaPublicKey := GetEd25519PrivateKeyAndPublicKey(eddsaSeed)
+	userEddsaPublicKeyStr := hex.EncodeToString(userEddsaPublicKey)
+	log.Info().Msg("userEddsaPublicKeyStr is " + userEddsaPublicKeyStr)
+
+	IssueDate := time.Now().Format(time.RFC3339)
+	// ExpiryDate format := "2023-06-27T06:35:24Z"
+	ExpiryDate := time.Now().Add(time.Hour * 24).Format(time.RFC3339)
+
+	unSignedContent := fmt.Sprintf(unsignedContentTemplateV2, appDomain, c.defaultAccount.GetAddress().String(), userEddsaPublicKeyStr, appDomain, IssueDate, ExpiryDate)
+
+	unSignedContentHash := accounts.TextHash([]byte(unSignedContent))
+	sig, _ := c.defaultAccount.GetKeyManager().Sign(unSignedContentHash)
+	authString := fmt.Sprintf("%s,SignedMsg=%s,Signature=%s", httplib.Gnfd1EthPersonalSign, unSignedContent, hexutil.Encode(sig))
+	authString = strings.ReplaceAll(authString, "\n", "\\n")
+	headers := make(map[string]string)
+	headers["x-gnfd-app-domain"] = appDomain
+	headers["x-gnfd-app-reg-public-key"] = userEddsaPublicKeyStr
+	headers["X-Gnfd-Expiry-Timestamp"] = ExpiryDate
+	headers["authorization"] = authString
+	headers["origin"] = appDomain
+	headers["x-gnfd-user-address"] = c.defaultAccount.GetAddress().String()
+	jsonResult, error1 := httpPostWithHeader(spEndpoint+"/auth/update_key_v2", "{}", headers)
+
+	return jsonResult, error1
+}
+
+// ListUserPublicKeyV2 - List user public keys for off-chain-auth v2
+// This API will list user public keys for off-chain-auth v2. So that users/dapp can know what public keys have already been registered in a given sp.
+//
+// - spEndpoint: The sp endpoint where the list API will send the request.
+//
+// - domain: The domain that this list api will query for.
+//
+// - ret1: The public key list for the given sp/account/domain. The account will be the client's defaultAccount.
+//
+// - ret2: Return error when ListUserPublicKeyV2 runs into failure.
+func (c *Client) ListUserPublicKeyV2(spEndpoint string, domain string) ([]string, error) {
+	header := make(map[string]string)
+	header["X-Gnfd-User-Address"] = c.defaultAccount.GetAddress().String()
+	header["X-Gnfd-App-Domain"] = domain
+
+	response, err := httpGetWithHeader(spEndpoint+"/auth/keys_v2", header)
+	if err != nil {
+		return nil, err
+	}
+	listResp := ListUserPublicKeyV2Resp{}
+	// decode the xml content from response body
+	err = xml.NewDecoder(bytes.NewBufferString(response)).Decode(&listResp)
+	if err != nil {
+		return nil, err
+	}
+	return listResp.PublicKeys, nil
+}
+
+// DeleteUserPublicKeyV2 - Delete user public keys for off-chain-auth v2
+// This API will delete user public keys for off-chain-auth v2.
+//
+// - spEndpoint: The sp endpoint where the delete API will send the request.
+//
+// - domain: The domain that this api will delete for.
+//
+// - publicKeys: The public keys that the invoker intends to delete
+//
+// - ret1: Return deletion result.
+//
+// - ret2: Return error when DeleteUserPublicKeyV2 runs into failure.
+func (c *Client) DeleteUserPublicKeyV2(spEndpoint string, domain string, publicKeys []string) (bool, error) {
+	header := make(map[string]string)
+	header["X-Gnfd-User-Address"] = c.defaultAccount.GetAddress().String()
+	header["X-Gnfd-App-Domain"] = domain
+	stNow := time.Now().UTC()
+	header[httplib.HTTPHeaderExpiryTimestamp] = stNow.Add(time.Second * types.DefaultExpireSeconds).Format(types.Iso8601DateFormatSecond)
+	req, err := http.NewRequest(http.MethodPost, spEndpoint+"/auth/delete_keys_v2", strings.NewReader(strings.Join(publicKeys, ",")))
+	for key, value := range header {
+		req.Header.Set(key, value)
+	}
+	// sign the total http request info when auth type v1
+	err = c.signRequest(req)
+	if err != nil {
+		return false, err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+	if (nil != resp) && (nil != resp.Body) {
+		defer resp.Body.Close()
+	}
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return false, err
+	}
+	deleteResp := DeleteUserPublicKeyV2Resp{}
+	// decode the xml content from response body
+	err = xml.NewDecoder(bytes.NewBufferString(string(body))).Decode(&deleteResp)
+	if err != nil {
+		return false, err
+	}
+	return deleteResp.Result, nil
 }
 
 func httpGetWithHeader(url string, header map[string]string) (string, error) {
@@ -209,6 +378,16 @@ func generateEddsaPrivateKey(seed string) (sk *eddsa.PrivateKey, err error) {
 	reader := bytes.NewReader(buf)
 	sk, err = generateKey(reader)
 	return sk, err
+}
+
+func GetEd25519PrivateKeyAndPublicKey(seed string) (ed25519.PrivateKey, ed25519.PublicKey) {
+	// Hash the seed to obtain a 32-byte value
+	hashedSeed := sha256.Sum256([]byte(seed))
+	// Derive the private key from the seed
+	privateKey := ed25519.NewKeyFromSeed(hashedSeed[:])
+	publicKey := privateKey.Public().(ed25519.PublicKey)
+
+	return privateKey, publicKey
 }
 
 const (

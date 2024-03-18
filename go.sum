@@ -158,8 +158,8 @@ github.com/bnb-chain/greenfield-cometbft v1.2.0 h1:LTStppZS9WkVj0TfEYKkk5OAQDGfY
 github.com/bnb-chain/greenfield-cometbft v1.2.0/go.mod h1:WVOEZ59UYM2XePQH47/IQfcInspDn8wbRXhFSJrbU1c=
 github.com/bnb-chain/greenfield-cometbft-db v0.8.1-alpha.1 h1:XcWulGacHVRiSCx90Q8Y//ajOrLNBQWR/KDB89dy3cU=
 github.com/bnb-chain/greenfield-cometbft-db v0.8.1-alpha.1/go.mod h1:ey1CiK4bYo1RBNJLRiVbYr5CMdSxci9S/AZRINLtppI=
-github.com/bnb-chain/greenfield-common/go v0.0.0-20230906132736-eb2f0efea228 h1:WywBaew30hZuqDTOQbkRV3uBg6XHjNIE1s3AXVXbG+8=
-github.com/bnb-chain/greenfield-common/go v0.0.0-20230906132736-eb2f0efea228/go.mod h1:K9jK80fbahciC+FAvrch8Qsbw9ZkvVgjfKsqrzPTAVA=
+github.com/bnb-chain/greenfield-common/go v0.0.0-20240228080631-2683b0ee669a h1:VjUknQkIcqkjYCt1hmfpinM7kToOBuUU+KykrrqFsEM=
+github.com/bnb-chain/greenfield-common/go v0.0.0-20240228080631-2683b0ee669a/go.mod h1:K9jK80fbahciC+FAvrch8Qsbw9ZkvVgjfKsqrzPTAVA=
 github.com/bnb-chain/greenfield-cosmos-sdk v1.4.1-0.20240221065455-ef1f7f0d2659 h1:ytOD5CuSsmV9pe9HXXJEsxiDKxHzOYShSG8s21Yw5Xw=
 github.com/bnb-chain/greenfield-cosmos-sdk v1.4.1-0.20240221065455-ef1f7f0d2659/go.mod h1:XF8U3VN1euzLkIR5xiSNyQSnBabvnD86oz6fgdrpteQ=
 github.com/bnb-chain/greenfield-cosmos-sdk/api v0.0.0-20231129013257-1e407f209b02 h1:cwuShQ+MlvwkfbOz79BRF4aYjgKAuSyugoCtXE8tWgM=
@@ -353,7 +353,6 @@ github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08/go.mod h1:x
 github.com/getkin/kin-openapi v0.53.0/go.mod h1:7Yn5whZr5kJi6t+kShccXS8ae1APpYTW6yheSwk8Yi4=
 github.com/getkin/kin-openapi v0.61.0/go.mod h1:7Yn5whZr5kJi6t+kShccXS8ae1APpYTW6yheSwk8Yi4=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
-github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gliderlabs/ssh v0.1.1/go.mod h1:U7qILu1NlMHj9FlMhZLlkCdDnU1DBEAqr0aevW3Awn0=
 github.com/glycerine/go-unsnap-stream v0.0.0-20180323001048-9f0cb55181dd/go.mod h1:/20jfyN9Y5QPEAprSgKAUr+glWDY39ZiUEAYOEv5dsE=
