@@ -355,3 +355,7 @@ type PolicyMeta struct {
 	// ExpirationTime defines the expiration time of permission
 	ExpirationTime int64 `xml:"ExpirationTime"`
 }
+
+type GetObjectMetaResponse struct {
+	Object *ObjectMeta `xml:"Object"`
+}

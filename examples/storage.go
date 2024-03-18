@@ -73,6 +73,11 @@ func main() {
 		handleErr(errors.New("download content not same"), "GetObject")
 	}
 
+	// get object meta
+	objectMeta, err := cli.GetObjectMeta(ctx, bucketName, objectName)
+	handleErr(err, "GetObjectMeta")
+	log.Printf("get object meta %s successfully, CreateTxHash %s \n", objectName, objectMeta.CreateTxHash)
+
 	// list objects
 	objects, err := cli.ListObjects(ctx, bucketName, types.ListObjectsOptions{
 		ShowRemovedObject: false, Delimiter: "", MaxKeys: 100, Endpoint: httpsAddr, SPAddress: "",

@@ -60,6 +60,7 @@ type IObjectClient interface {
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
 	ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error)
 	ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error)
+	GetObjectMeta(ctx context.Context, bucketName, objectName string) (types.ObjectMeta, error)
 }
 
 // GetRedundancyParams query and return the data shards, parity shards and segment size of redundancy
@@ -1444,4 +1445,58 @@ func (c *Client) ListObjectPolicies(ctx context.Context, objectName, bucketName 
 	}
 
 	return policies, nil
+}
+
+// GetObjectMeta return the object meta info
+func (c *Client) GetObjectMeta(ctx context.Context, bucketName, objectName string) (types.ObjectMeta, error) {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
+		return types.ObjectMeta{}, err
+	}
+
+	if err := s3util.CheckValidObjectName(objectName); err != nil {
+		return types.ObjectMeta{}, err
+	}
+
+	reqMeta := requestMeta{
+		bucketName: bucketName,
+		objectName: objectName,
+		urlValues: url.Values{
+			"object-meta": []string{""},
+		},
+	}
+
+	sendOpt := sendOptions{
+		method:           http.MethodGet,
+		disableCloseBody: true,
+	}
+
+	endpoint, err := c.getSPUrlByBucket(bucketName)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
+		return types.ObjectMeta{}, err
+	}
+
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return types.ObjectMeta{}, err
+	}
+	defer utils.CloseResponse(resp)
+
+	// unmarshal the xml content from response body
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		log.Error().Msg("the meta of object in user's bucket:" + bucketName + " failed: " + err.Error())
+		return types.ObjectMeta{}, err
+	}
+
+	objectMetaResp := types.GetObjectMetaResponse{}
+	bufStr := buf.String()
+	err = xml.Unmarshal([]byte(bufStr), &objectMetaResp)
+	if err != nil && objectMetaResp.Object == nil {
+		log.Error().Msg("the meta of object in user's bucket:" + bucketName + " failed: " + err.Error())
+		return types.ObjectMeta{}, err
+	}
+
+	return *objectMetaResp.Object, nil
 }
