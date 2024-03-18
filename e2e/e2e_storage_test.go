@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"fmt"
+	"github.com/bnb-chain/greenfield/types/resource"
 	"io"
 	"os"
 	"path/filepath"
@@ -21,7 +22,6 @@ import (
 	types2 "github.com/bnb-chain/greenfield/sdk/types"
 	storageTestUtil "github.com/bnb-chain/greenfield/testutil/storage"
 	greenfield_types "github.com/bnb-chain/greenfield/types"
-	"github.com/bnb-chain/greenfield/types/resource"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
@@ -287,6 +287,29 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().NoError(err)
 	_, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 	s.Require().Error(err)
+
+	objectName2 := storageTestUtil.GenRandomObjectName()
+
+	//var buffer bytes.Buffer
+	//// Create 1MiB content where each line contains 1024 characters.
+	//for i := 0; i < 1024*300; i++ {
+	//	buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	//}
+	err = s.Client.DelegatePutObject(s.ClientContext, bucketName, objectName2, objectSize, bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	s.WaitSealObject(bucketName, objectName2)
+
+	var newBuffer bytes.Buffer
+	for i := 0; i < 1024*300*40; i++ {
+		newBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+	newObjectSize := int64(newBuffer.Len())
+	s.T().Logf("newObjectSize: %d", newObjectSize)
+
+	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName2, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
 }
 
 func (s *StorageTestSuite) Test_Group() {
@@ -948,68 +971,4 @@ func (s *StorageTestSuite) PutObjectWithRetry(bucketName, objectName string, obj
 		break
 	}
 	return err
-}
-
-func (s *StorageTestSuite) Test_delegate_upload() {
-	bucketName := storageTestUtil.GenRandomBucketName()
-	objectName := storageTestUtil.GenRandomObjectName()
-
-	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
-
-	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
-	s.Require().NoError(err)
-
-	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
-	s.Require().NoError(err)
-
-	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
-	s.Require().NoError(err)
-	if err == nil {
-		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
-	}
-	var buffer bytes.Buffer
-	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
-	for i := 0; i < 2048*1000/2; i++ {
-		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
-	}
-
-	objectSize := int64(buffer.Len())
-	s.T().Logf("objectSize: %d", objectSize)
-	err = s.Client.DelegatePutObject(s.ClientContext, bucketName, objectName, objectSize, bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
-	s.Require().NoError(err)
-
-	for {
-		time.Sleep(1 * time.Second)
-		object, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-		if err != nil {
-			continue
-		}
-		if object.ObjectInfo.ObjectStatus == storageTypes.OBJECT_STATUS_SEALED {
-			break
-		}
-		s.T().Log("object not sealed yet")
-	}
-
-	var newBuffer bytes.Buffer
-	for i := 0; i < 2048*1000/5; i++ {
-		newBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
-	}
-	newObjectSize := int64(newBuffer.Len())
-	s.T().Logf("newObjectSize: %d", newObjectSize)
-
-	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
-	s.Require().NoError(err)
-
-	for {
-		time.Sleep(1 * time.Second)
-		object, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
-		if err != nil {
-			continue
-		}
-		if !object.ObjectInfo.GetIsUpdating() {
-			break
-		}
-		s.T().Log("object not sealed yet")
-	}
-
 }

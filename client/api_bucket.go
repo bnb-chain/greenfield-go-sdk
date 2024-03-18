@@ -38,7 +38,7 @@ type IBucketClient interface {
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
 	UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error)
 	UpdateBucketPaymentAddr(ctx context.Context, bucketName string, paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption) (string, error)
-	UpdateDelegatedAgent(ctx context.Context, bucketName string, addAgentAddresses, removeAgentAddresses []string, opt types.UpdateBucketOptions) (string, error)
+	ToggleSPAsDelegatedAgent(ctx context.Context, bucketName string, opt types.UpdateBucketOptions) (string, error)
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
 	PutBucketPolicy(ctx context.Context, bucketName string, principal types.Principal, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
@@ -334,38 +334,14 @@ func (c *Client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 	return c.sendTxn(ctx, updateBucketMsg, opts.TxOpts)
 }
 
-func (c *Client) UpdateDelegatedAgent(ctx context.Context, bucketName string,
-	addAgentAddresses, removeAgentAddresses []string, opt types.UpdateBucketOptions,
+func (c *Client) ToggleSPAsDelegatedAgent(ctx context.Context, bucketName string, opt types.UpdateBucketOptions,
 ) (string, error) {
 	_, err := c.HeadBucket(ctx, bucketName)
 	if err != nil {
 		return "", err
 	}
-
-	addAgents := make([]sdk.AccAddress, 0)
-	removeAgents := make([]sdk.AccAddress, 0)
-
-	for _, address := range addAgentAddresses {
-		agent, err := sdk.AccAddressFromHexUnsafe(address)
-		if err != nil {
-			return "", err
-		}
-		addAgents = append(addAgents, agent)
-	}
-	for _, address := range removeAgentAddresses {
-		agent, err := sdk.AccAddressFromHexUnsafe(address)
-		if err != nil {
-			return "", err
-		}
-		removeAgents = append(removeAgents, agent)
-	}
-
-	updateDelegatedAgentMsg := storageTypes.NewMsgUpdateDelegatedAgent(
-		c.MustGetDefaultAccount().GetAddress(),
-		bucketName,
-		addAgents,
-		removeAgents)
-	return c.sendTxn(ctx, updateDelegatedAgentMsg, opt.TxOpts)
+	msg := storageTypes.NewMsgToggleSPAsDelegatedAgent(c.MustGetDefaultAccount().GetAddress(), bucketName)
+	return c.sendTxn(ctx, msg, opt.TxOpts)
 }
 
 // HeadBucket - query the bucketInfo on chain by bucket name, return the bucket info if exists.

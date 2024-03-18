@@ -90,7 +90,7 @@ func (s *BaseSuite) WaitSealObject(bucketName string, objectName string) {
 	for i := 0; i < 100; i++ {
 		objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
 		s.Require().NoError(err)
-		if objectDetail.ObjectInfo.GetObjectStatus() == storageTypes.OBJECT_STATUS_SEALED {
+		if objectDetail.ObjectInfo.GetObjectStatus() == storageTypes.OBJECT_STATUS_SEALED && !objectDetail.ObjectInfo.GetIsUpdating() {
 			break
 		}
 		time.Sleep(3 * time.Second)

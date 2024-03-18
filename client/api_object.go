@@ -39,6 +39,7 @@ type IObjectClient interface {
 	UpdateObjectContent(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.UpdateObjectOptions) (string, error)
 	CancelUpdateObjectContent(ctx context.Context, bucketName, objectName string, opts types.CancelUpdateObjectOption) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	DelegatePutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	DelegateUpdateObjectContent(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
@@ -471,7 +472,7 @@ func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName 
 		urlValues.Set("complete", strconv.FormatBool(complete))
 
 		if opts.Delegated {
-			urlValues.Set("delegate_resumable", "")
+			urlValues.Set("delegate", "")
 			urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
 			urlValues.Set("payload_size", strconv.FormatInt(objectSize, 10))
 			urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
