@@ -17,6 +17,10 @@ import (
 	"strings"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
+
 	hashlib "github.com/bnb-chain/greenfield-common/go/hash"
 	httplib "github.com/bnb-chain/greenfield-common/go/http"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
@@ -26,9 +30,6 @@ import (
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	types2 "github.com/bnb-chain/greenfield/x/virtualgroup/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc"
 )
 
 // IClient - Declare all Greenfield SDK Client APIs, including APIs for interacting with Greenfield Blockchain and SPs.
@@ -67,12 +68,13 @@ type Client struct {
 	// The user agent info
 	userAgent string
 	// define if trace the error request to SP
-	isTraceEnabled     bool
-	traceOutput        io.Writer
-	onlyTraceError     bool
-	offChainAuthOption *OffChainAuthOption
-	useWebsocketConn   bool
-	expireSeconds      uint64
+	isTraceEnabled       bool
+	traceOutput          io.Writer
+	onlyTraceError       bool
+	offChainAuthOption   *OffChainAuthOption
+	offChainAuthOptionV2 *OffChainAuthOptionV2
+	useWebsocketConn     bool
+	expireSeconds        uint64
 	// forceToUseSpecifiedSpEndpointForDownloadOnly indicates a fixed SP endpoint to which to send the download request
 	// If this option is set, the client can only make download requests, and can only download from the fixed endpoint
 	forceToUseSpecifiedSpEndpointForDownloadOnly *url.URL
@@ -95,6 +97,11 @@ type Option struct {
 	// This property should not be set in most cases unless you want to use go-sdk to test if the SP support off-chain-auth feature.
 	// Once this property is set, the request will be signed in "GNFD1-EDDSA" way rather than GNFD1-ECDSA.
 	OffChainAuthOption *OffChainAuthOption
+	// OffChainAuthOptionV2 consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+	// It uses ed25519 curve.
+	// This property should not be set in most cases unless you want to use go-sdk to test if the SP support off-chain-auth-v2 feature.
+	// Once this property is set, the request will be signed in "GNFD2-EDDSA" way rather than GNFD2-ECDSA.
+	OffChainAuthOptionV2 *OffChainAuthOptionV2
 	// UseWebSocketConn specifies that connection to Chain is via websocket.
 	UseWebSocketConn bool
 	// ExpireSeconds indicates the number of seconds after which the authentication of the request sent to the SP will become invalid，the default value is 1000.
@@ -117,6 +124,23 @@ type OffChainAuthOption struct {
 	Domain string
 	// ShouldRegisterPubKey This should be set as true for the first time and could be set as false if the pubkey have been already been registered already.
 	ShouldRegisterPubKey bool
+}
+
+// OffChainAuthOptionV2 - The optional configurations for off-chain-auth-v2.
+//
+// The OffChainAuthOptionV2 consists of a EdDSA private key and the domain where the EdDSA keys will be registered for.
+//
+// This auth mechanism is usually used in browser-based application.
+// That we support OffChainAuth configuration in go-sdk is to make the tests on off-chain-auth-v2 be convenient.
+type OffChainAuthOptionV2 struct {
+	// Seed is a EdDSA private key used for off-chain-auth.
+	Seed string
+	// Domain is the domain where the EdDSA keys will be registered for.
+	Domain string
+	// ShouldRegisterPubKey This should be set as true for the first time and could be set as false if the pubkey have been already been registered already.
+	ShouldRegisterPubKey bool
+	// PublicKey This will be set automatically once the public key is registered.
+	PublicKey string
 }
 
 // New - New Greenfield Go SDK Client.
@@ -201,6 +225,27 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 				registerResult, err := c.RegisterEDDSAPublicKey(sp.OperatorAddress.String(), sp.EndPoint.Scheme+"://"+sp.EndPoint.Host)
 				if err != nil {
 					log.Error().Msg(fmt.Sprintf("Fail to RegisterEDDSAPublicKey for sp : %s", sp.EndPoint))
+				}
+				log.Info().Msg(fmt.Sprintf("registerResult: %s", registerResult))
+
+			}
+		}
+	}
+
+	// register off-chain-auth-v2 pubkey to all sps
+	if option.OffChainAuthOptionV2 != nil {
+		if option.OffChainAuthOptionV2.Seed == "" || option.OffChainAuthOptionV2.Domain == "" {
+			return nil, errors.New("seed and domain can't be empty in OffChainAuthOptionV2")
+		}
+		_, userEddsaPublicKey := GetEd25519PrivateKeyAndPublicKey(option.OffChainAuthOptionV2.Seed)
+		option.OffChainAuthOptionV2.PublicKey = hex.EncodeToString(userEddsaPublicKey)
+
+		c.offChainAuthOptionV2 = option.OffChainAuthOptionV2
+		if option.OffChainAuthOptionV2.ShouldRegisterPubKey {
+			for _, sp := range c.storageProviders {
+				registerResult, err := c.RegisterEDDSAPublicKeyV2(sp.EndPoint.Scheme + "://" + sp.EndPoint.Host)
+				if err != nil {
+					log.Error().Msg(fmt.Sprintf("Fail to RegisterEDDSAPublicKeyV2 for sp : %s", sp.EndPoint))
 				}
 				log.Info().Msg(fmt.Sprintf("registerResult: %s", registerResult))
 
@@ -623,6 +668,18 @@ func (c *Client) signRequest(req *http.Request) error {
 		req.Header.Set("X-Gnfd-App-Domain", c.offChainAuthOption.Domain)
 		unsignedMsg := httplib.GetMsgToSignInGNFD1Auth(req)
 		authStr := c.OffChainAuthSign(unsignedMsg)
+		// set auth header
+		req.Header.Set(types.HTTPHeaderAuthorization, authStr)
+		return nil
+	}
+
+	// use offChainAuth if OffChainAuthOptionV2 is set
+	if c.offChainAuthOptionV2 != nil {
+		req.Header.Set("X-Gnfd-User-Address", c.defaultAccount.GetAddress().String())
+		req.Header.Set("X-Gnfd-App-Domain", c.offChainAuthOptionV2.Domain)
+		req.Header.Set("X-Gnfd-App-Reg-Public-Key", c.offChainAuthOptionV2.PublicKey)
+		unsignedMsg := httplib.GetMsgToSignInGNFD1Auth(req)
+		authStr := c.OffChainAuthSignV2(unsignedMsg)
 		// set auth header
 		req.Header.Set(types.HTTPHeaderAuthorization, authStr)
 		return nil
