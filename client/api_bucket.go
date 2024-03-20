@@ -595,7 +595,6 @@ func (c *Client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 
 	bufStr := buf.String()
 	err = xml.Unmarshal([]byte(bufStr), &listBucketsResult)
-
 	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil {
 		return types.ListBucketsResult{}, err
@@ -992,7 +991,6 @@ func (c *Client) MigrateBucket(ctx context.Context, bucketName string, dstPrimar
 //
 // - ret2: Return error when the request of cancel migration failed, otherwise return nil.
 func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error) {
-
 	cancelMigrateBucketMsg := storageTypes.NewMsgCancelMigrateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName)
 
 	err := cancelMigrateBucketMsg.ValidateBasic()
@@ -1044,7 +1042,6 @@ func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error) {
-
 	_, err := sdk.AccAddressFromHexUnsafe(paymentAccount)
 	if err != nil {
 		return types.ListBucketsByPaymentAccountResult{}, err

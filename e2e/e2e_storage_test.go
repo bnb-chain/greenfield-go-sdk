@@ -3,7 +3,6 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	"github.com/bnb-chain/greenfield/types/resource"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/bnb-chain/greenfield/types/resource"
 
 	"cosmossdk.io/math"
 	"github.com/stretchr/testify/suite"
@@ -309,7 +310,6 @@ func (s *StorageTestSuite) Test_Object() {
 
 	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName2, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
-
 }
 
 func (s *StorageTestSuite) Test_Group() {
@@ -675,7 +675,7 @@ func (s *StorageTestSuite) Test_Upload_Object_With_Tampering_Content() {
 }
 
 func (s *StorageTestSuite) Test_Group_with_Tag() {
-	//create group with tag
+	// create group with tag
 	groupName := storageTestUtil.GenRandomGroupName()
 
 	groupOwner := s.DefaultAccount.GetAddress()
@@ -697,7 +697,7 @@ func (s *StorageTestSuite) Test_Group_with_Tag() {
 }
 
 func (s *StorageTestSuite) Test_CreateGroup_And_Set_Tag() {
-	//create group with tag
+	// create group with tag
 	groupName := storageTestUtil.GenRandomGroupName()
 
 	groupOwner := s.DefaultAccount.GetAddress()

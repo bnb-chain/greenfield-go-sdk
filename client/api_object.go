@@ -337,7 +337,9 @@ func (c *Client) putObject(ctx context.Context, bucketName, objectName string, o
 		urlValues.Set("delegate", "")
 		urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
 		urlValues.Set("payload_size", strconv.FormatInt(objectSize, 10))
-		urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
+		if !opts.IsUpdate {
+			urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
+		}
 	}
 
 	reqMeta := requestMeta{
@@ -389,10 +391,7 @@ func DefaultUploadSegment(id int) error {
 func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
-
-	var (
-		offset uint64
-	)
+	var offset uint64
 
 	if !opts.Delegated {
 		if err = c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
@@ -475,7 +474,9 @@ func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName 
 			urlValues.Set("delegate", "")
 			urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
 			urlValues.Set("payload_size", strconv.FormatInt(objectSize, 10))
-			urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
+			if !opts.IsUpdate {
+				urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
+			}
 		}
 		reqMeta := requestMeta{
 			bucketName:    bucketName,
@@ -602,7 +603,6 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 		endpoint = c.forceToUseSpecifiedSpEndpointForDownloadOnly
 	} else {
 		endpoint, err = c.getSPUrlByBucket(bucketName)
-
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
 			return nil, types.ObjectStat{}, err

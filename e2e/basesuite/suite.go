@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 	"os"
 	"path/filepath"
 	"time"
+
+	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
