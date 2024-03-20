@@ -290,15 +290,8 @@ func (s *StorageTestSuite) Test_Object() {
 	s.Require().Error(err)
 
 	objectName2 := storageTestUtil.GenRandomObjectName()
-
-	//var buffer bytes.Buffer
-	//// Create 1MiB content where each line contains 1024 characters.
-	//for i := 0; i < 1024*300; i++ {
-	//	buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
-	//}
 	err = s.Client.DelegatePutObject(s.ClientContext, bucketName, objectName2, objectSize, bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
-
 	s.WaitSealObject(bucketName, objectName2)
 
 	var newBuffer bytes.Buffer
@@ -310,6 +303,7 @@ func (s *StorageTestSuite) Test_Object() {
 
 	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName2, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
+	s.WaitSealObject(bucketName, objectName2)
 }
 
 func (s *StorageTestSuite) Test_Group() {
