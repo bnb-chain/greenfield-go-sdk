@@ -38,6 +38,7 @@ type IBucketClient interface {
 	UpdateBucketVisibility(ctx context.Context, bucketName string, visibility storageTypes.VisibilityType, opt types.UpdateVisibilityOption) (string, error)
 	UpdateBucketInfo(ctx context.Context, bucketName string, opts types.UpdateBucketOptions) (string, error)
 	UpdateBucketPaymentAddr(ctx context.Context, bucketName string, paymentAddr sdk.AccAddress, opt types.UpdatePaymentOption) (string, error)
+	ToggleSPAsDelegatedAgent(ctx context.Context, bucketName string, opt types.UpdateBucketOptions) (string, error)
 	HeadBucket(ctx context.Context, bucketName string) (*storageTypes.BucketInfo, error)
 	HeadBucketByID(ctx context.Context, bucketID string) (*storageTypes.BucketInfo, error)
 	PutBucketPolicy(ctx context.Context, bucketName string, principal types.Principal, statements []*permTypes.Statement, opt types.PutPolicyOption) (string, error)
@@ -333,6 +334,16 @@ func (c *Client) UpdateBucketInfo(ctx context.Context, bucketName string, opts t
 	return c.sendTxn(ctx, updateBucketMsg, opts.TxOpts)
 }
 
+func (c *Client) ToggleSPAsDelegatedAgent(ctx context.Context, bucketName string, opt types.UpdateBucketOptions,
+) (string, error) {
+	_, err := c.HeadBucket(ctx, bucketName)
+	if err != nil {
+		return "", err
+	}
+	msg := storageTypes.NewMsgToggleSPAsDelegatedAgent(c.MustGetDefaultAccount().GetAddress(), bucketName)
+	return c.sendTxn(ctx, msg, opt.TxOpts)
+}
+
 // HeadBucket - query the bucketInfo on chain by bucket name, return the bucket info if exists.
 //
 // - ctx: Context variables for the current API call.
@@ -584,7 +595,6 @@ func (c *Client) ListBuckets(ctx context.Context, opts types.ListBucketsOptions)
 
 	bufStr := buf.String()
 	err = xml.Unmarshal([]byte(bufStr), &listBucketsResult)
-
 	// TODO(annie) remove tolerance for unmarshal err after structs got stabilized
 	if err != nil {
 		return types.ListBucketsResult{}, err
@@ -981,7 +991,6 @@ func (c *Client) MigrateBucket(ctx context.Context, bucketName string, dstPrimar
 //
 // - ret2: Return error when the request of cancel migration failed, otherwise return nil.
 func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error) {
-
 	cancelMigrateBucketMsg := storageTypes.NewMsgCancelMigrateBucket(c.MustGetDefaultAccount().GetAddress(), bucketName)
 
 	err := cancelMigrateBucketMsg.ValidateBasic()
@@ -1033,7 +1042,6 @@ func (c *Client) CancelMigrateBucket(ctx context.Context, bucketName string, opt
 //
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error) {
-
 	_, err := sdk.AccAddressFromHexUnsafe(paymentAccount)
 	if err != nil {
 		return types.ListBucketsByPaymentAccountResult{}, err

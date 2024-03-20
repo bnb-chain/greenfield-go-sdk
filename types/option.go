@@ -233,6 +233,9 @@ type PutObjectOptions struct {
 	TxnHash          string // TxnHash indicates the transaction hash creating the object meta on chain.
 	DisableResumable bool   // DisableResumable indicates whether upload the object to Storage Provider via resumable upload.
 	PartSize         uint64
+	Delegated        bool // Delegated indicates that the request to SP will require SP to create/update objet behalf of the uploader.
+	IsUpdate         bool // IsUpdate indicates that the request to SP is a delegated update object request.
+	Visibility       storageTypes.VisibilityType
 }
 
 // GetObjectOptions contains the options for `GetObject` API.

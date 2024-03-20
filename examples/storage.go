@@ -133,8 +133,10 @@ func main() {
 	log.Printf("object: %s has been deleted\n", objectName)
 
 	// list buckets
-	paymentBuckets, err := cli.ListBucketsByPaymentAccount(ctx, paymentAddr, types.ListBucketsByPaymentAccountOptions{Endpoint: httpsAddr,
-		SPAddress: ""})
+	paymentBuckets, err := cli.ListBucketsByPaymentAccount(ctx, paymentAddr, types.ListBucketsByPaymentAccountOptions{
+		Endpoint:  httpsAddr,
+		SPAddress: "",
+	})
 	log.Println("list buckets by payment account result:")
 	for _, bucket := range paymentBuckets.Buckets {
 		i := bucket.BucketInfo

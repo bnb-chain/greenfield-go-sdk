@@ -206,7 +206,6 @@ func New(chainID string, endpoint string, option Option) (IClient, error) {
 	} else {
 		// fetch sp endpoints info from chain
 		err = c.refreshStorageProviders(context.Background())
-
 		if err != nil {
 			return nil, err
 		}
