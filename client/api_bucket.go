@@ -57,7 +57,7 @@ type IBucketClient interface {
 	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error)
 	GetBucketMigrationProgress(ctx context.Context, bucketName string, destSP uint32) (types.MigrationProgress, error)
 	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
-	SetBucketFlowRateLimit(ctx context.Context, bucketName string, paymentAddr, bucketOwner sdk.AccAddress, flowRateLimit sdkmath.Int, opt types.UpdatePaymentOption) (string, error)
+	SetBucketFlowRateLimit(ctx context.Context, bucketName string, paymentAddr, bucketOwner sdk.AccAddress, flowRateLimit sdkmath.Int, opt types.SetBucketFlowRateLimitOption) (string, error)
 	GetPaymentAccountFlowRateLimit(ctx context.Context, paymentAddr, bucketOwner sdk.AccAddress, bucketName string) (*storageTypes.QueryPaymentAccountBucketFlowRateLimitResponse, error)
 }
 
@@ -292,7 +292,7 @@ func (c *Client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 //
 // - ret2: Return error if update flow rate limit failed, otherwise return nil.
 func (c *Client) SetBucketFlowRateLimit(ctx context.Context, bucketName string,
-	paymentAddr, bucketOwner sdk.AccAddress, flowRateLimit sdkmath.Int, opt types.UpdatePaymentOption,
+	paymentAddr, bucketOwner sdk.AccAddress, flowRateLimit sdkmath.Int, opt types.SetBucketFlowRateLimitOption,
 ) (string, error) {
 	updateBucketMsg := storageTypes.NewMsgSetBucketFlowRateLimit(c.MustGetDefaultAccount().GetAddress(), bucketOwner, paymentAddr, bucketName, flowRateLimit)
 	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
