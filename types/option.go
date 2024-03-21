@@ -76,6 +76,11 @@ type UpdatePaymentOption struct {
 	TxOpts *gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.
 }
 
+// SetBucketFlowRateLimitOption indicates the metadata to construct `SetBucketFlowRateLimit` msg.
+type SetBucketFlowRateLimitOption struct {
+	TxOpts *gnfdsdktypes.TxOption // TxOpts defines the options to customize a transaction.
+}
+
 // UpdateBucketOptions indicates the metadata to construct `UpdateBucketInfo` msg of storage module.
 type UpdateBucketOptions struct {
 	Visibility     storageTypes.VisibilityType // Visibility defines the bucket public status.

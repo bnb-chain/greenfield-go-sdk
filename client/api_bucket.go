@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
@@ -56,6 +57,8 @@ type IBucketClient interface {
 	CancelMigrateBucket(ctx context.Context, bucketName string, opts types.CancelMigrateBucketOptions) (string, error)
 	GetBucketMigrationProgress(ctx context.Context, bucketName string, destSP uint32) (types.MigrationProgress, error)
 	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
+	SetBucketFlowRateLimit(ctx context.Context, bucketName string, paymentAddr, bucketOwner sdk.AccAddress, flowRateLimit sdkmath.Int, opt types.SetBucketFlowRateLimitOption) (string, error)
+	GetPaymentAccountFlowRateLimit(ctx context.Context, paymentAddr, bucketOwner sdk.AccAddress, bucketName string) (*storageTypes.QueryPaymentAccountBucketFlowRateLimitResponse, error)
 }
 
 // GetCreateBucketApproval - Send create bucket approval request to SP and returns the signature info for the approval of preCreating resources.
@@ -269,6 +272,58 @@ func (c *Client) UpdateBucketPaymentAddr(ctx context.Context, bucketName string,
 
 	updateBucketMsg := storageTypes.NewMsgUpdateBucketInfo(c.MustGetDefaultAccount().GetAddress(), bucketName, &bucketInfo.ChargedReadQuota, paymentAddr, bucketInfo.Visibility)
 	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
+}
+
+// SetBucketFlowRateLimit - Set the flow rate limit of the bucket. It will send the MsgSetBucketFlowRateLimit msg to greenfield to update the meta.
+//
+// - ctx: Context variables for the current API call.
+//
+// - bucketName: The name of the bucket to be updated.
+//
+// - paymentAddr: The payment address from which deduct the cost of bucket storage or quota.
+//
+// - bucketOwner: The owner of the bucket.
+//
+// - flowRateLimit: The flow rate limit of the bucket.
+//
+// - opt: The Options for customizing the transaction.
+//
+// - ret1: Transaction hash return from blockchain.
+//
+// - ret2: Return error if update flow rate limit failed, otherwise return nil.
+func (c *Client) SetBucketFlowRateLimit(ctx context.Context, bucketName string,
+	paymentAddr, bucketOwner sdk.AccAddress, flowRateLimit sdkmath.Int, opt types.SetBucketFlowRateLimitOption,
+) (string, error) {
+	updateBucketMsg := storageTypes.NewMsgSetBucketFlowRateLimit(c.MustGetDefaultAccount().GetAddress(), bucketOwner, paymentAddr, bucketName, flowRateLimit)
+	return c.sendTxn(ctx, updateBucketMsg, opt.TxOpts)
+}
+
+// GetPaymentAccountFlowRateLimit - Get the flow rate limit of the bucket.
+//
+// - ctx: Context variables for the current API call.
+//
+// - paymentAddr: The payment address from which deduct the cost of bucket storage or quota.
+//
+// - bucketOwner: The owner of the bucket.
+//
+// - bucketName: The name of the bucket.
+//
+// - ret1: The flow rate limit of the bucket.
+//
+// - ret2: Return error if get flow rate limit failed, otherwise return nil.
+func (c *Client) GetPaymentAccountFlowRateLimit(ctx context.Context, paymentAddr, bucketOwner sdk.AccAddress, bucketName string) (*storageTypes.QueryPaymentAccountBucketFlowRateLimitResponse, error) {
+	queryFlowRateLimit := storageTypes.QueryPaymentAccountBucketFlowRateLimitRequest{
+		PaymentAccount: paymentAddr.String(),
+		BucketOwner:    bucketOwner.String(),
+		BucketName:     bucketName,
+	}
+
+	queryFlowRateLimitResp, err := c.chainClient.QueryPaymentAccountBucketFlowRateLimit(ctx, &queryFlowRateLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	return queryFlowRateLimitResp, nil
 }
 
 // UpdateBucketInfo - Update the bucket meta on chain, including read quota, payment address or visibility. It will send the MsgUpdateBucketInfo msg to greenfield to update the meta.
