@@ -62,7 +62,7 @@ type IBucketClient interface {
 	GetPaymentAccountFlowRateLimit(ctx context.Context, paymentAddr, bucketOwner sdk.AccAddress, bucketName string) (*storageTypes.QueryPaymentAccountBucketFlowRateLimitResponse, error)
 }
 
-// Deprecated: GetCreateBucketApproval - Send create bucket approval request to SP and returns the signature info for the approval of preCreating resources.
+// GetCreateBucketApproval - Send create bucket approval request to SP and returns the signature info for the approval of preCreating resources.
 //
 // - ctx: Context variables for the current API call.
 //
@@ -177,7 +177,13 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 
 	familyID, err := c.QuerySpOptimalGlobalVirtualGroupFamily(ctx, sp.Id, virtualgroupTypes.Strategy_Maximize_Free_Store_Size)
 	if err != nil {
-		return "", err
+		log.Error().Msg(fmt.Sprintf("failed to query sp ptimal vgf:  %s", err.Error()))
+		var signedMsg *storageTypes.MsgCreateBucket
+		signedMsg, err = c.GetCreateBucketApproval(ctx, createBucketMsg)
+		if err != nil {
+			return "", err
+		}
+		familyID = signedMsg.PrimarySpApproval.GlobalVirtualGroupFamilyId
 	}
 
 	createBucketMsg.PrimarySpApproval.GlobalVirtualGroupFamilyId = familyID
