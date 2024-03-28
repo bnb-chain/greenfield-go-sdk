@@ -25,6 +25,7 @@ import (
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
+	virtualgroupTypes "github.com/bnb-chain/greenfield/x/virtualgroup/types"
 
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
 	"github.com/bnb-chain/greenfield-go-sdk/types"
@@ -163,17 +164,36 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 	if err != nil {
 		return "", err
 	}
-	signedMsg, err := c.GetCreateBucketApproval(ctx, createBucketMsg)
+
+	accAddress, err := sdk.AccAddressFromHexUnsafe(primaryAddr)
 	if err != nil {
 		return "", err
 	}
+
+	sp, err := c.GetStorageProviderInfo(ctx, accAddress)
+	if err != nil {
+		return "", err
+	}
+
+	familyID, err := c.QuerySpOptimalGlobalVirtualGroupFamily(ctx, sp.Id, virtualgroupTypes.Strategy_Maximize_Free_Store_Size)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("failed to query sp ptimal vgf:  %s", err.Error()))
+		var signedMsg *storageTypes.MsgCreateBucket
+		signedMsg, err = c.GetCreateBucketApproval(ctx, createBucketMsg)
+		if err != nil {
+			return "", err
+		}
+		familyID = signedMsg.PrimarySpApproval.GlobalVirtualGroupFamilyId
+	}
+
+	createBucketMsg.PrimarySpApproval.GlobalVirtualGroupFamilyId = familyID
 
 	// set the default txn broadcast mode as block mode
 	if opts.TxOpts == nil {
 		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
-	msgs := []sdk.Msg{signedMsg}
+	msgs := []sdk.Msg{createBucketMsg}
 
 	if opts.Tags != nil {
 		// Set tag

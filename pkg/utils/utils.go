@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -318,4 +319,45 @@ func ReadFull(r io.Reader, buf []byte) (n int, err error) {
 		err = io.ErrUnexpectedEOF
 	}
 	return
+}
+
+// CheckObjectName  This code block checks for unsupported or potentially risky formats in object names.
+// The checks are essential for ensuring the security and compatibility of the object names within the system.
+// 1. ".." in object names: Checked to prevent path traversal attacks which might access directories outside the intended scope.
+// 2. Object name being "/": The root directory should not be used as an object name due to potential security risks and ambiguity.
+// 3. "\\" in object names: Backslashes are checked because they are often not supported in UNIX-like file systems and can cause issues in path parsing.
+// 4. SQL Injection patterns in object names: Ensures that the object name does not contain patterns that could be used for SQL injection attacks, maintaining the integrity of the database.
+func CheckObjectName(objectName string) bool {
+	if strings.Contains(objectName, "..") ||
+		objectName == "/" ||
+		strings.Contains(objectName, "\\") ||
+		IsSQLInjection(objectName) {
+		return false
+	}
+	return true
+}
+
+func IsSQLInjection(input string) bool {
+	// define patterns that may indicate SQL injection, especially those with a semicolon followed by common SQL keywords
+	patterns := []string{
+		"(?i).*;.*select", // Matches any string with a semicolon followed by "select"
+		"(?i).*;.*insert", // Matches any string with a semicolon followed by "insert"
+		"(?i).*;.*update", // Matches any string with a semicolon followed by "update"
+		"(?i).*;.*delete", // Matches any string with a semicolon followed by "delete"
+		"(?i).*;.*drop",   // Matches any string with a semicolon followed by "drop"
+		"(?i).*;.*alter",  // Matches any string with a semicolon followed by "alter"
+		"/\\*.*\\*/",      // Matches SQL block comment
+	}
+
+	for _, pattern := range patterns {
+		matched, err := regexp.MatchString(pattern, input)
+		if err != nil {
+			return false
+		}
+		if matched {
+			return true
+		}
+	}
+
+	return false
 }

@@ -120,6 +120,10 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
+	if !utils.CheckObjectName(objectName) {
+		return "", fmt.Errorf("fail to check object name:%s", objectName)
+	}
+
 	// compute hash root of payload
 	expectCheckSums, size, redundancyType, err := c.ComputeHashRoots(reader, opts.IsSerialComputeMode)
 	if err != nil {
@@ -148,17 +152,12 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
-	signedCreateObjectMsg, err := c.GetCreateObjectApproval(ctx, createObjectMsg)
-	if err != nil {
-		return "", err
-	}
-
 	// set the default txn broadcast mode as block mode
 	if opts.TxOpts == nil {
 		broadcastMode := tx.BroadcastMode_BROADCAST_MODE_SYNC
 		opts.TxOpts = &gnfdsdk.TxOption{Mode: &broadcastMode}
 	}
-	msgs := []sdk.Msg{signedCreateObjectMsg}
+	msgs := []sdk.Msg{createObjectMsg}
 
 	if opts.Tags != nil {
 		// Set tag
@@ -1116,7 +1115,7 @@ func (c *Client) ListObjects(ctx context.Context, bucketName string, opts types.
 	return listObjectsResult, nil
 }
 
-// GetCreateObjectApproval returns the signature info for the approval of preCreating resources
+// Deprecated: GetCreateObjectApproval returns the signature info for the approval of preCreating resources
 func (c *Client) GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error) {
 	unsignedBytes := createObjectMsg.GetSignBytes()
 
