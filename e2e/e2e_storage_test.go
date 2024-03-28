@@ -44,12 +44,13 @@ func (s *StorageTestSuite) SetupSuite() {
 			break
 		}
 	}
+	s.T().Log("---> QuerySpAvailableGlobalVirtualGroupFamilies <---")
 	for i := 0; i < 10; i++ {
-		time.Sleep(3 * time.Second)
 		families, _ := s.Client.QuerySpAvailableGlobalVirtualGroupFamilies(s.ClientContext, s.PrimarySP.Id)
 		if len(families) > 0 {
 			break
 		}
+		time.Sleep(3 * time.Second)
 	}
 }
 
