@@ -304,6 +304,7 @@ func (s *StorageTestSuite) Test_Object() {
 	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName2, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 	s.WaitSealObject(bucketName, objectName2)
+
 }
 
 func (s *StorageTestSuite) Test_Group() {
@@ -951,6 +952,32 @@ func (s *StorageTestSuite) Test_Get_Object_With_ForcedSpEndpoint() {
 
 	s.T().Log("---> restore client without ForceToUseSpecifiedSpEndpointForDownloadOnly option param <---")
 	s.Client = origClient
+}
+
+func (s *StorageTestSuite) TestCreateFolder() {
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
+	objectName = fmt.Sprintf("%s/", objectName)
+
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
+
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{Visibility: storageTypes.VISIBILITY_TYPE_PUBLIC_READ})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PUBLIC_READ)
+	}
+
+	s.T().Log("---> CreateFolder and HeadObject <---")
+	err = s.Client.DelegateCreateFolder(s.ClientContext, bucketName, objectName, types.PutObjectOptions{Visibility: storageTypes.VISIBILITY_TYPE_PUBLIC_READ})
+	s.Require().NoError(err)
+
+	s.WaitSealObject(bucketName, objectName)
 }
 
 func (s *StorageTestSuite) PutObjectWithRetry(bucketName, objectName string, objectSize int64, buffer bytes.Buffer, option types.PutObjectOptions) error {
