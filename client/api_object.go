@@ -59,6 +59,7 @@ type IObjectClient interface {
 	ListObjects(ctx context.Context, bucketName string, opts types.ListObjectsOptions) (types.ListObjectsResult, error)
 	ComputeHashRoots(reader io.Reader, isSerial bool) ([][]byte, int64, storageTypes.RedundancyType, error)
 	CreateFolder(ctx context.Context, bucketName, objectName string, opts types.CreateObjectOptions) (string, error)
+	DelegateCreateFolder(ctx context.Context, bucketName, objectName string, opts types.PutObjectOptions) error
 	GetObjectUploadProgress(ctx context.Context, bucketName, objectName string) (string, error)
 	ListObjectsByObjectID(ctx context.Context, objectIds []uint64, opts types.EndPointOptions) (types.ListObjectsByObjectIDResponse, error)
 	ListObjectPolicies(ctx context.Context, objectName, bucketName string, actionType uint32, opts types.ListObjectPoliciesOptions) (types.ListObjectPoliciesResponse, error)
@@ -363,6 +364,47 @@ func (c *Client) putObject(ctx context.Context, bucketName, objectName string, o
 			method: http.MethodPut,
 			body:   reader,
 		}
+	}
+
+	endpoint, err := c.getSPUrlByBucket(bucketName)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed, err: %s", bucketName, err.Error()))
+		return err
+	}
+
+	_, err = c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) delegateCreateFolder(ctx context.Context, bucketName, objectName string, opts types.PutObjectOptions,
+) (err error) {
+
+	var contentType string
+	if opts.ContentType != "" {
+		contentType = opts.ContentType
+	} else {
+		contentType = types.ContentDefault
+	}
+	urlValues := make(url.Values)
+
+	urlValues.Set("create-folder", "")
+	urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
+
+	reqMeta := requestMeta{
+		bucketName:    bucketName,
+		objectName:    objectName,
+		contentSHA256: types.EmptyStringSHA256,
+		contentLength: 0,
+		contentType:   contentType,
+		urlValues:     urlValues,
+	}
+
+	sendOpt := sendOptions{
+		method: http.MethodPost,
 	}
 
 	endpoint, err := c.getSPUrlByBucket(bucketName)
@@ -1136,6 +1178,16 @@ func (c *Client) CreateFolder(ctx context.Context, bucketName, objectName string
 	reader := bytes.NewReader([]byte(``))
 	txHash, err := c.CreateObject(ctx, bucketName, objectName, reader, opts)
 	return txHash, err
+}
+
+// DelegateCreateFolder send create empty object txn to greenfield chain
+func (c *Client) DelegateCreateFolder(ctx context.Context, bucketName, objectName string, opts types.PutObjectOptions) error {
+	if !strings.HasSuffix(objectName, "/") {
+		return errors.New("failed to create folder. Folder names must end with a forward slash (/) character")
+	}
+	opts.Delegated = true
+
+	return c.delegateCreateFolder(ctx, bucketName, objectName, opts)
 }
 
 // GetObjectUploadProgress return the status of object including the uploading progress
