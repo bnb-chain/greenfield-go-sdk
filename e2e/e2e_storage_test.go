@@ -39,18 +39,10 @@ func (s *StorageTestSuite) SetupSuite() {
 	spList, err := s.Client.ListStorageProviders(s.ClientContext, false)
 	s.Require().NoError(err)
 	for _, sp := range spList {
-		if sp.Endpoint != "https://sp0.greenfield.io" {
+		if sp.Endpoint != "https://sp0.greenfield.io" && sp.Id == 1 {
 			s.PrimarySP = sp
 			break
 		}
-	}
-	s.T().Log("---> QuerySpAvailableGlobalVirtualGroupFamilies <---")
-	for i := 0; i < 10; i++ {
-		families, _ := s.Client.QuerySpAvailableGlobalVirtualGroupFamilies(s.ClientContext, s.PrimarySP.Id)
-		if len(families) > 0 {
-			break
-		}
-		time.Sleep(3 * time.Second)
 	}
 }
 
