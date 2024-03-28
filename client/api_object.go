@@ -37,8 +37,11 @@ type IObjectClient interface {
 	GetCreateObjectApproval(ctx context.Context, createObjectMsg *storageTypes.MsgCreateObject) (*storageTypes.MsgCreateObject, error)
 	CreateObject(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.CreateObjectOptions) (string, error)
 	UpdateObjectContent(ctx context.Context, bucketName, objectName string, reader io.Reader, opts types.UpdateObjectOptions) (string, error)
+	CancelUpdateObjectContent(ctx context.Context, bucketName, objectName string, opts types.CancelUpdateObjectOption) (string, error)
 	PutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	DelegatePutObject(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
+	DelegateUpdateObjectContent(ctx context.Context, bucketName, objectName string, objectSize int64, reader io.Reader, opts types.PutObjectOptions) error
 	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts types.PutObjectOptions) (err error)
 	CancelCreateObject(ctx context.Context, bucketName, objectName string, opt types.CancelCreateOption) (string, error)
 	DeleteObject(ctx context.Context, bucketName, objectName string, opt types.DeleteObjectOption) (string, error)
@@ -182,7 +185,7 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 	return txnHash, nil
 }
 
-// UpdateObjectContent get approval of updating object and send updateObjectContent txn to greenfield chain,
+// UpdateObjectContent sends updateObjectContent tx to greenfield chain,
 // it returns the transaction hash value and error
 func (c *Client) UpdateObjectContent(ctx context.Context, bucketName, objectName string,
 	reader io.Reader, opts types.UpdateObjectOptions,
@@ -225,6 +228,21 @@ func (c *Client) UpdateObjectContent(ctx context.Context, bucketName, objectName
 		}
 	}
 	return txnHash, nil
+}
+
+// CancelUpdateObjectContent sends CancelUpdateObjectContent tx to greenfield chain,
+// it returns the transaction hash value and error
+func (c *Client) CancelUpdateObjectContent(ctx context.Context, bucketName, objectName string, opts types.CancelUpdateObjectOption) (string, error) {
+	if err := s3util.CheckValidBucketName(bucketName); err != nil {
+		return "", err
+	}
+
+	if err := s3util.CheckValidObjectName(objectName); err != nil {
+		return "", err
+	}
+
+	msg := storageTypes.NewMsgCancelUpdateObjectContent(c.MustGetDefaultAccount().GetAddress(), bucketName, objectName)
+	return c.sendTxn(ctx, msg, opts.TxOpts)
 }
 
 // DeleteObject - Send DeleteObject msg to greenfield chain and return txn hash.
@@ -299,9 +317,11 @@ func (c *Client) PutObject(ctx context.Context, bucketName, objectName string, o
 func (c *Client) putObject(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
-	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
-		log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
-		return err
+	if !opts.Delegated {
+		if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
+			log.Error().Msg(fmt.Sprintf("fail to head object %s , err %v ", objectName, err))
+			return err
+		}
 	}
 
 	var contentType string
@@ -310,6 +330,16 @@ func (c *Client) putObject(ctx context.Context, bucketName, objectName string, o
 	} else {
 		contentType = types.ContentDefault
 	}
+	urlValues := make(url.Values)
+
+	if opts.Delegated {
+		urlValues.Set("delegate", "")
+		urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
+		urlValues.Set("payload_size", strconv.FormatInt(objectSize, 10))
+		if !opts.IsUpdate {
+			urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
+		}
+	}
 
 	reqMeta := requestMeta{
 		bucketName:    bucketName,
@@ -317,6 +347,7 @@ func (c *Client) putObject(ctx context.Context, bucketName, objectName string, o
 		contentSHA256: types.EmptyStringSHA256,
 		contentLength: objectSize,
 		contentType:   contentType,
+		urlValues:     urlValues,
 	}
 
 	var sendOpt sendOptions
@@ -359,13 +390,18 @@ func DefaultUploadSegment(id int) error {
 func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName string, objectSize int64,
 	reader io.Reader, opts types.PutObjectOptions,
 ) (err error) {
-	if err := c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
-		return err
-	}
+	var offset uint64
 
-	offset, err := c.getObjectResumableUploadOffset(ctx, bucketName, objectName)
-	if err != nil {
-		return err
+	if !opts.Delegated {
+		if err = c.headSPObjectInfo(ctx, bucketName, objectName); err != nil {
+			return err
+		}
+		offset, err = c.getObjectResumableUploadOffset(ctx, bucketName, objectName)
+		if err != nil {
+			return err
+		}
+	} else {
+		offset = 0
 	}
 
 	// Total data read and written to server. should be equal to
@@ -433,6 +469,14 @@ func (c *Client) putObjectResumable(ctx context.Context, bucketName, objectName 
 		urlValues.Set("offset", strconv.FormatInt(totalUploadedSize, 10))
 		urlValues.Set("complete", strconv.FormatBool(complete))
 
+		if opts.Delegated {
+			urlValues.Set("delegate", "")
+			urlValues.Set("is_update", strconv.FormatBool(opts.IsUpdate))
+			urlValues.Set("payload_size", strconv.FormatInt(objectSize, 10))
+			if !opts.IsUpdate {
+				urlValues.Set("visibility", strconv.FormatInt(int64(opts.Visibility), 10))
+			}
+		}
 		reqMeta := requestMeta{
 			bucketName:    bucketName,
 			objectName:    objectName,
@@ -558,7 +602,6 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string,
 		endpoint = c.forceToUseSpecifiedSpEndpointForDownloadOnly
 	} else {
 		endpoint, err = c.getSPUrlByBucket(bucketName)
-
 		if err != nil {
 			log.Error().Msg(fmt.Sprintf("route endpoint by bucket: %s failed,  err: %s", bucketName, err.Error()))
 			return nil, types.ObjectStat{}, err
@@ -1427,4 +1470,39 @@ func (c *Client) ListObjectPolicies(ctx context.Context, objectName, bucketName 
 	}
 
 	return policies, nil
+}
+
+func (c *Client) DelegatePutObject(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
+) (err error) {
+	if objectSize <= 0 {
+		return errors.New("object size should be more than 0")
+	}
+	params, err := c.GetParams()
+	if err != nil {
+		return err
+	}
+	opts.Delegated = true
+	// minPartSize: 16MB
+	if opts.PartSize == 0 {
+		opts.PartSize = types.MinPartSize
+	}
+	if opts.PartSize%params.GetMaxSegmentSize() != 0 {
+		return errors.New("part size should be an integer multiple of the segment size")
+	}
+
+	// upload an entire object to the storage provider in a single request
+	if objectSize <= int64(opts.PartSize) || opts.DisableResumable {
+		return c.putObject(ctx, bucketName, objectName, objectSize, reader, opts)
+	}
+
+	// resumableupload
+	return c.putObjectResumable(ctx, bucketName, objectName, objectSize, reader, opts)
+}
+
+func (c *Client) DelegateUpdateObjectContent(ctx context.Context, bucketName, objectName string, objectSize int64,
+	reader io.Reader, opts types.PutObjectOptions,
+) (err error) {
+	opts.IsUpdate = true
+	return c.DelegatePutObject(ctx, bucketName, objectName, objectSize, reader, opts)
 }

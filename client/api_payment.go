@@ -203,7 +203,6 @@ func (c *Client) ListUserPaymentAccounts(ctx context.Context, opts types.ListUse
 
 	bufStr := buf.String()
 	err = xml.Unmarshal([]byte(bufStr), &paymentAccounts)
-
 	if err != nil {
 		return types.ListUserPaymentAccountsResult{}, err
 	}
