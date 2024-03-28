@@ -232,6 +232,12 @@ type BucketMetaWithVGF struct {
 	UpdateTime int64 `xml:"UpdateTime"`
 	// Vgf serve as a means of grouping global virtual groups.
 	Vgf *GlobalVirtualGroupFamily `xml:"Vgf"`
+	// OffChainStatus represents the status of a bucket in the off-chain storage.
+	// It is used to track the current state of the bucket with respect to off-chain operations,
+	// 1 means 0001 -> OffChainStatusIsLimited is true
+	// 0 means 0000 -> OffChainStatusIsLimited is false
+	// For an explanation of the different OffChainStatus values, please visit:https://github.com/bnb-chain/greenfield-storage-provider/blob/9d7048ad33cf51a2f7eb347e2113c5d0cc45f970/modular/blocksyncer/modules/bucket/bucket_handle.go#L40
+	OffChainStatus int32 `xml:"OffChainStatus"`
 }
 
 // BucketMeta is the structure for metadata service user bucket
@@ -254,6 +260,12 @@ type BucketMeta struct {
 	UpdateAt int64 `xml:"UpdateAt"`
 	// UpdateTime defines the block number when the bucket updated
 	UpdateTime int64 `xml:"UpdateTime"`
+	// OffChainStatus represents the status of a bucket in the off-chain storage.
+	// It is used to track the current state of the bucket with respect to off-chain operations,
+	// 1 means 0001 -> OffChainStatusIsLimited is true
+	// 0 means 0000 -> OffChainStatusIsLimited is false
+	// For an explanation of the different OffChainStatus values, please visit:https://github.com/bnb-chain/greenfield-storage-provider/blob/9d7048ad33cf51a2f7eb347e2113c5d0cc45f970/modular/blocksyncer/modules/bucket/bucket_handle.go#L40
+	OffChainStatus int32 `xml:"OffChainStatus"`
 }
 
 // ListBucketsByBucketIDResponse is response type for the ListBucketsByBucketID
