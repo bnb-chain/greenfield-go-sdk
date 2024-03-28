@@ -103,6 +103,7 @@ jobs:
           ./deployment/localup/local_env/sp5/gnfd-sp5 update.quota  --quota 5000000000 -c deployment/localup/local_env/sp5/config.toml
           ./deployment/localup/local_env/sp6/gnfd-sp6 update.quota  --quota 5000000000 -c deployment/localup/local_env/sp6/config.toml
           ./deployment/localup/local_env/sp7/gnfd-sp7 update.quota  --quota 5000000000 -c deployment/localup/local_env/sp7/config.toml
+          sleep 60
           ps -ef | grep gnfd-sp | wc -l
           tail -n 1000 deployment/localup/local_env/sp0/gnfd-sp.log
           cd ../greenfield-go-sdk
