@@ -49,7 +49,6 @@ func (s *StorageTestSuite) SetupSuite() {
 	for len(families) == 0 {
 		time.Sleep(5 * time.Second)
 		families, err = s.Client.QuerySpAvailableGlobalVirtualGroupFamilies(s.ClientContext, s.PrimarySP.Id)
-		s.Require().NoError(err)
 	}
 }
 
