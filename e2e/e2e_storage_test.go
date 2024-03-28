@@ -46,9 +46,12 @@ func (s *StorageTestSuite) SetupSuite() {
 	}
 	//wait for sp to create
 	var families []uint32
-	for len(families) == 0 {
-		time.Sleep(5 * time.Second)
+	for i := 0; i < 100; i++ {
 		families, err = s.Client.QuerySpAvailableGlobalVirtualGroupFamilies(s.ClientContext, s.PrimarySP.Id)
+		if len(families) > 0 {
+			break
+		}
+		time.Sleep(3 * time.Second)
 	}
 }
 
