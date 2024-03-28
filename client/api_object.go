@@ -120,8 +120,17 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 		return "", err
 	}
 
+	// Read a small chunk to detect MIME type
+	peeker := make([]byte, types.BytesToReadForMIME)
+	n, err := reader.Read(peeker)
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+
+	// Concatenate the peeked data with the original reader
+	combinedReader := io.MultiReader(bytes.NewReader(peeker[:n]), reader)
 	// compute hash root of payload
-	expectCheckSums, size, redundancyType, err := c.ComputeHashRoots(reader, opts.IsSerialComputeMode)
+	expectCheckSums, size, redundancyType, err := c.ComputeHashRoots(combinedReader, opts.IsSerialComputeMode)
 	if err != nil {
 		return "", err
 	}
@@ -130,9 +139,9 @@ func (c *Client) CreateObject(ctx context.Context, bucketName, objectName string
 	if opts.ContentType != "" {
 		contentType = opts.ContentType
 	} else {
-		contentType = types.ContentDefault
+		contentType = http.DetectContentType(peeker[:n])
 	}
-
+	
 	var visibility storageTypes.VisibilityType
 	if opts.Visibility == storageTypes.VISIBILITY_TYPE_UNSPECIFIED {
 		visibility = storageTypes.VISIBILITY_TYPE_INHERIT // set default visibility type

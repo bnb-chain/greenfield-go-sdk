@@ -72,4 +72,5 @@ const (
 
 	WaitTxContextTimeOut = 1 * time.Second
 	DefaultExpireSeconds = 1000
+	BytesToReadForMIME   = 512
 )
