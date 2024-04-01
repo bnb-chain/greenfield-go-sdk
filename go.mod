@@ -9,7 +9,7 @@ require (
 	github.com/bnb-chain/greenfield-common/go v0.0.0-20240228080631-2683b0ee669a
 	github.com/cometbft/cometbft v0.37.2
 	github.com/consensys/gnark-crypto v0.12.1
-	github.com/cosmos/cosmos-sdk v0.47.3
+	github.com/cosmos/cosmos-sdk v0.47.10
 	github.com/cosmos/gogoproto v1.4.10
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/prysmaticlabs/prysm v0.0.0-20220124113610-e26cde5e091b
