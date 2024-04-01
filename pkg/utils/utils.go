@@ -268,15 +268,6 @@ func ParseRange(rangeStr string) (bool, int64, int64) {
 	return false, -1, -1
 }
 
-// StringToUint64 converts string to uint64
-func stringToUint64(str string) (uint64, error) {
-	ui64, err := strconv.ParseUint(str, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return ui64, nil
-}
-
 // stringToInt64 converts string to int64
 func stringToInt64(str string) (int64, error) {
 	i64, err := strconv.ParseInt(str, 10, 64)
