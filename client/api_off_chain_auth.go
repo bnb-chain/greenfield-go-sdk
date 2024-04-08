@@ -444,7 +444,7 @@ func generateKey(r io.Reader) (*eddsa.PrivateKey, error) {
 
 	var bscalar big.Int
 	bscalar.SetBytes(scalar[:])
-	pub.A.ScalarMultiplication(&c.Base, &bscalar)
+	pub.A.ScalarMul(&c.Base, &bscalar)
 
 	var res [sizeFr * 3]byte
 	pubkBin := pub.A.Bytes()
