@@ -170,15 +170,6 @@ func GetContentLength(reader io.Reader) (int64, error) {
 	return contentLength, err
 }
 
-// StringToUint64 converts string to uint64
-func StringToUint64(str string) (uint64, error) {
-	ui64, err := strconv.ParseUint(str, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return ui64, nil
-}
-
 // hasInvalidPath checks if the given path contains "." or ".." as path segments.
 func hasInvalidPath(path string) bool {
 	path = filepath.ToSlash(strings.TrimSpace(path))
@@ -256,34 +247,34 @@ func ParseRange(rangeStr string) (bool, int64, int64) {
 	rangeStr = rangeStr[len("bytes="):]
 	if strings.HasSuffix(rangeStr, "-") {
 		rangeStr = rangeStr[:len(rangeStr)-1]
-		rangeStart, err := stringToUint64(rangeStr)
+		rangeStart, err := stringToInt64(rangeStr)
 		if err != nil {
 			return false, -1, -1
 		}
-		return true, int64(rangeStart), -1
+		return true, rangeStart, -1
 	}
 	pair := strings.Split(rangeStr, "-")
 	if len(pair) == 2 {
-		rangeStart, err := stringToUint64(pair[0])
+		rangeStart, err := stringToInt64(pair[0])
 		if err != nil {
 			return false, -1, -1
 		}
-		rangeEnd, err := stringToUint64(pair[1])
+		rangeEnd, err := stringToInt64(pair[1])
 		if err != nil {
 			return false, -1, -1
 		}
-		return true, int64(rangeStart), int64(rangeEnd)
+		return true, rangeStart, rangeEnd
 	}
 	return false, -1, -1
 }
 
-// StringToUint64 converts string to uint64
-func stringToUint64(str string) (uint64, error) {
-	ui64, err := strconv.ParseUint(str, 10, 64)
+// stringToInt64 converts string to int64
+func stringToInt64(str string) (int64, error) {
+	i64, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
 		return 0, err
 	}
-	return ui64, nil
+	return i64, nil
 }
 
 func ReadFull(r io.Reader, buf []byte) (n int, err error) {
