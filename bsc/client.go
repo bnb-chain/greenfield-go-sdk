@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 // IClient - Declare all Greenfield SDK Client APIs, including APIs for interacting with Greenfield Blockchain and SPs.
@@ -35,15 +34,15 @@ type Client struct {
 	// Host is the target sp server hostname，it is the host info in the request which sent to SP
 	host string
 	// The user agent info
-	userAgent string
+	//userAgent string
 	// define if trace the error request to BSC
-	isTraceEnabled   bool
-	traceOutput      io.Writer
-	onlyTraceError   bool
-	useWebsocketConn bool
-	expireSeconds    uint64
-	rpcURL           string
-	deployment       *bsctypes.Deployment
+	//isTraceEnabled   bool
+	//traceOutput      io.Writer
+	//onlyTraceError   bool
+	//useWebsocketConn bool
+	//expireSeconds    uint64
+	rpcURL     string
+	deployment *bsctypes.Deployment
 }
 
 // Option - Configurations for providing optional parameters for the Binance Smart Chain SDK Client.
@@ -108,7 +107,6 @@ func New(rpcURL string, env string, option Option) (IClient, error) {
 	c := Client{
 		chainClient:    cc,
 		httpClient:     &http.Client{Transport: option.Transport},
-		userAgent:      types.UserAgent,
 		defaultAccount: option.DefaultAccount, // it allows to be nil
 		secure:         option.Secure,
 		host:           option.Host,
