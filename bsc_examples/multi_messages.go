@@ -5,9 +5,10 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/bnb-chain/greenfield-go-sdk/bsc"
 	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 func main() {

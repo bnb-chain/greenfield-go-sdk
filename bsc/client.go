@@ -8,10 +8,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
+
+	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 // IClient - Declare all Greenfield SDK Client APIs, including APIs for interacting with Greenfield Blockchain and SPs.

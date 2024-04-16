@@ -5,10 +5,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
-	bsccommon "github.com/bnb-chain/greenfield-go-sdk/common"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
+	bsccommon "github.com/bnb-chain/greenfield-go-sdk/common"
 )
 
 type IGreenfieldExecutorClient interface {
