@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	permissiontype "github.com/bnb-chain/greenfield/x/permission/types"
-	"github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -14,22 +13,23 @@ import (
 )
 
 type IMessages interface {
-	CreateBucket(sender *common.Address, synPkg types.CreateBucketSynPackage) *Messages
-	CreateBucketCallBack(sender *common.Address, synPkg types.CreateBucketSynPackage, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages
-	DeleteBucket(sender *common.Address, id big.Int) *Messages
-	DeleteBucketCallBack(sender *common.Address, id big.Int, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages
-	DeleteObject(sender *common.Address, id big.Int) *Messages
-	DeleteObjectCallBack(sender *common.Address, id big.Int, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages
+	CreateBucket(sender *common.Address, synPkg *CreateBucketSynPackage) *Messages
+	CreateBucketCallBack(sender *common.Address, synPkg *CreateBucketSynPackage, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	DeleteBucket(sender *common.Address, id *big.Int) *Messages
+	DeleteBucketCallBack(sender *common.Address, id *big.Int, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	DeleteObject(sender *common.Address, id *big.Int) *Messages
+	DeleteObjectCallBack(sender *common.Address, id *big.Int, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
 	CreateGroup(sender *common.Address, owner *common.Address, name string) *Messages
-	CreateGroupCallBack(sender *common.Address, owner *common.Address, name string, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages
-	DeleteGroup(sender *common.Address, id big.Int) *Messages
-	DeleteGroupCallBack(sender *common.Address, id big.Int, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages
-	UpdateGroup(sender *common.Address, synPkg types.UpdateGroupMemberSynPackage) *Messages
-	UpdateGroupCallBack(sender *common.Address, synPkg types.UpdateGroupMemberSynPackage, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages
-	CreatePolicy(sender *common.Address, policy permissiontype.Policy) *Messages
-	CreatePolicyCallBack(sender *common.Address, policy permissiontype.Policy, extraData ExtraData, opt *RelayFeeOption) *Messages
-	DeletePolicyCallBack(sender *common.Address, id big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages
-	TransferOut(sender *common.Address, recipient *common.Address, amount big.Int) *Messages
+	CreateGroupCallBack(sender *common.Address, owner *common.Address, name string, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	DeleteGroup(sender *common.Address, id *big.Int) *Messages
+	DeleteGroupCallBack(sender *common.Address, id big.Int, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	UpdateGroup(sender *common.Address, synPkg *UpdateGroupMemberSynPackage) *Messages
+	UpdateGroupCallBack(sender *common.Address, synPkg *UpdateGroupMemberSynPackage, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	CreatePolicy(sender *common.Address, policy *permissiontype.Policy) *Messages
+	CreatePolicyCallBack(sender *common.Address, policy *permissiontype.Policy, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	DeletePolicy(sender *common.Address, id *big.Int) *Messages
+	DeletePolicyCallBack(sender *common.Address, id *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	TransferOut(sender *common.Address, recipient *common.Address, amount *big.Int) *Messages
 }
 
 type Message struct {
@@ -76,7 +76,7 @@ func (m *Messages) Build() *MultiMessage {
 	}
 }
 
-func (m *Messages) CreateBucket(sender *common.Address, synPkg types.CreateBucketSynPackage) *Messages {
+func (m *Messages) CreateBucket(sender *common.Address, synPkg *CreateBucketSynPackage) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
 
@@ -100,7 +100,7 @@ func (m *Messages) CreateBucket(sender *common.Address, synPkg types.CreateBucke
 	return m
 }
 
-func (m *Messages) CreateBucketCallBack(sender *common.Address, synPkg types.CreateBucketSynPackage, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages {
+func (m *Messages) CreateBucketCallBack(sender *common.Address, synPkg *CreateBucketSynPackage, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
@@ -117,7 +117,7 @@ func (m *Messages) CreateBucketCallBack(sender *common.Address, synPkg types.Cre
 		log.Fatalf("failed to parse contract ABI: %v", err)
 	}
 
-	packedData, err := parsedABI.Pack("prepareCreateBucket", sender, synPkg, callbackGasLimit, extraData)
+	packedData, err := parsedABI.Pack("prepareCreateBucket0", sender, synPkg, callbackGasLimit, extraData)
 	if err != nil {
 		log.Fatalf("failed to pack data for sendMessages: %v", err)
 	}
@@ -131,7 +131,7 @@ func (m *Messages) CreateBucketCallBack(sender *common.Address, synPkg types.Cre
 	return m
 }
 
-func (m *Messages) DeleteBucket(sender *common.Address, id big.Int) *Messages {
+func (m *Messages) DeleteBucket(sender *common.Address, id *big.Int) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
 
@@ -155,7 +155,7 @@ func (m *Messages) DeleteBucket(sender *common.Address, id big.Int) *Messages {
 	return m
 }
 
-func (m *Messages) DeleteBucketCallBack(sender *common.Address, id big.Int, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages {
+func (m *Messages) DeleteBucketCallBack(sender *common.Address, id *big.Int, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
@@ -172,7 +172,7 @@ func (m *Messages) DeleteBucketCallBack(sender *common.Address, id big.Int, call
 		log.Fatalf("Failed to parse contract ABI: %v", err)
 	}
 
-	packedData, err := parsedABI.Pack("prepareDeleteBucket", sender, id, callbackGasLimit, extraData)
+	packedData, err := parsedABI.Pack("prepareDeleteBucket0", sender, id, callbackGasLimit, extraData)
 	if err != nil {
 		log.Fatalf("Failed to pack data for sendMessages: %v", err)
 	}
@@ -186,7 +186,7 @@ func (m *Messages) DeleteBucketCallBack(sender *common.Address, id big.Int, call
 	return m
 }
 
-func (m *Messages) DeleteObject(sender *common.Address, id big.Int) *Messages {
+func (m *Messages) DeleteObject(sender *common.Address, id *big.Int) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
 
@@ -210,7 +210,7 @@ func (m *Messages) DeleteObject(sender *common.Address, id big.Int) *Messages {
 	return m
 }
 
-func (m *Messages) DeleteObjectCallBack(sender *common.Address, id big.Int, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages {
+func (m *Messages) DeleteObjectCallBack(sender *common.Address, id *big.Int, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
@@ -227,7 +227,7 @@ func (m *Messages) DeleteObjectCallBack(sender *common.Address, id big.Int, call
 		log.Fatalf("Failed to parse contract ABI: %v", err)
 	}
 
-	packedData, err := parsedABI.Pack("prepareDeleteObject", sender, id, callbackGasLimit, extraData)
+	packedData, err := parsedABI.Pack("prepareDeleteObject0", sender, id, callbackGasLimit, extraData)
 	if err != nil {
 		log.Fatalf("Failed to pack data for sendMessages: %v", err)
 	}
@@ -251,7 +251,7 @@ func (m *Messages) CreateGroup(sender *common.Address, owner *common.Address, na
 		log.Fatalf("Failed to parse contract ABI: %v", err)
 	}
 
-	packedData, err := parsedABI.Pack("prepareCreateGroup", sender, owner, name)
+	packedData, err := parsedABI.Pack("prepareCreateGroup0", sender, owner, name)
 	if err != nil {
 		log.Fatalf("Failed to pack data for sendMessages: %v", err)
 	}
@@ -265,7 +265,7 @@ func (m *Messages) CreateGroup(sender *common.Address, owner *common.Address, na
 	return m
 }
 
-func (m *Messages) CreateGroupCallBack(sender *common.Address, owner *common.Address, name string, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages {
+func (m *Messages) CreateGroupCallBack(sender *common.Address, owner *common.Address, name string, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
@@ -293,7 +293,7 @@ func (m *Messages) CreateGroupCallBack(sender *common.Address, owner *common.Add
 	return m
 }
 
-func (m *Messages) DeleteGroup(sender *common.Address, id big.Int) *Messages {
+func (m *Messages) DeleteGroup(sender *common.Address, id *big.Int) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
 
@@ -317,7 +317,7 @@ func (m *Messages) DeleteGroup(sender *common.Address, id big.Int) *Messages {
 	return m
 }
 
-func (m *Messages) DeleteGroupCallBack(sender *common.Address, id big.Int, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages {
+func (m *Messages) DeleteGroupCallBack(sender *common.Address, id *big.Int, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
@@ -334,7 +334,7 @@ func (m *Messages) DeleteGroupCallBack(sender *common.Address, id big.Int, callb
 		log.Fatalf("Failed to parse contract ABI: %v", err)
 	}
 
-	packedData, err := parsedABI.Pack("prepareDeleteGroup", sender, id, callbackGasLimit, extraData)
+	packedData, err := parsedABI.Pack("prepareDeleteGroup0", sender, id, callbackGasLimit, extraData)
 	if err != nil {
 		log.Fatalf("Failed to pack data for sendMessages: %v", err)
 	}
@@ -348,7 +348,7 @@ func (m *Messages) DeleteGroupCallBack(sender *common.Address, id big.Int, callb
 	return m
 }
 
-func (m *Messages) UpdateGroup(sender *common.Address, synPkg types.UpdateGroupMemberSynPackage) *Messages {
+func (m *Messages) UpdateGroup(sender *common.Address, synPkg *UpdateGroupMemberSynPackage) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
 
@@ -358,7 +358,7 @@ func (m *Messages) UpdateGroup(sender *common.Address, synPkg types.UpdateGroupM
 		log.Fatalf("Failed to parse contract ABI: %v", err)
 	}
 
-	packedData, err := parsedABI.Pack("prepareUpdateGroup", sender, synPkg)
+	packedData, err := parsedABI.Pack("prepareUpdateGroup0", sender, synPkg)
 	if err != nil {
 		log.Fatalf("Failed to pack data for sendMessages: %v", err)
 	}
@@ -372,7 +372,7 @@ func (m *Messages) UpdateGroup(sender *common.Address, synPkg types.UpdateGroupM
 	return m
 }
 
-func (m *Messages) UpdateGroupCallBack(sender *common.Address, synPkg types.UpdateGroupMemberSynPackage, callbackGasLimit big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages {
+func (m *Messages) UpdateGroupCallBack(sender *common.Address, synPkg *UpdateGroupMemberSynPackage, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
@@ -403,7 +403,7 @@ func (m *Messages) UpdateGroupCallBack(sender *common.Address, synPkg types.Upda
 	return m
 }
 
-func (m *Messages) CreatePolicy(sender *common.Address, policy permissiontype.Policy) *Messages {
+func (m *Messages) CreatePolicy(sender *common.Address, policy *permissiontype.Policy) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
 
@@ -432,7 +432,7 @@ func (m *Messages) CreatePolicy(sender *common.Address, policy permissiontype.Po
 	return m
 }
 
-func (m *Messages) CreatePolicyCallBack(sender *common.Address, policy permissiontype.Policy, extraData ExtraData, opt *RelayFeeOption) *Messages {
+func (m *Messages) CreatePolicyCallBack(sender *common.Address, policy *permissiontype.Policy, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
@@ -454,7 +454,7 @@ func (m *Messages) CreatePolicyCallBack(sender *common.Address, policy permissio
 		log.Fatalf("failed to marshal policy: %v", err)
 	}
 
-	packedData, err := parsedABI.Pack("prepareCreatePolicy", sender, data, extraData)
+	packedData, err := parsedABI.Pack("prepareCreatePolicy0", sender, data, extraData)
 	if err != nil {
 		log.Fatalf("failed to pack data for sendMessages: %v", err)
 	}
@@ -468,7 +468,7 @@ func (m *Messages) CreatePolicyCallBack(sender *common.Address, policy permissio
 	return m
 }
 
-func (m *Messages) DeletePolicy(sender *common.Address, id big.Int) *Messages {
+func (m *Messages) DeletePolicy(sender *common.Address, id *big.Int) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
 
@@ -492,7 +492,7 @@ func (m *Messages) DeletePolicy(sender *common.Address, id big.Int) *Messages {
 	return m
 }
 
-func (m *Messages) DeletePolicyCallBack(sender *common.Address, id big.Int, extraData ExtraData, opt *RelayFeeOption) *Messages {
+func (m *Messages) DeletePolicyCallBack(sender *common.Address, id *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
@@ -509,7 +509,7 @@ func (m *Messages) DeletePolicyCallBack(sender *common.Address, id big.Int, extr
 		log.Fatalf("Failed to parse contract ABI: %v", err)
 	}
 
-	packedData, err := parsedABI.Pack("prepareDeletePolicy", sender, id, extraData)
+	packedData, err := parsedABI.Pack("prepareDeletePolicy0", sender, id, extraData)
 	if err != nil {
 		log.Fatalf("Failed to pack data for sendMessages: %v", err)
 	}
@@ -523,7 +523,7 @@ func (m *Messages) DeletePolicyCallBack(sender *common.Address, id big.Int, extr
 	return m
 }
 
-func (m *Messages) TransferOut(sender *common.Address, recipient *common.Address, amount big.Int) *Messages {
+func (m *Messages) TransferOut(sender *common.Address, recipient *common.Address, amount *big.Int) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
 

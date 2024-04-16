@@ -1,6 +1,12 @@
 package bsctypes
 
-type FailureHandleStrategy int
+import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+)
+
+type FailureHandleStrategy uint8
 
 const (
 	BlockOnFail FailureHandleStrategy = iota
@@ -8,9 +14,26 @@ const (
 	SkipOnFail
 )
 
+type UpdateGroupOpType uint8
+
+const (
+	AddMembers UpdateGroupOpType = iota
+	RemoveMembers
+	RenewMembers
+)
+
+type BucketVisibilityType uint8
+
+const (
+	Unspecified BucketVisibilityType = iota
+	PublicRead
+	Private
+	Inherit
+)
+
 type ExtraData struct {
-	AppAddress            string                `json:"appAddress"`
-	RefundAddress         string                `json:"refundAddress"`
+	AppAddress            *common.Address       `json:"appAddress"`
+	RefundAddress         *common.Address       `json:"refundAddress"`
 	FailureHandleStrategy FailureHandleStrategy `json:"failureHandleStrategy"`
 	CallbackData          []byte                `json:"callbackData"`
 }
@@ -56,4 +79,26 @@ type Deployment struct {
 	PermissionHub           string `json:"PermissionHub"`
 	AdditionalPermissionHub string `json:"AdditionalPermissionHub"`
 	PermissionToken         string `json:"PermissionToken"`
+}
+
+type CreateBucketSynPackage struct {
+	Creator                        *common.Address      `json:"creator"`
+	Name                           string               `json:"name"`
+	Visibility                     BucketVisibilityType `json:"visibility"`
+	PaymentAddress                 *common.Address      `json:"paymentAddress"`
+	PrimarySpAddress               *common.Address      `json:"primarySpAddress"`
+	PrimarySpApprovalExpiredHeight uint64               `json:"primarySpApprovalExpiredHeight"`
+	GlobalVirtualGroupFamilyId     uint32               `json:"globalVirtualGroupFamilyId"`
+	PrimarySpSignature             []byte               `json:"primarySpSignature"`
+	ChargedReadQuota               uint64               `json:"chargedReadQuota"`
+	ExtraData                      []byte               `json:"extraData"`
+}
+
+type UpdateGroupMemberSynPackage struct {
+	Operator         *common.Address   `json:"operator"`
+	Id               *big.Int          `json:"Id"`
+	OpType           UpdateGroupOpType `json:"opType"`
+	Members          []common.Address  `json:"members"`
+	ExtraData        []byte            `json:"extraData"`
+	MemberExpiration []uint64          `json:"memberExpiration"`
 }

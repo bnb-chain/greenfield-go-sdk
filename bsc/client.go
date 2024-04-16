@@ -41,7 +41,6 @@ type Client struct {
 	onlyTraceError   bool
 	useWebsocketConn bool
 	expireSeconds    uint64
-	chainID          int
 	rpcURL           string
 	deployment       *bsctypes.Deployment
 }
@@ -60,7 +59,7 @@ type Option struct {
 	Host string
 }
 
-func New(rpcURL string, chainID int, option Option) (IClient, error) {
+func New(rpcURL string, env string, option Option) (IClient, error) {
 	if rpcURL == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct Client")
 	}
@@ -75,13 +74,15 @@ func New(rpcURL string, chainID int, option Option) (IClient, error) {
 		return nil, err
 	}
 
-	switch chainID {
-	case 56:
-		path = "./common/contract/56-deployment.json"
-	case 97:
-		path = "./common/contract/97-deployment.json"
-	case 204:
-		path = "./common/contract/204-deployment.json"
+	switch env {
+	case "dev-net":
+		path = "./common/contract/dev-net.json"
+	case "qa-net":
+		path = "./common/contract/qa-net.json"
+	case "test-net":
+		path = "./common/contract/test-net.json"
+	case "main-net":
+		path = "./common/contract/main-net.json"
 	}
 
 	jsonFile, err := os.Open(path)
@@ -110,7 +111,6 @@ func New(rpcURL string, chainID int, option Option) (IClient, error) {
 		defaultAccount: option.DefaultAccount, // it allows to be nil
 		secure:         option.Secure,
 		host:           option.Host,
-		chainID:        chainID,
 		rpcURL:         rpcURL,
 		deployment:     deployment,
 	}
