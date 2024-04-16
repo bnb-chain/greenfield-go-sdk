@@ -526,7 +526,7 @@ func (m *Messages) DeletePolicyCallBack(sender *common.Address, id *big.Int, ext
 func (m *Messages) TransferOut(sender *common.Address, recipient *common.Address, amount *big.Int) *Messages {
 	fee := new(big.Int)
 	fee.Add(m.RelayFee, m.MinAckRelayFee)
-
+	fee.Add(fee, amount)
 	address := common.HexToAddress(m.Deployment.TokenHub)
 	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.TokenABI))
 	if err != nil {
