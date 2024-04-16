@@ -22,7 +22,7 @@ type IMessages interface {
 	CreateGroup(sender *common.Address, owner *common.Address, name string) *Messages
 	CreateGroupCallBack(sender *common.Address, owner *common.Address, name string, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
 	DeleteGroup(sender *common.Address, id *big.Int) *Messages
-	DeleteGroupCallBack(sender *common.Address, id big.Int, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	DeleteGroupCallBack(sender *common.Address, id *big.Int, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
 	UpdateGroup(sender *common.Address, synPkg *UpdateGroupMemberSynPackage) *Messages
 	UpdateGroupCallBack(sender *common.Address, synPkg *UpdateGroupMemberSynPackage, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
 	CreatePolicy(sender *common.Address, policy *permissiontype.Policy) *Messages
