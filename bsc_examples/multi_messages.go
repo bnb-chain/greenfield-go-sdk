@@ -19,10 +19,13 @@ func main() {
 
 	client, err := bsc.New(rpcAddr, "qa-net", bsc.Option{DefaultAccount: account})
 	if err != nil {
-		log.Fatalf("unable to new greenfield client, %v", err)
+		log.Fatalf("unable to new bsc client, %v", err)
 	}
 
 	relayFee, minAckRelayFee, err := client.GetMinAckRelayFee(context.Background())
+	if err != nil {
+		log.Fatalf("unable to get min ack relay fee, %v", err)
+	}
 
 	messages := bsctypes.NewMessages(client.GetDeployment(), relayFee, minAckRelayFee)
 
