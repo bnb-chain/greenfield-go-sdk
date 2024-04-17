@@ -19,6 +19,7 @@ type IBasicClient interface {
 	SendTx(ctx context.Context, nonce uint64, toAddr *common.Address, amount *big.Int, gasPrice *big.Int, data []byte) (*common.Hash, error)
 	GetDeployment() *bsctypes.Deployment
 	GetMinAckRelayFee(ctx context.Context) (relayFee *big.Int, minAckRelayFee *big.Int, err error)
+	GetCallbackGasPrice(ctx context.Context) (gasPrice *big.Int, err error)
 	CheckTxStatus(ctx context.Context, tx *common.Hash) (bool, error)
 }
 
@@ -111,6 +112,48 @@ func (c *Client) GetMinAckRelayFee(ctx context.Context) (relayFee *big.Int, minA
 	}
 
 	return relayFee, minAckRelayFee, nil
+}
+
+func (c *Client) GetCallbackGasPrice(ctx context.Context) (gasPrice *big.Int, err error) {
+	var (
+		ok bool
+	)
+	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.CrossChainABI))
+	if err != nil {
+		log.Fatalf("Failed to parse contract ABI: %v", err)
+	}
+
+	packedData, err := parsedABI.Pack("callbackGasPrice")
+	if err != nil {
+		log.Fatalf("Failed to pack data for sendMessages: %v", err)
+	}
+
+	contractAddress := common.HexToAddress(c.GetDeployment().CrossChain)
+	msg := ethereum.CallMsg{
+		To:   &contractAddress,
+		Data: packedData,
+	}
+
+	resp, err := c.chainClient.CallContract(ctx, msg, nil)
+	if err != nil {
+		log.Fatalf("Failed to call contract: %v", err)
+	}
+
+	result, err := parsedABI.Unpack("callbackGasPrice", resp)
+	if err != nil {
+		log.Fatalf("Failed to unpack returned data: %v", err)
+	}
+
+	if len(result) != 1 {
+		log.Fatalf("expected one return values from callbackGasPrice")
+	}
+
+	gasPrice, ok = result[0].(*big.Int)
+	if !ok {
+		log.Fatalf("Type assertion failed for one or both return values")
+	}
+
+	return gasPrice, nil
 }
 
 func (c *Client) CheckTxStatus(ctx context.Context, tx *common.Hash) (bool, error) {

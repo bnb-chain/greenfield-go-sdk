@@ -3,9 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/bnb-chain/greenfield-go-sdk/bsc"
 	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
@@ -27,15 +24,21 @@ func main() {
 		log.Fatalf("unable to get min ack relay fee, %v", err)
 	}
 
-	messages := bsctypes.NewMessages(client.GetDeployment(), relayFee, minAckRelayFee)
+	gasPrice, err := client.GetCallbackGasPrice(context.Background())
+	if err != nil {
+		log.Fatalf("unable to get min ack relay fee, %v", err)
+	}
+
+	messages := bsctypes.NewMessages(client.GetDeployment(), relayFee, minAckRelayFee, gasPrice)
 
 	// success case
+	// Create Group
 	//_ = messages.CreateGroup(account.GetAddress(), account.GetAddress(), "barry-test")
-	//_ = messages.CreateGroupCallBack(account.GetAddress(), account.GetAddress(), "barry-test", big.NewInt(1000000), &bsctypes.ExtraData{
+	//_ = messages.CreateGroupCallBack(account.GetAddress(), account.GetAddress(), "barry-test-callback", big.NewInt(1000000), &bsctypes.ExtraData{
 	//	AppAddress:            account.GetAddress(),
 	//	RefundAddress:         account.GetAddress(),
-	//	FailureHandleStrategy: 0,
-	//	CallbackData:          []byte{'1'},
+	//	FailureHandleStrategy: bsctypes.SkipOnFail,
+	//	CallbackData:          []byte{'t'},
 	//}, nil)
 
 	//paymentAddress := common.HexToAddress("0xd4a205968691416b982685602d663567ede960d5")
@@ -164,9 +167,9 @@ func main() {
 	//		CallbackData:          []byte{'1'},
 	//	}, nil)
 
-	// test cases
-	to := common.HexToAddress("0xe0523429ea945ced7bd3b170fd8dbe797778049b")
-	_ = messages.TransferOut(account.GetAddress(), &to, big.NewInt(1111))
+	// success test cases
+	//to := common.HexToAddress("0xe0523429ea945ced7bd3b170fd8dbe797778049b")
+	//_ = messages.TransferOut(account.GetAddress(), &to, big.NewInt(1111))
 
 	tx, err := client.SendMessages(context.Background(), messages.Build())
 	if err != nil {

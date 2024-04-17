@@ -45,18 +45,20 @@ type MultiMessage struct {
 }
 
 type Messages struct {
-	Message        []*Message
-	Deployment     *Deployment
-	RelayFee       *big.Int
-	MinAckRelayFee *big.Int
+	Message          []*Message
+	Deployment       *Deployment
+	RelayFee         *big.Int
+	MinAckRelayFee   *big.Int
+	CallbackGasPrice *big.Int
 }
 
-func NewMessages(deployment *Deployment, relayFee *big.Int, minAckRelayFee *big.Int) *Messages {
+func NewMessages(deployment *Deployment, relayFee *big.Int, minAckRelayFee *big.Int, callbackGasPrice *big.Int) *Messages {
 	return &Messages{
-		Message:        []*Message{},
-		Deployment:     deployment,
-		RelayFee:       relayFee,
-		MinAckRelayFee: minAckRelayFee,
+		Message:          []*Message{},
+		Deployment:       deployment,
+		RelayFee:         relayFee,
+		MinAckRelayFee:   minAckRelayFee,
+		CallbackGasPrice: callbackGasPrice,
 	}
 }
 
@@ -265,13 +267,22 @@ func (m *Messages) CreateGroup(sender *common.Address, owner *common.Address, na
 	return m
 }
 
+func (m *Messages) GetCallBackFee() {
+
+}
+
 func (m *Messages) CreateGroupCallBack(sender *common.Address, owner *common.Address, name string, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages {
+	// fee = relayFee + minAckRelayFee + callbackGasLimit * callbackGasPrice
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
 		ackFee = opt.AckRelayFee
 	}
 	fee.Add(m.RelayFee, ackFee)
+	if callbackGasLimit != nil {
+		callbackGasCost := new(big.Int).Mul(callbackGasLimit, m.CallbackGasPrice)
+		fee.Add(fee, callbackGasCost)
+	}
 
 	address := common.HexToAddress(m.Deployment.GroupHub)
 	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.GroupABI))
