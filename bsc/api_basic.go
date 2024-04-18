@@ -77,12 +77,12 @@ func (c *Client) GetMinAckRelayFee(ctx context.Context) (relayFee *big.Int, minA
 	)
 	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.CrossChainABI))
 	if err != nil {
-		log.Fatalf("Failed to parse contract ABI: %v", err)
+		log.Fatalf("failed to parse contract ABI: %v", err)
 	}
 
 	packedData, err := parsedABI.Pack("getRelayFees")
 	if err != nil {
-		log.Fatalf("Failed to pack data for sendMessages: %v", err)
+		log.Fatalf("failed to pack data for getRelayFees: %v", err)
 	}
 
 	contractAddress := common.HexToAddress(c.GetDeployment().CrossChain)
@@ -93,22 +93,22 @@ func (c *Client) GetMinAckRelayFee(ctx context.Context) (relayFee *big.Int, minA
 
 	resp, err := c.chainClient.CallContract(ctx, msg, nil)
 	if err != nil {
-		log.Fatalf("Failed to call contract: %v", err)
+		log.Fatalf("failed to call contract: %v", err)
 	}
 
 	result, err := parsedABI.Unpack("getRelayFees", resp)
 	if err != nil {
-		log.Fatalf("Failed to unpack returned data: %v", err)
+		log.Fatalf("failed to unpack returned data: %v", err)
 	}
 
 	if len(result) != 2 {
-		log.Fatalf("Expected two return values from getRelayFees")
+		log.Fatalf("expected two return values from getRelayFees")
 	}
 
 	relayFee, ok1 = result[0].(*big.Int)
 	minAckRelayFee, ok2 = result[1].(*big.Int)
 	if !ok1 || !ok2 {
-		log.Fatalf("Type assertion failed for one or both return values")
+		log.Fatalf("type assertion failed for one or both return values")
 	}
 
 	return relayFee, minAckRelayFee, nil
@@ -120,12 +120,12 @@ func (c *Client) GetCallbackGasPrice(ctx context.Context) (gasPrice *big.Int, er
 	)
 	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.CrossChainABI))
 	if err != nil {
-		log.Fatalf("Failed to parse contract ABI: %v", err)
+		log.Fatalf("failed to parse contract ABI: %v", err)
 	}
 
 	packedData, err := parsedABI.Pack("callbackGasPrice")
 	if err != nil {
-		log.Fatalf("Failed to pack data for sendMessages: %v", err)
+		log.Fatalf("failed to pack data for callbackGasPrice: %v", err)
 	}
 
 	contractAddress := common.HexToAddress(c.GetDeployment().CrossChain)
@@ -136,12 +136,12 @@ func (c *Client) GetCallbackGasPrice(ctx context.Context) (gasPrice *big.Int, er
 
 	resp, err := c.chainClient.CallContract(ctx, msg, nil)
 	if err != nil {
-		log.Fatalf("Failed to call contract: %v", err)
+		log.Fatalf("failed to call contract: %v", err)
 	}
 
 	result, err := parsedABI.Unpack("callbackGasPrice", resp)
 	if err != nil {
-		log.Fatalf("Failed to unpack returned data: %v", err)
+		log.Fatalf("failed to unpack returned data: %v", err)
 	}
 
 	if len(result) != 1 {
@@ -150,7 +150,7 @@ func (c *Client) GetCallbackGasPrice(ctx context.Context) (gasPrice *big.Int, er
 
 	gasPrice, ok = result[0].(*big.Int)
 	if !ok {
-		log.Fatalf("Type assertion failed for one or both return values")
+		log.Fatalf("type assertion failed for one or both return values")
 	}
 
 	return gasPrice, nil

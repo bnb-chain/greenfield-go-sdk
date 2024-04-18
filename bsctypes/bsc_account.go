@@ -20,8 +20,7 @@ type KeyManager interface {
 
 type BscKeyManager struct {
 	privateKey *ecdsa.PrivateKey
-	// TODO BARRY replace it to  sdk.AccAddress
-	address *common.Address
+	address    *common.Address
 }
 
 func (k *BscKeyManager) GetPrivateKey() *ecdsa.PrivateKey {

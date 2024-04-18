@@ -14,7 +14,7 @@ import (
 	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
 )
 
-// IClient - Declare all Greenfield SDK Client APIs, including APIs for interacting with Greenfield Blockchain and SPs.
+// IClient - Declare all BSC SDK Client APIs, including APIs for multi messages & greenfield executor
 type IClient interface {
 	IMultiMessageClient
 	IGreenfieldExecutorClient
@@ -32,15 +32,7 @@ type Client struct {
 	// Whether the connection to the blockchain node is secure (HTTPS) or not (HTTP).
 	secure bool
 	// Host is the target sp server hostname，it is the host info in the request which sent to SP
-	host string
-	// The user agent info
-	//userAgent string
-	// define if trace the error request to BSC
-	//isTraceEnabled   bool
-	//traceOutput      io.Writer
-	//onlyTraceError   bool
-	//useWebsocketConn bool
-	//expireSeconds    uint64
+	host       string
 	rpcURL     string
 	deployment *bsctypes.Deployment
 }
@@ -87,20 +79,20 @@ func New(rpcURL string, env string, option Option) (IClient, error) {
 
 	jsonFile, err := os.Open(path)
 	if err != nil {
-		log.Fatalf("Failed to open JSON file: %v", err)
+		log.Fatalf("failed to open JSON file: %v", err)
 	}
 	defer jsonFile.Close()
 
 	// Read the JSON file into a byte slice
 	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
-		log.Fatalf("Failed to read JSON file: %v", err)
+		log.Fatalf("failed to read JSON file: %v", err)
 		return nil, err
 	}
 
 	err = json.Unmarshal(byteValue, &deployment)
 	if err != nil {
-		log.Fatalf("Failed to unmarshal JSON data: %v", err)
+		log.Fatalf("failed to unmarshal JSON data: %v", err)
 		return nil, err
 	}
 

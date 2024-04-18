@@ -20,12 +20,12 @@ type IMultiMessageClient interface {
 func (c *Client) SendMessages(ctx context.Context, message *bsctypes.MultiMessage) (*common.Hash, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.MultiMessageABI))
 	if err != nil {
-		log.Fatalf("Failed to parse contract ABI: %v", err)
+		log.Fatalf("failed to parse contract ABI: %v", err)
 	}
 
 	packedData, err := parsedABI.Pack("sendMessages", message.Targets, message.Data, message.Values)
 	if err != nil {
-		log.Fatalf("Failed to pack data for sendMessages: %v", err)
+		log.Fatalf("failed to pack data for sendMessages: %v", err)
 	}
 
 	sum := new(big.Int)
@@ -36,7 +36,7 @@ func (c *Client) SendMessages(ctx context.Context, message *bsctypes.MultiMessag
 	contractAddress := common.HexToAddress(c.GetDeployment().MultiMessage)
 	tx, err := c.SendTx(ctx, 0, &contractAddress, sum, nil, packedData)
 	if err != nil {
-		log.Fatalf("Failed to call contract: %v", err)
+		log.Fatalf("failed to call contract: %v", err)
 	}
 
 	return tx, nil

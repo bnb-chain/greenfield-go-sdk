@@ -19,18 +19,18 @@ type IGreenfieldExecutorClient interface {
 func (c *Client) Execute(ctx context.Context, message *bsctypes.ExecutorMessages) (*common.Hash, error) {
 	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.ExecutorABI))
 	if err != nil {
-		log.Fatalf("Failed to parse contract ABI: %v", err)
+		log.Fatalf("failed to parse contract ABI: %v", err)
 	}
 
 	packedData, err := parsedABI.Pack("execute", message.MsgTypes, message.MsgBytes)
 	if err != nil {
-		log.Fatalf("Failed to pack data for Execute: %v", err)
+		log.Fatalf("failed to pack data for execute: %v", err)
 	}
 
 	contractAddress := common.HexToAddress(c.GetDeployment().GreenfieldExecutor)
 	tx, err := c.SendTx(ctx, 0, &contractAddress, message.RelayFee, nil, packedData)
 	if err != nil {
-		log.Fatalf("Failed to call contract: %v", err)
+		log.Fatalf("failed to call contract: %v", err)
 	}
 
 	return tx, nil
