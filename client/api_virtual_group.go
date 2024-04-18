@@ -69,7 +69,8 @@ func (c *Client) QuerySpAvailableGlobalVirtualGroupFamilies(ctx context.Context,
 // - ret2: Return error when the request failed, otherwise return nil.
 func (c *Client) QuerySpOptimalGlobalVirtualGroupFamily(ctx context.Context, spID uint32, strategy types.PickVGFStrategy) (uint32, error) {
 	queryResponse, err := c.chainClient.QuerySpOptimalGlobalVirtualGroupFamily(ctx, &types.QuerySpOptimalGlobalVirtualGroupFamilyRequest{
-		SpId: spID,
+		SpId:            spID,
+		PickVgfStrategy: strategy,
 	})
 	if err != nil {
 		return 0, err
