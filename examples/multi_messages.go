@@ -99,7 +99,7 @@ func main() {
 		&bsctypes.ExtraData{
 			AppAddress:            account.GetAddress(),
 			RefundAddress:         account.GetAddress(),
-			FailureHandleStrategy: 0,
+			FailureHandleStrategy: 2,
 		}, nil)
 
 	//Delete Policy
@@ -109,7 +109,7 @@ func main() {
 		&bsctypes.ExtraData{
 			AppAddress:            account.GetAddress(),
 			RefundAddress:         account.GetAddress(),
-			FailureHandleStrategy: 0,
+			FailureHandleStrategy: 2,
 		}, nil)
 
 	// Crete group
