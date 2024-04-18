@@ -175,7 +175,7 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	familyID, err := c.QuerySpOptimalGlobalVirtualGroupFamily(ctx, sp.Id, virtualgroupTypes.Strategy_Maximize_Free_Store_Size)
+	familyID, err := c.QuerySpOptimalGlobalVirtualGroupFamily(ctx, sp.Id, virtualgroupTypes.Strategy_Oldest_Create_Time)
 	if err != nil {
 		log.Error().Msg(fmt.Sprintf("failed to query sp ptimal vgf:  %s", err.Error()))
 		var signedMsg *storageTypes.MsgCreateBucket
