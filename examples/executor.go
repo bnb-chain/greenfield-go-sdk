@@ -1,4 +1,4 @@
-package bscexamples
+package main
 
 import (
 	"context"
@@ -11,12 +11,12 @@ import (
 )
 
 func main() {
-	account, err := bsctypes.NewBscAccountFromPrivateKey("barry", privateKey)
+	account, err := bsctypes.NewBscAccountFromPrivateKey("barry", bscPrivateKey)
 	if err != nil {
 		log.Fatalf("New account from private key error, %v", err)
 	}
 
-	client, err := bsc.New(rpcAddr, "qa-net", bsc.Option{DefaultAccount: account})
+	client, err := bsc.New(bscRpcAddr, "qa-net", bsc.Option{DefaultAccount: account})
 	if err != nil {
 		log.Fatalf("unable to new bsc client, %v", err)
 	}
