@@ -58,7 +58,7 @@ func (c *Client) SendTx(ctx context.Context, nonce uint64, toAddr *common.Addres
 	if err != nil {
 		return nil, err
 	}
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), c.defaultAccount.GetKeyManager().GetPrivateKey())
+	signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainId), c.defaultAccount.GetKeyManager().GetPrivateKey())
 	if err != nil {
 		return nil, err
 	}
