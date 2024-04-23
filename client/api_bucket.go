@@ -15,20 +15,20 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/rs/zerolog/log"
+
+	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
+	"github.com/bnb-chain/greenfield-go-sdk/types"
 
 	gnfdsdk "github.com/bnb-chain/greenfield/sdk/types"
 	gnfdTypes "github.com/bnb-chain/greenfield/types"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	virtualgroupTypes "github.com/bnb-chain/greenfield/x/virtualgroup/types"
-
-	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
-	"github.com/bnb-chain/greenfield-go-sdk/types"
 )
 
 // IBucketClient interface defines functions related to bucket.
@@ -60,6 +60,7 @@ type IBucketClient interface {
 	ListBucketsByPaymentAccount(ctx context.Context, paymentAccount string, opts types.ListBucketsByPaymentAccountOptions) (types.ListBucketsByPaymentAccountResult, error)
 	SetBucketFlowRateLimit(ctx context.Context, bucketName string, paymentAddr, bucketOwner sdk.AccAddress, flowRateLimit sdkmath.Int, opt types.SetBucketFlowRateLimitOption) (string, error)
 	GetPaymentAccountFlowRateLimit(ctx context.Context, paymentAddr, bucketOwner sdk.AccAddress, bucketName string) (*storageTypes.QueryPaymentAccountBucketFlowRateLimitResponse, error)
+	GetRecommendedVirtualGroupFamilyIDBySPID(ctx context.Context, spID uint32) (uint32, error)
 }
 
 // GetCreateBucketApproval - Send create bucket approval request to SP and returns the signature info for the approval of preCreating resources.
@@ -175,9 +176,9 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string, primaryAdd
 		return "", err
 	}
 
-	familyID, err := c.QuerySpOptimalGlobalVirtualGroupFamily(ctx, sp.Id, virtualgroupTypes.Strategy_Oldest_Create_Time)
+	familyID, err := c.GetRecommendedVirtualGroupFamilyIDBySPID(ctx, sp.Id)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("failed to query sp ptimal vgf:  %s", err.Error()))
+		log.Error().Msg(fmt.Sprintf("failed to query sp vgf:  %s", err.Error()))
 		var signedMsg *storageTypes.MsgCreateBucket
 		signedMsg, err = c.GetCreateBucketApproval(ctx, createBucketMsg)
 		if err != nil {
@@ -1228,4 +1229,37 @@ func (c *Client) getMigrationStateFromSP(ctx context.Context, bucketName string,
 	}
 
 	return migrationProgress, nil
+}
+
+func (c *Client) GetRecommendedVirtualGroupFamilyIDBySPID(ctx context.Context, spID uint32) (uint32, error) {
+	endpoint, err := c.getSPUrlByID(spID)
+	if err != nil {
+		log.Error().Msg(fmt.Sprintf("route endpoint by sp ID: %d failed, err: %s", spID, err.Error()))
+		return 0, err
+	}
+	return c.getRecommendedVirtualGroupFamilyIDBySPEndpoint(ctx, endpoint)
+}
+
+func (c *Client) getRecommendedVirtualGroupFamilyIDBySPEndpoint(ctx context.Context, endpoint *url.URL) (uint32, error) {
+	reqMeta := requestMeta{
+		urlRelPath: "get-recommended-vgf",
+	}
+	sendOpt := sendOptions{
+		method: http.MethodGet,
+		adminInfo: AdminAPIInfo{
+			isAdminAPI:   true,
+			adminVersion: types.AdminV1Version,
+		},
+		disableCloseBody: true,
+	}
+	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
+	if err != nil {
+		return 0, err
+	}
+	vgf := types.VirtualGroupFamily{}
+	err = xml.NewDecoder(resp.Body).Decode(&vgf)
+	if err != nil {
+		return 0, err
+	}
+	return vgf.Id, nil
 }

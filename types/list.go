@@ -369,3 +369,8 @@ type PolicyMeta struct {
 	// ExpirationTime defines the expiration time of permission
 	ExpirationTime int64 `xml:"ExpirationTime"`
 }
+
+type VirtualGroupFamily struct {
+	XMLName xml.Name `xml:"VirtualGroupFamily"`
+	Id      uint32   `xml:"Id"`
+}
