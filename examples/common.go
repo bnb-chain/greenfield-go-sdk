@@ -26,6 +26,8 @@ const (
 	toAddress               = "0x.." // used for cross chain transfer
 	httpsAddr               = ""
 	paymentAddr             = ""
+	bscRpcAddr              = "https://data-seed-prebsc-1-s1.binance.org:8545/"
+	bscPrivateKey           = "a6f2041aeca9a09159c937b77316c9c7e2c0f1c5b7241832f84bf1d37eb49661"
 )
 
 func handleErr(err error, funcName string) {
