@@ -381,7 +381,6 @@ func (c *Client) putObject(ctx context.Context, bucketName, objectName string, o
 
 func (c *Client) delegateCreateFolder(ctx context.Context, bucketName, objectName string, opts types.PutObjectOptions,
 ) (err error) {
-
 	var contentType string
 	if opts.ContentType != "" {
 		contentType = opts.ContentType

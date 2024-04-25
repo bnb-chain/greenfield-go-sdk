@@ -14,6 +14,7 @@ import (
 	"github.com/bnb-chain/greenfield/types/resource"
 
 	"cosmossdk.io/math"
+
 	"github.com/stretchr/testify/suite"
 
 	"github.com/bnb-chain/greenfield-go-sdk/client"
@@ -304,7 +305,6 @@ func (s *StorageTestSuite) Test_Object() {
 	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName2, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 	s.WaitSealObject(bucketName, objectName2)
-
 }
 
 func (s *StorageTestSuite) Test_Group() {
