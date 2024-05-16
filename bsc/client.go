@@ -3,11 +3,11 @@ package bsc
 import (
 	"encoding/json"
 	"errors"
-	"io"
+	"fmt"
 	"log"
 	"net/http"
-	"os"
 
+	"github.com/bnb-chain/greenfield-go-sdk/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
 
@@ -58,7 +58,7 @@ func New(rpcURL string, env string, option Option) (IClient, error) {
 	var (
 		cc         *ethclient.Client
 		deployment *bsctypes.Deployment
-		path       string
+		jsonStr    string
 		err        error
 	)
 	cc, err = ethclient.Dial(rpcURL)
@@ -68,29 +68,18 @@ func New(rpcURL string, env string, option Option) (IClient, error) {
 
 	switch env {
 	case "dev-net":
-		path = "./common/contract/dev-net.json"
+		jsonStr = common.Devnet
 	case "qa-net":
-		path = "./common/contract/qa-net.json"
+		jsonStr = common.Qanet
 	case "test-net":
-		path = "./common/contract/test-net.json"
+		jsonStr = common.Testnet
 	case "main-net":
-		path = "./common/contract/main-net.json"
+		jsonStr = common.Mainnet
+	default:
+		return nil, fmt.Errorf("invalid environment: %s", env)
 	}
 
-	jsonFile, err := os.Open(path)
-	if err != nil {
-		log.Fatalf("failed to open JSON file: %v", err)
-	}
-	defer jsonFile.Close()
-
-	// Read the JSON file into a byte slice
-	byteValue, err := io.ReadAll(jsonFile)
-	if err != nil {
-		log.Fatalf("failed to read JSON file: %v", err)
-		return nil, err
-	}
-
-	err = json.Unmarshal(byteValue, &deployment)
+	err = json.Unmarshal([]byte(jsonStr), &deployment)
 	if err != nil {
 		log.Fatalf("failed to unmarshal JSON data: %v", err)
 		return nil, err
