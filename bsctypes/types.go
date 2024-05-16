@@ -34,10 +34,14 @@ const (
 type Environment uint8
 
 const (
-	Devnet Environment = iota
-	Qanet
-	Testnet
-	Mainnet
+	BscDevnet Environment = iota
+	BscQanet
+	BscTestnet
+	BscMainnet
+	OpBNBDevnet
+	OpBNBQanet
+	OpBNBTestnet
+	OpBNBMainnet
 )
 
 type ExtraData struct {

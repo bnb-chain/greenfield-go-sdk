@@ -7,11 +7,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/bnb-chain/greenfield-go-sdk/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
 
 	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
+	"github.com/bnb-chain/greenfield-go-sdk/common"
 )
 
 // IClient - Declare all BSC SDK Client APIs, including APIs for multi messages & greenfield executor
@@ -19,6 +19,7 @@ type IClient interface {
 	IMultiMessageClient
 	IGreenfieldExecutorClient
 	IBasicClient
+	IAccountClient
 }
 
 // Client - The implementation for IClient, implement all Client APIs for Greenfield SDK.
@@ -67,14 +68,22 @@ func New(rpcURL string, env bsctypes.Environment, option Option) (IClient, error
 	}
 
 	switch env {
-	case bsctypes.Devnet:
-		jsonStr = common.Devnet
-	case bsctypes.Qanet:
-		jsonStr = common.Qanet
-	case bsctypes.Testnet:
-		jsonStr = common.Testnet
-	case bsctypes.Mainnet:
-		jsonStr = common.Mainnet
+	case bsctypes.BscDevnet:
+		jsonStr = common.BscDevnet
+	case bsctypes.BscQanet:
+		jsonStr = common.BscQanet
+	case bsctypes.BscTestnet:
+		jsonStr = common.BscTestnet
+	case bsctypes.BscMainnet:
+		jsonStr = common.BscMainnet
+	case bsctypes.OpBNBDevnet:
+		jsonStr = common.OpBNBDevnet
+	case bsctypes.OpBNBQanet:
+		jsonStr = common.OpBNBQanet
+	case bsctypes.OpBNBTestnet:
+		jsonStr = common.OpBNBTestnet
+	case bsctypes.OpBNBMainnet:
+		jsonStr = common.OpBNBMainnet
 	default:
 		return nil, fmt.Errorf("invalid environment: %s", env)
 	}
