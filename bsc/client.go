@@ -51,7 +51,7 @@ type Option struct {
 	Host string
 }
 
-func New(rpcURL string, env string, option Option) (IClient, error) {
+func New(rpcURL string, env bsctypes.Environment, option Option) (IClient, error) {
 	if rpcURL == "" {
 		return nil, errors.New("fail to get grpcAddress and chainID to construct Client")
 	}
@@ -67,13 +67,13 @@ func New(rpcURL string, env string, option Option) (IClient, error) {
 	}
 
 	switch env {
-	case "dev-net":
+	case bsctypes.Devnet:
 		jsonStr = common.Devnet
-	case "qa-net":
+	case bsctypes.Qanet:
 		jsonStr = common.Qanet
-	case "test-net":
+	case bsctypes.Testnet:
 		jsonStr = common.Testnet
-	case "main-net":
+	case bsctypes.Mainnet:
 		jsonStr = common.Mainnet
 	default:
 		return nil, fmt.Errorf("invalid environment: %s", env)
