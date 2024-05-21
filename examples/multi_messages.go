@@ -21,7 +21,7 @@ func main() {
 		log.Fatalf("New account from private key error, %v", err)
 	}
 
-	client, err := bsc.New(bscRpcAddr, "qa-net", bsc.Option{DefaultAccount: account})
+	client, err := bsc.New(bscRpcAddr, bsctypes.BscQanet, bsc.Option{DefaultAccount: account})
 	if err != nil {
 		log.Fatalf("unable to new bsc client, %v", err)
 	}

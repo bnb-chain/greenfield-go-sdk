@@ -31,6 +31,19 @@ const (
 	Inherit
 )
 
+type Environment uint8
+
+const (
+	BscDevnet Environment = iota
+	BscQanet
+	BscTestnet
+	BscMainnet
+	OpBNBDevnet
+	OpBNBQanet
+	OpBNBTestnet
+	OpBNBMainnet
+)
+
 type ExtraData struct {
 	AppAddress            *common.Address       `json:"appAddress"`
 	RefundAddress         *common.Address       `json:"refundAddress"`
