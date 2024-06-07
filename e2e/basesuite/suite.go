@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	Endpoint = "https://gnfd-testnet-fullnode-tendermint-us.bnbchain.org:443"
-	ChainID  = "greenfield_5600-1"
+	Endpoint = "http://localhost:26750"
+	ChainID  = "greenfield_9000-121"
 )
 
 func ParseMnemonicFromFile(fileName string) string {
@@ -68,8 +68,8 @@ func (s *BaseSuite) NewChallengeClient() {
 }
 
 func (s *BaseSuite) SetupSuite() {
-	//mnemonic := ParseValidatorMnemonic(0)
-	account, err := types.NewAccountFromPrivateKey("test", "6547492644d0136f76ef65e3bd04a77d079ed38028f747700c6c6063564d7032")
+	mnemonic := ParseValidatorMnemonic(0)
+	account, err := types.NewAccountFromMnemonic("test", mnemonic)
 	s.Require().NoError(err)
 	s.Client, err = client.New(ChainID, Endpoint, client.Option{
 		DefaultAccount: account,
@@ -77,7 +77,7 @@ func (s *BaseSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.ClientContext = context.Background()
 	s.DefaultAccount = account
-	//s.NewChallengeClient()
+	s.NewChallengeClient()
 }
 
 func (s *BaseSuite) WaitSealObject(bucketName string, objectName string) {

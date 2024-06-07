@@ -7,10 +7,16 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/bnb-chain/greenfield/types/resource"
+
 	"cosmossdk.io/math"
+
+	"github.com/stretchr/testify/suite"
+
 	"github.com/bnb-chain/greenfield-go-sdk/client"
 	"github.com/bnb-chain/greenfield-go-sdk/e2e/basesuite"
 	"github.com/bnb-chain/greenfield-go-sdk/pkg/utils"
@@ -21,7 +27,6 @@ import (
 	permTypes "github.com/bnb-chain/greenfield/x/permission/types"
 	spTypes "github.com/bnb-chain/greenfield/x/sp/types"
 	storageTypes "github.com/bnb-chain/greenfield/x/storage/types"
-	"github.com/stretchr/testify/suite"
 )
 
 type StorageTestSuite struct {
@@ -134,17 +139,170 @@ func (s *StorageTestSuite) Test_Bucket() {
 }
 
 func (s *StorageTestSuite) Test_Object() {
-	bucketName := "v32"
+	bucketName := storageTestUtil.GenRandomBucketName()
+	objectName := storageTestUtil.GenRandomObjectName()
 
-	file, _ := os.Open("/Users/barry/Desktop/erc20_account0.sql")
-	defer file.Close()
-	all, _ := io.ReadAll(file)
-	var err error
+	s.T().Logf("BucketName:%s, objectName: %s", bucketName, objectName)
 
-	objectSize := int64(len(all))
+	bucketTx, err := s.Client.CreateBucket(s.ClientContext, bucketName, s.PrimarySP.OperatorAddress, types.CreateBucketOptions{})
+	s.Require().NoError(err)
+
+	_, err = s.Client.WaitForTx(s.ClientContext, bucketTx)
+	s.Require().NoError(err)
+
+	bucketInfo, err := s.Client.HeadBucket(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	if err == nil {
+		s.Require().Equal(bucketInfo.Visibility, storageTypes.VISIBILITY_TYPE_PRIVATE)
+	}
+
+	var buffer bytes.Buffer
+	line := `1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,1234567890,123456789012`
+	// Create 1MiB content where each line contains 1024 characters.
+	for i := 0; i < 1024*300; i++ {
+		buffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+
+	s.T().Log("---> CreateObject and HeadObject <---")
+	objectTx, err := s.Client.CreateObject(s.ClientContext, bucketName, objectName, bytes.NewReader(buffer.Bytes()), types.CreateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+	objectDetail, err := s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(objectDetail.ObjectInfo.ObjectName, objectName)
+	s.Require().Equal(objectDetail.ObjectInfo.GetObjectStatus().String(), "OBJECT_STATUS_CREATED")
+
+	objectSize := int64(buffer.Len())
+	s.T().Logf("---> PutObject and GetObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+	err = s.Client.PutObject(s.ClientContext, bucketName, objectName, objectSize,
+		bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	s.WaitSealObject(bucketName, objectName)
+
+	var updatedBuffer bytes.Buffer
+	for i := 0; i < 1024*300; i++ {
+		updatedBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+	objectTx, err = s.Client.UpdateObjectContent(s.ClientContext, bucketName, objectName, bytes.NewReader(updatedBuffer.Bytes()), types.UpdateObjectOptions{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, objectTx)
+	s.Require().NoError(err)
+	s.T().Logf("UpdateObjectContent tx hash %s", objectTx)
+
+	objectDetail, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().NoError(err)
+	s.Require().Equal(true, objectDetail.ObjectInfo.IsUpdating)
+
+	objectSize = int64(updatedBuffer.Len())
+	s.T().Logf("---> PutObject, objectName:%s objectSize:%d <---", objectName, objectSize)
+
+	err = s.PutObjectWithRetry(bucketName, objectName, objectSize,
+		updatedBuffer, types.PutObjectOptions{})
+	s.Require().NoError(err)
+
+	time.Sleep(5 * time.Second)
+
+	s.T().Log("---> Get bucket quota <---")
+
+	concurrentNumber := 5
+	downloadCount := 5
+	quota0, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+
+	var wg sync.WaitGroup
+	wg.Add(concurrentNumber)
+
+	for i := 0; i < concurrentNumber; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < downloadCount; j++ {
+				objectContent, _, err := s.Client.GetObject(s.ClientContext, bucketName, objectName, types.GetObjectOptions{})
+				if err != nil {
+					fmt.Printf("error: %v", err)
+					quota2, _ := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+					fmt.Printf("quota: %v", quota2)
+				}
+				objectBytes, err := io.ReadAll(objectContent)
+				s.Require().NoError(err)
+				s.Require().Equal(objectBytes, buffer.Bytes())
+			}
+		}()
+	}
+	wg.Wait()
+
+	expectQuotaUsed := int(objectSize) * concurrentNumber * downloadCount
+	quota1, err := s.Client.GetBucketReadQuota(s.ClientContext, bucketName)
+	s.Require().NoError(err)
+	freeQuotaConsumed := quota1.FreeConsumedSize - quota0.FreeConsumedSize
+	// the consumed quota and free quota should be right
+	s.Require().Equal(uint64(expectQuotaUsed), freeQuotaConsumed)
+
+	s.T().Log("---> PutObjectPolicy <---")
+	principal, _, err := types.NewAccount("principal")
+	s.Require().NoError(err)
+	principalWithAccount, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	s.Require().NoError(err)
+	statements := []*permTypes.Statement{
+		{
+			Effect: permTypes.EFFECT_ALLOW,
+			Actions: []permTypes.ActionType{
+				permTypes.ACTION_GET_OBJECT,
+			},
+			Resources:      nil,
+			ExpirationTime: nil,
+			LimitSize:      nil,
+		},
+	}
+	policy, err := s.Client.PutObjectPolicy(s.ClientContext, bucketName, objectName, principalWithAccount, statements, types.PutPolicyOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, policy)
+	s.Require().NoError(err)
+
+	s.T().Log("--->  GetObjectPolicy <---")
+	objectPolicy, err := s.Client.GetObjectPolicy(s.ClientContext, bucketName, objectName, principal.GetAddress().String())
+	s.Require().NoError(err)
+	s.T().Logf("get object policy:%s\n", objectPolicy.String())
+
+	s.T().Log("--->  ListObjectPolicies <---")
+	objectPolicies, err := s.Client.ListObjectPolicies(s.ClientContext, objectName, bucketName, uint32(permTypes.ACTION_GET_OBJECT), types.ListObjectPoliciesOptions{})
+	s.Require().NoError(err)
+	s.Require().Equal(resource.RESOURCE_TYPE_OBJECT.String(), resource.ResourceType_name[objectPolicies.Policies[0].ResourceType])
+	s.T().Logf("list object policies principal type:%d principal value:%s \n", objectPolicies.Policies[0].PrincipalType, objectPolicies.Policies[0].PrincipalValue)
+
+	s.T().Log("---> DeleteObjectPolicy <---")
+
+	principalStr, err := utils.NewPrincipalWithAccount(principal.GetAddress())
+	s.Require().NoError(err)
+	deleteObjectPolicy, err := s.Client.DeleteObjectPolicy(s.ClientContext, bucketName, objectName, principalStr, types.DeletePolicyOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteObjectPolicy)
+	s.Require().NoError(err)
+
+	s.T().Log("---> DeleteObject <---")
+	deleteObject, err := s.Client.DeleteObject(s.ClientContext, bucketName, objectName, types.DeleteObjectOption{})
+	s.Require().NoError(err)
+	_, err = s.Client.WaitForTx(s.ClientContext, deleteObject)
+	s.Require().NoError(err)
+	_, err = s.Client.HeadObject(s.ClientContext, bucketName, objectName)
+	s.Require().Error(err)
 
 	objectName2 := storageTestUtil.GenRandomObjectName()
-	err = s.Client.DelegatePutObject(s.ClientContext, bucketName, objectName2, objectSize, bytes.NewReader(all), types.PutObjectOptions{})
+	err = s.Client.DelegatePutObject(s.ClientContext, bucketName, objectName2, objectSize, bytes.NewReader(buffer.Bytes()), types.PutObjectOptions{})
+	s.Require().NoError(err)
+	s.WaitSealObject(bucketName, objectName2)
+
+	var newBuffer bytes.Buffer
+	for i := 0; i < 1024*300*40; i++ {
+		newBuffer.WriteString(fmt.Sprintf("[%05d] %s\n", i, line))
+	}
+	newObjectSize := int64(newBuffer.Len())
+	s.T().Logf("newObjectSize: %d", newObjectSize)
+
+	err = s.Client.DelegateUpdateObjectContent(s.ClientContext, bucketName, objectName2, newObjectSize, bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
 	s.Require().NoError(err)
 	s.WaitSealObject(bucketName, objectName2)
 }
