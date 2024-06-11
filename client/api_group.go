@@ -59,7 +59,7 @@ type IGroupClient interface {
 // Create, Associate payment accounts
 // Grant, Revoke the above permissions
 //
-// # For more details regarding `Group`, please refer to https://docs.bnbchain.org/greenfield-docs/docs/guide/greenfield-blockchain/modules/permission
+// # For more details regarding `Group`, please refer to https://github.com/bnb-chain/greenfield/blob/master/docs/modules/permission.md
 //
 // - ctx: Context variables for the current API call.
 //
