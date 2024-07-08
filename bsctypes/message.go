@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	permissiontype "github.com/bnb-chain/greenfield/x/permission/types"
+	"github.com/bnb-chain/greenfield/x/storage/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -27,6 +28,8 @@ type IMessages interface {
 	UpdateGroupCallBack(sender *common.Address, synPkg *UpdateGroupMemberSynPackage, callbackGasLimit *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
 	CreatePolicy(sender *common.Address, policy *permissiontype.Policy) *Messages
 	CreatePolicyCallBack(sender *common.Address, policy *permissiontype.Policy, extraData *ExtraData, opt *RelayFeeOption) *Messages
+	CreatePolicyByMsg(sender *common.Address, policy *types.MsgPutPolicy) *Messages
+	CreatePolicyByMsgCallBack(sender *common.Address, policy *types.MsgPutPolicy, extraData *ExtraData, opt *RelayFeeOption) *Messages
 	DeletePolicy(sender *common.Address, id *big.Int) *Messages
 	DeletePolicyCallBack(sender *common.Address, id *big.Int, extraData *ExtraData, opt *RelayFeeOption) *Messages
 	TransferOut(sender *common.Address, recipient *common.Address, amount *big.Int) *Messages
@@ -405,6 +408,71 @@ func (m *Messages) CreatePolicy(sender *common.Address, policy *permissiontype.P
 }
 
 func (m *Messages) CreatePolicyCallBack(sender *common.Address, policy *permissiontype.Policy, extraData *ExtraData, opt *RelayFeeOption) *Messages {
+	fee := new(big.Int)
+	ackFee := m.MinAckRelayFee
+	if opt != nil && opt.AckRelayFee != nil {
+		if opt.AckRelayFee.Cmp(m.MinAckRelayFee) < 0 {
+			log.Fatalf("opt.AckRelayFee can't be smaller than MinAckRelayFee")
+		}
+		ackFee = opt.AckRelayFee
+	}
+	fee.Add(m.RelayFee, ackFee)
+
+	address := common.HexToAddress(m.Deployment.PermissionHub)
+	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.PermissionABI))
+	if err != nil {
+		log.Fatalf("failed to parse contract ABI: %v", err)
+	}
+
+	data, err := policy.Marshal()
+	if err != nil {
+		log.Fatalf("failed to marshal policy: %v", err)
+	}
+
+	packedData, err := parsedABI.Pack("prepareCreatePolicy0", sender, data, extraData)
+	if err != nil {
+		log.Fatalf("failed to pack data for prepareCreatePolicy0: %v", err)
+	}
+
+	message := &Message{
+		Target: &address,
+		Data:   packedData,
+		Value:  fee,
+	}
+	m.Message = append(m.Message, message)
+	return m
+}
+
+func (m *Messages) CreatePolicyByMsg(sender *common.Address, policy *types.MsgPutPolicy) *Messages {
+	fee := new(big.Int)
+	fee.Add(m.RelayFee, m.MinAckRelayFee)
+
+	address := common.HexToAddress(m.Deployment.PermissionHub)
+	parsedABI, err := abi.JSON(strings.NewReader(bsccommon.PermissionABI))
+	if err != nil {
+		log.Fatalf("failed to parse contract ABI: %v", err)
+	}
+
+	data, err := policy.Marshal()
+	if err != nil {
+		log.Fatalf("failed to marshal policy: %v", err)
+	}
+
+	packedData, err := parsedABI.Pack("prepareCreatePolicy", sender, data)
+	if err != nil {
+		log.Fatalf("failed to pack data for prepareCreatePolicy: %v", err)
+	}
+
+	message := &Message{
+		Target: &address,
+		Data:   packedData,
+		Value:  fee,
+	}
+	m.Message = append(m.Message, message)
+	return m
+}
+
+func (m *Messages) CreatePolicyByMsgCallBack(sender *common.Address, policy *types.MsgPutPolicy, extraData *ExtraData, opt *RelayFeeOption) *Messages {
 	fee := new(big.Int)
 	ackFee := m.MinAckRelayFee
 	if opt != nil && opt.AckRelayFee != nil {
