@@ -7,8 +7,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
+
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/bnb-chain/greenfield-go-sdk/bsctypes"
 	"github.com/bnb-chain/greenfield-go-sdk/common"
@@ -85,7 +86,7 @@ func New(rpcURL string, env bsctypes.Environment, option Option) (IClient, error
 	case bsctypes.OpBNBMainnet:
 		jsonStr = common.OpBNBMainnet
 	default:
-		return nil, fmt.Errorf("invalid environment: %s", env)
+		return nil, fmt.Errorf("invalid environment: %v", env)
 	}
 
 	err = json.Unmarshal([]byte(jsonStr), &deployment)
