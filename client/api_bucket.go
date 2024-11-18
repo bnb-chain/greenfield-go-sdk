@@ -101,6 +101,32 @@ func (c *Client) GetCreateBucketApproval(ctx context.Context, createBucketMsg *s
 		return nil, err
 	}
 
+	endMap := map[string]string{
+		"127.0.0.1:9033": "gf-stagenet-sp-a1.bk.nodereal.cc:80",
+		"127.0.0.1:9034": "gf-stagenet-sp-b1.bk.nodereal.cc:80",
+		"127.0.0.1:9035": "gf-stagenet-sp-c1.bk.nodereal.cc:80",
+		"127.0.0.1:9036": "gf-stagenet-sp-d1.bk.nodereal.cc:80",
+		"127.0.0.1:9037": "gf-stagenet-sp-e1.bk.nodereal.cc:80",
+		"127.0.0.1:9038": "gf-stagenet-sp-f1.bk.nodereal.cc:80",
+		"127.0.0.1:9039": "gf-stagenet-sp-g1.bk.nodereal.cc:80",
+		"127.0.0.1:9040": "gf-stagenet-sp-ali1.bk.nodereal.cc:80",
+	}
+
+	host := endMap[endpoint.Host]
+	endpoint = &url.URL{
+		Scheme:      "http",
+		Opaque:      "",
+		User:        nil,
+		Host:        host,
+		Path:        "",
+		RawPath:     "",
+		OmitHost:    false,
+		ForceQuery:  false,
+		RawQuery:    "",
+		Fragment:    "",
+		RawFragment: "",
+	}
+
 	resp, err := c.sendReq(ctx, reqMeta, &sendOpt, endpoint)
 	if err != nil {
 		return nil, err
