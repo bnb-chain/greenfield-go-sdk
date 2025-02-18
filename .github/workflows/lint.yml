@@ -24,7 +24,7 @@ jobs:
       GOPRIVATE: github.com/bnb-chain
       GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
       - uses: actions/checkout@v3
@@ -51,10 +51,9 @@ jobs:
           go mod tidy
           go mod download
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v5
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
           version: latest
-          skip-pkg-cache: true
           args: --timeout=99m
           github-token: ${{ secrets.github_token }}
