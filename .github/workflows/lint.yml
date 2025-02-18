@@ -10,6 +10,8 @@ on:
       - develop
 permissions:
   contents: read
+  pull-requests: read
+  checks: write
   # Optional: allow read access to pull request. Use with `only-new-issues` option.
   # pull-requests: read
 jobs:
