@@ -78,8 +78,14 @@ func main() {
 		newBuffer.WriteString(fmt.Sprintf("%s", line))
 	}
 
-	err = cli.DelegateUpdateObjectContent(ctx, bucketName, objectName, int64(buffer.Len()), bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
+	err = cli.DelegateUpdateObjectContent(ctx, bucketName, objectName, int64(newBuffer.Len()), bytes.NewReader(newBuffer.Bytes()), types.PutObjectOptions{})
 	handleErr(err, "DelegateUpdateObjectContent")
+
+	log.Printf("object: %s has been updated to SP\n", objectName)
+
+	waitObjectSeal(cli, bucketName, objectName)
+	// wait for block_syncer to sync up data from chain
+	time.Sleep(time.Second * 5)
 
 	// get object
 	reader, info, err = cli.GetObject(ctx, bucketName, objectName, types.GetObjectOptions{})
